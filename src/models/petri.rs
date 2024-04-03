@@ -1,78 +1,102 @@
-use super::{Label, Model, State, Transition};
-use super::time::TimeInterval;
-use std::fmt;
+use std::{collections::HashMap, fmt, process::Output};
 
-#[derive(Clone)]
-pub struct PetriState(pub Label);
-impl State for PetriState {
-    fn get_label(&self) -> Label {
-        self.0.clone()
-    }
-    fn clone_box(&self) -> Box<dyn State> {
-        Box::new(self.clone())
-    }
-}
+use super::{Label, Model, Node};
+use crate::computation::ActionSet;
+use crate::game::Strategy;
 
-#[derive(Clone)]
-pub struct PetriTransition {
-    pub label: Label,
-    pub from: Vec<Label>,
-    pub to: Vec<Label>,
-    pub interval: TimeInterval,
-}
-impl Transition for PetriTransition {
-    fn get_label(&self) -> Label {
-        self.label.clone()
-    }
-    fn get_inputs(&self) -> Vec<Label> {
-        self.from.iter().map(|l| l.clone()).collect()
-    }
-    fn get_outputs(&self) -> Vec<Label> {
-        self.to.iter().map(|l| l.clone()).collect()
-    }
-    fn clone_box(&self) -> Box<dyn Transition> {
-        Box::new(self.clone())
-    }
-}
+mod petri_place;
+mod petri_transition;
+mod petri_marking;
+mod petri_state;
+mod petri_class;
+
+pub use petri_place::PetriPlace;
+pub use petri_transition::PetriTransition;
+pub use petri_marking::PetriMarking;
+pub use petri_state::{PetriState, FiringFunction};
+pub use petri_class::PetriClass;
+
+type PetriStrategy = dyn Strategy<Input = PetriState, Output = FiringFunction>;
 
 pub struct PetriNet {
-    pub states: Vec<PetriState>,
+    pub places: Vec<PetriPlace>,
     pub transitions: Vec<PetriTransition>,
-    pub initial_states: Vec<Label>,
+    places_dic: HashMap<Label, usize>,
+    transitions_dic: HashMap<Label, usize>,
 }
+
+impl PetriNet {
+
+    pub fn new(places: Vec<PetriPlace>, transitions : Vec<PetriTransition>) -> Self {
+        let mut places_dic : HashMap<Label, usize> = HashMap::new();
+        let mut transitions_dic : HashMap<Label, usize> = HashMap::new();
+        for (key, place) in places.iter().enumerate() {
+            places_dic.insert(place.get_label(), key);
+        }
+        for (key, transi) in transitions.iter().enumerate() {
+            transitions_dic.insert(transi.get_label(), key);
+        }
+        PetriNet { places, transitions, places_dic, transitions_dic }
+    }
+
+    pub fn get_place_index(&self, place : &Label) -> usize {
+        self.places_dic[place]
+    }
+
+    pub fn get_transition_index(&self, transition : &Label) -> usize {
+        self.transitions_dic[transition]
+    }
+
+    pub fn get_place_label(&self, place : usize) -> Label {
+        self.places[place].get_label()
+    }
+
+    pub fn get_transition_label(&self, transition : usize) -> Label {
+        self.transitions[transition].get_label()
+    }
+
+    pub fn enabled_transitions(&self, marking : &PetriMarking) -> ActionSet {
+        ActionSet::new()
+    }
+
+    pub fn fire(&self, state : &PetriState, action : usize) -> (PetriState, ActionSet) {
+        if !state.firing_function.next_actions().contains(&action) {
+            panic!("Transition not fireable !");
+        }
+        let mut next_state = state.clone();
+        next_state.firing_function.step_to_next_action();
+        let transi = &self.transitions[action];
+        for edge in transi.input_edges.iter() {
+            next_state.marking.unmark(edge.node_from(), edge.weight);
+        }
+        let pers = self.enabled_transitions(&next_state.marking);
+        for edge in transi.output_edges.iter() {
+            next_state.marking.mark(edge.node_to(), edge.weight);
+        }
+        let enabled_post = self.enabled_transitions(&next_state.marking);
+        let newen = ActionSet::get_newen(&pers, &enabled_post);
+        next_state.actions = newen.clone() | pers;
+        (next_state, newen)
+    }
+
+}
+
 impl Model for PetriNet {
-    fn get_states(&self) -> Vec<Box<&dyn State>> {
-        self.states.iter().map(|state| Box::new(state as _)).collect()
+    type State = PetriState;
+    type Action = usize;
+
+    fn next(&self, state : &PetriState, action : usize) -> PetriState {
+        let (mut next_state, newen) = self.fire(state, action);
+        
+        next_state
     }
-    fn get_transitions(&self) -> Vec<Box<&dyn Transition>> {
-        self.transitions.iter().map(|transi| Box::new(transi as _)).collect()
-    }
-    fn get_initial_states(&self) -> Vec<Label> {
-        self.initial_states.iter().map(|lbl| lbl.clone() ).collect()
-    }
+
 }
 
 // Display implementations ---
-
-impl fmt::Display for PetriState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "State_{}", self.0)
-    }
-}
-impl fmt::Display for PetriTransition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // TODO : Maybe add from / to in the display text ?
-        let from_str : Vec<String> = self.from.iter().map( |lbl| lbl.to_string() ).collect();
-        let to_str : Vec<String> = self.to.iter().map( |lbl| lbl.to_string() ).collect();
-        let from_str = from_str.join(",");
-        let to_str = to_str.join(",");
-        let to_print = format!("Transition_{}_{}_[{}]->[{}]", self.label, self.interval, from_str, to_str);
-        write!(f, "{}", to_print)
-    }
-}
 impl fmt::Display for PetriNet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let states_str : Vec<String> = self.states.iter().map( |s| s.to_string() ).collect();
+        let states_str : Vec<String> = self.places.iter().map( |s| s.to_string() ).collect();
         let states_str = states_str.join(";");
         let transition_str : Vec<String> = self.transitions.iter().map( |s| s.to_string() ).collect();
         let transition_str = transition_str.join(";"); 

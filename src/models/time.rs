@@ -36,7 +36,7 @@ impl TimeInterval {
     pub fn contains(&self, clock : f64) -> bool {
         self.0.lower_than(clock) && self.1.greater_than(clock)
     }
-    pub fn none() -> TimeInterval {
+    pub fn full() -> TimeInterval {
         TimeInterval(TimeBound::MinusInfinite, TimeBound::Infinite)
     }
 }

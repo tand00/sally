@@ -1,17 +1,12 @@
-pub mod dbm;
 pub mod models;
+pub mod computation;
 pub mod game;
 
-use std::collections::HashMap;
-
-use models::{Model, State, Transition};
 use models::lbl;
 use models::time::{TimeInterval, TimeBound::*};
 use models::petri;
 
 //use models::class_graph::*;
-
-use crate::game::Run;
 
 fn main() {
     let i0 = TimeInterval(Large(3), Infinite);
@@ -22,45 +17,27 @@ fn main() {
     println!("{i1}");
     println!("{i2}");
 
-    let t0 = petri::PetriTransition {
-        label: lbl("t0"),
-        from: vec![lbl("a")],
-        to: vec![lbl("b")],
-        interval: i0
-    };
-    let t1 = petri::PetriTransition {
-        label: lbl("t1"),
-        from: vec![lbl("a")],
-        to: vec![lbl("c")],
-        interval: i1
-    };
+    let t0 = petri::PetriTransition::new(
+        lbl("t0"),
+        vec![lbl("a")],
+        vec![lbl("b")],
+        i0
+    );
+    let t1 = petri::PetriTransition::new(
+        lbl("t1"),
+        vec![lbl("a")],
+        vec![lbl("c")],
+        i1
+    );
 
-    let state_a = petri::PetriState(lbl("a"));
-    let state_b = petri::PetriState(lbl("b"));
+    let place_a = petri::PetriPlace::new(lbl("a"));
+    let place_b = petri::PetriPlace::new(lbl("b"));
 
-    let mut r = Run::empty();
-    r.push_state(state_a.clone_box());
-    r.push_action(t0.clone_box());
-    r.push_state(state_b.clone_box());
-    println!("Run : {r}");
-
-    let mut model = petri::PetriNet {
-        states: vec![state_a, state_b],
-        transitions: vec![t0, t1],
-        initial_states: vec![lbl("a")],
-    };
+    let model = petri::PetriNet::new(
+        vec![place_a, place_b], 
+        vec![t0, t1]);
 
     println!("{}", model);
-    
-    let mut result = model.check_labels_coherence();
-
-    println!("{result}");
-
-    model.states.push(petri::PetriState(lbl("c")));
-
-    result = model.check_labels_coherence();
-
-    println!("{result}");
 
     /*let mut s = ClassGraph {
         classes: vec![
