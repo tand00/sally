@@ -14,7 +14,7 @@ impl PetriPlace {
             name: lbl,
             out_transitions: Vec::new()
         }
-    } 
+    }
 
     pub fn add_out_transition(&mut self, action : usize) {
         self.out_transitions.push(action)
@@ -22,6 +22,10 @@ impl PetriPlace {
 
     pub fn clear_out_transitions(&mut self) {
         self.out_transitions.clear()
+    }
+
+    pub fn get_out_transitions(&self) -> Vec<usize> {
+        self.out_transitions.clone()
     }
 
 }

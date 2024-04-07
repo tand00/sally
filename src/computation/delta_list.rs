@@ -28,7 +28,7 @@ impl<T : Add<Output = T> + PartialOrd + Copy> DeltaList<T> {
 
     pub fn push(&mut self, index : usize, x : T) {
         if self.elements.is_empty() {
-            self.elements.insert(index, x);
+            self.elements.insert(index, x + self.delta);
             self.index_min = vec![0];
             return;
         }
@@ -86,6 +86,10 @@ impl<T : Add<Output = T> + PartialOrd + Copy> DeltaList<T> {
                 min_value = *x;
             }
         }
+    }
+
+    pub fn contains(&self, key : &usize) -> bool {
+        self.elements.contains_key(key)
     }
 
 }

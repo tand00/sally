@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, process::Output};
+use std::{collections::{HashMap, HashSet}, fmt, process::Output};
 
 use super::{Label, Model, Node};
 use crate::computation::ActionSet;
@@ -15,8 +15,6 @@ pub use petri_transition::PetriTransition;
 pub use petri_marking::PetriMarking;
 pub use petri_state::{PetriState, FiringFunction};
 pub use petri_class::PetriClass;
-
-type PetriStrategy = dyn Strategy<Input = PetriState, Output = FiringFunction>;
 
 pub struct PetriNet {
     pub places: Vec<PetriPlace>,
@@ -56,7 +54,29 @@ impl PetriNet {
     }
 
     pub fn enabled_transitions(&self, marking : &PetriMarking) -> ActionSet {
-        ActionSet::new()
+        let mut en = ActionSet::new();
+        for (i, transi) in self.transitions.iter().enumerate() {
+            if transi.is_enabled(marking) {
+                en.enable(i);
+            }
+        }
+        en
+    }
+
+    pub fn compute_newen_pers(&self, new_marking : &PetriMarking, changed_places : &HashSet<usize>, old_actions : &ActionSet) -> (ActionSet, ActionSet) {
+        let mut pers = old_actions.clone();
+        let mut newen = ActionSet::new();
+        for place_index in changed_places {
+            let place : &PetriPlace = &self.places[*place_index];
+            for transi_index in place.get_out_transitions() {
+                pers.disable(transi_index);
+                let transi : &PetriTransition = &self.transitions[transi_index];
+                if transi.is_enabled(new_marking) {
+                    newen.enable(transi_index);
+                }
+            }
+        }
+        (pers, newen)
     }
 
     pub fn fire(&self, state : &PetriState, action : usize) -> (PetriState, ActionSet) {
@@ -66,16 +86,17 @@ impl PetriNet {
         let mut next_state = state.clone();
         next_state.firing_function.step_to_next_action();
         let transi = &self.transitions[action];
+        let mut changed_places : HashSet<usize> = HashSet::new();
         for edge in transi.input_edges.iter() {
             next_state.marking.unmark(edge.node_from(), edge.weight);
+            changed_places.insert(edge.node_from());
         }
-        let pers = self.enabled_transitions(&next_state.marking);
         for edge in transi.output_edges.iter() {
             next_state.marking.mark(edge.node_to(), edge.weight);
+            changed_places.insert(edge.node_to());
         }
-        let enabled_post = self.enabled_transitions(&next_state.marking);
-        let newen = ActionSet::get_newen(&pers, &enabled_post);
-        next_state.actions = newen.clone() | pers;
+        let (newen, pers) = self.compute_newen_pers(&next_state.marking, &changed_places, &state.actions);
+        next_state.new_actions(&newen | &pers);
         (next_state, newen)
     }
 

@@ -1,10 +1,12 @@
 mod label;
 mod node;
 mod edge;
+mod digraph;
 
 pub use label::{lbl, Label};
 pub use node::Node;
 pub use edge::Edge;
+pub use digraph::Digraph;
 
 pub mod time;
 pub mod petri;

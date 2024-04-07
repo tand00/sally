@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr};
+use std::ops::{BitAnd, BitOr, Not};
 use std::cmp::min;
 
 
@@ -60,7 +60,7 @@ impl ActionSet {
         }
     }
 
-    pub fn enabled_actions(&self) -> Vec<usize> {
+    pub fn get_actions(&self) -> Vec<usize> {
         let mut res : Vec<usize> = Vec::new();
         for (b_i,b) in self.enabled.iter().enumerate() { // Usually only one block, except if > 64 actions
             let mut rem = *b;
@@ -105,6 +105,17 @@ impl BitOr for ActionSet {
     
 }
 
+impl BitOr for &ActionSet {
+    type Output = ActionSet;
+    
+    fn bitor(self, rhs: Self) -> Self::Output {
+        let mut res = self.clone();
+        res.merge(rhs);
+        res
+    }
+    
+}
+
 impl BitAnd for ActionSet {
     type Output = ActionSet;
     
@@ -118,4 +129,43 @@ impl BitAnd for ActionSet {
         ActionSet::from(res)
     }
     
+}
+
+impl BitAnd for &ActionSet {
+    type Output = ActionSet;
+    
+    fn bitand(self, rhs: Self) -> Self::Output {
+        let len = min(self.enabled.len(), rhs.enabled.len());
+        let mut res : Vec<u64>= Vec::new();
+        for i in 0..len {
+            let byte = self.enabled[i] & rhs.enabled[i];
+            res.push(byte);
+        }
+        ActionSet::from(res)
+    }
+    
+}
+
+impl Not for ActionSet {
+    type Output = ActionSet;
+
+    fn not(self) -> Self::Output {
+        let mut res : Vec<u64> = Vec::new();
+        for i in self.enabled {
+            res.push(!i);
+        }
+        ActionSet::from(res)
+    }
+}
+
+impl Not for &ActionSet {
+    type Output = ActionSet;
+
+    fn not(self) -> Self::Output {
+        let mut res : Vec<u64> = Vec::new();
+        for i in self.enabled.iter() {
+            res.push(!(*i));
+        }
+        ActionSet::from(res)
+    }
 }

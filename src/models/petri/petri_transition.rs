@@ -4,6 +4,8 @@ use std::fmt;
 use crate::models::time::TimeInterval;
 use crate::models::{Edge, Label, Node};
 
+use super::PetriMarking;
+
 #[derive(Clone)]
 pub struct PetriTransition {
     pub label: Label,
@@ -62,6 +64,15 @@ impl PetriTransition {
             edge.set_node_to(places_dic[place_label]);
             self.output_edges.push(edge);
         }
+    }
+
+    pub fn is_enabled(&self, marking : &PetriMarking) -> bool {
+        for edge in self.input_edges.iter() {
+            if marking.tokens(edge.node_from()) < edge.weight {
+                return false
+            }
+        }
+        true
     }
 
 }

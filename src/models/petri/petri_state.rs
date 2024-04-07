@@ -28,6 +28,10 @@ impl FiringFunction {
         self.timings.at(action)
     }
 
+    pub fn erase(&mut self, action : usize) {
+        self.timings.remove(action);
+    }
+
 }
 
 #[derive(Clone)]
@@ -35,4 +39,16 @@ pub struct PetriState {
     pub marking: PetriMarking,
     pub firing_function: FiringFunction,
     pub actions: ActionSet
+}
+
+impl PetriState {
+
+    pub fn new_actions(&mut self, new_set : ActionSet) {
+        let disabled = (&self.actions) & (&!&new_set);
+        for a in disabled.get_actions() {
+            self.firing_function.erase(a);
+        }
+        self.actions = new_set;
+    }
+
 }
