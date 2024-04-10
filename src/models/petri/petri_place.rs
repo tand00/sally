@@ -36,10 +36,6 @@ impl Node for PetriPlace {
         self.name.clone()
     }
 
-    fn clone_box(&self) -> Box<dyn Node> {
-        Box::new(self.clone())
-    }
-
 }
 
 impl fmt::Display for PetriPlace {

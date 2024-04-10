@@ -53,8 +53,12 @@ impl DBM {
         !any_sup
     }
 
-    pub fn canonical(self) -> Self {
-        self
+    pub fn canonical(&self) -> Self {
+        self.clone()
+    }
+
+    pub fn vars_count(&self) -> usize {
+        self.vars
     }
 
 }

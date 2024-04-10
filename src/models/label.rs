@@ -13,6 +13,9 @@ impl Label {
     pub fn from(lbl : &str) -> Self {
         Label(String::from(lbl))
     }
+    pub fn from_string(str : impl ToString) -> Self {
+        Label(str.to_string())
+    }
 }
 impl fmt::Display for Label {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

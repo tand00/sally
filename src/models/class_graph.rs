@@ -3,7 +3,7 @@ use super::petri::{PetriClass, PetriMarking, PetriNet};
 
 pub struct ClassGraph {
     classes: Vec<PetriClass>,
-    edges: Vec<Edge>
+    edges: Vec<Edge<i32>>
 }
 
 impl ClassGraph {

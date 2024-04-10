@@ -92,4 +92,10 @@ impl<T : Add<Output = T> + PartialOrd + Copy> DeltaList<T> {
         self.elements.contains_key(key)
     }
 
+    pub fn merge(&mut self, other : DeltaList<T>) {
+        for (k,x) in other.elements {
+            
+        }
+    }
+
 }

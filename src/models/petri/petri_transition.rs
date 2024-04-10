@@ -12,18 +12,14 @@ pub struct PetriTransition {
     pub from: Vec<Label>,
     pub to: Vec<Label>,
     pub interval: TimeInterval,
-    pub input_edges: Vec<Edge>,
-    pub output_edges: Vec<Edge>
+    pub input_edges: Vec<Edge<i32>>,
+    pub output_edges: Vec<Edge<i32>>
 }
 
 impl Node for PetriTransition {
 
     fn get_label(&self) -> Label {
         self.label.clone()
-    }
-
-    fn clone_box(&self) -> Box<dyn Node> {
-        Box::new(self.clone())
     }
 
 }
@@ -42,11 +38,11 @@ impl PetriTransition {
         }
     }
 
-    pub fn get_inputs(&self) -> Vec<&Edge> {
+    pub fn get_inputs(&self) -> Vec<&Edge<i32>> {
         self.input_edges.iter().collect()
     }
 
-    pub fn get_outputs(&self) -> Vec<&Edge> {
+    pub fn get_outputs(&self) -> Vec<&Edge<i32>> {
         self.output_edges.iter().collect()
     }
 

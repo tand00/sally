@@ -13,12 +13,13 @@ pub mod petri;
 pub mod observation;
 pub mod class_graph;
 
-/// Generic trait that should be implemented by all types of models
+/// Generic trait that should be implemented by all Timed Transition Systems
 pub trait Model {
 
     type State;
     type Action;
     
-    fn next(&self, state : &Self::State, action : Self::Action) -> Self::State;
+    // Given a state and an action, returns a (potentially incomplete) state, completion actions, and actions available
+    fn next(&self, state : Self::State, action : Self::Action) -> (Self::State, Vec<usize>);
 
 }

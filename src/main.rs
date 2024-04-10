@@ -1,3 +1,7 @@
+extern crate nalgebra as na;
+extern crate num_traits;
+extern crate serde_json as json;
+
 pub mod models;
 pub mod computation;
 pub mod game;

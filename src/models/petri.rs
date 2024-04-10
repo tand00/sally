@@ -1,8 +1,7 @@
-use std::{collections::{HashMap, HashSet}, fmt, process::Output};
+use std::{collections::{HashMap, HashSet}, fmt};
 
 use super::{Label, Model, Node};
 use crate::computation::ActionSet;
-use crate::game::Strategy;
 
 mod petri_place;
 mod petri_transition;
@@ -104,14 +103,13 @@ impl PetriNet {
 
 impl Model for PetriNet {
     type State = PetriState;
-    type Action = usize;
+    type Action = (FiringFunction, usize);
 
-    fn next(&self, state : &PetriState, action : usize) -> PetriState {
-        let (mut next_state, newen) = self.fire(state, action);
-        
-        next_state
+    fn next(&self, mut state : Self::State, action : Self::Action) -> (Self::State, Vec<usize>) {
+        state.firing_function.merge(action.0);
+        let (new_state, newen) = self.fire(&state, action.1);
+        (new_state, newen.get_actions())
     }
-
 }
 
 // Display implementations ---

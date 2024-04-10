@@ -28,8 +28,16 @@ impl FiringFunction {
         self.timings.at(action)
     }
 
+    pub fn set_timing(&mut self, action : usize, timing : f64) {
+        self.timings.push(action, timing);
+    }
+
     pub fn erase(&mut self, action : usize) {
         self.timings.remove(action);
+    }
+
+    pub fn merge(&mut self, other : FiringFunction) {
+        let other_timings = other.timings;
     }
 
 }

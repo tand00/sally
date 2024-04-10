@@ -1,4 +1,4 @@
-type Tokens = i16;
+type Tokens = i32;
 
 #[derive(Clone)]
 pub struct PetriMarking {
