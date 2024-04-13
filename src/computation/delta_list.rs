@@ -92,9 +92,16 @@ impl<T : Add<Output = T> + PartialOrd + Copy> DeltaList<T> {
         self.elements.contains_key(key)
     }
 
+    pub fn keys(&self) -> Vec<usize> {
+        self.elements.keys().cloned().collect()
+    }
+
     pub fn merge(&mut self, other : DeltaList<T>) {
         for (k,x) in other.elements {
-            
+            if self.elements.contains_key(&k) {
+                continue;
+            }
+            self.push(k, x + other.delta);
         }
     }
 

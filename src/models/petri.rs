@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, fmt};
 
-use super::{Label, Model, Node};
+use super::{Label, Model, Node, Timed};
 use crate::computation::ActionSet;
 
 mod petri_place;
@@ -79,9 +79,6 @@ impl PetriNet {
     }
 
     pub fn fire(&self, state : &PetriState, action : usize) -> (PetriState, ActionSet) {
-        if !state.firing_function.next_actions().contains(&action) {
-            panic!("Transition not fireable !");
-        }
         let mut next_state = state.clone();
         next_state.firing_function.step_to_next_action();
         let transi = &self.transitions[action];
@@ -105,11 +102,32 @@ impl Model for PetriNet {
     type State = PetriState;
     type Action = (FiringFunction, usize);
 
-    fn next(&self, mut state : Self::State, action : Self::Action) -> (Self::State, Vec<usize>) {
+    fn next(&self, mut state : Self::State, action : Self::Action) -> (Option<Self::State>, Vec<usize>) {
         state.firing_function.merge(action.0);
+        if !state.firing_function.next_actions().contains(&action.1) {
+            return (None, Vec::new())
+        }
         let (new_state, newen) = self.fire(&state, action.1);
-        (new_state, newen.get_actions())
+        (Some(new_state), newen.get_actions())
     }
+
+    fn random_action(&self, state : &Self::State, newen : Vec<usize>) -> Self::Action {
+        let dates = FiringFunction::from(value)
+    }
+
+}
+
+impl Timed for PetriNet {
+
+    fn available_delay(&self, state : &Self::State) -> f64 {
+        state.firing_function.min_time()
+    }
+
+    fn delay(&self, mut state : Self::State, dt : f64) -> Self::State {
+        state.firing_function.step(dt);
+        state
+    }
+
 }
 
 // Display implementations ---

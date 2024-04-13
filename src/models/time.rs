@@ -1,6 +1,6 @@
-use std::{cmp::min, fmt, ops::{Add, Neg, Sub}};
+use std::{cmp::{max, min}, fmt, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}};
 
-/// Integer / Infinite time bound, used to define time intervals
+/// Integer / Infinite time bound, represents a "</<=" integer constraint
 #[derive(Debug,Copy,Clone,PartialEq,Eq,Ord)]
 pub enum TimeBound {
     Strict(i32),
@@ -9,6 +9,8 @@ pub enum TimeBound {
     MinusInfinite,
 }
 
+use num_traits::{Bounded, One, Zero};
+use rand::random;
 use TimeBound::{Strict, Large, Infinite, MinusInfinite};
 
 impl TimeBound {
@@ -63,10 +65,35 @@ impl Add for TimeBound {
     }
 }
 
+impl AddAssign for TimeBound {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs
+    }
+}
+
 impl Sub for TimeBound {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
         self + (-rhs)
+    }
+}
+
+impl SubAssign for TimeBound {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs
+    }
+}
+
+impl Mul for TimeBound {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        self.intersection(rhs)
+    }
+}
+
+impl MulAssign for TimeBound {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs
     }
 }
 
@@ -97,6 +124,33 @@ impl PartialOrd for TimeBound {
     }
 }
 
+impl Zero for TimeBound {
+    fn zero() -> Self {
+        Large(0)
+    }
+    fn is_zero(&self) -> bool {
+        *self == Large(0)
+    }
+}
+
+impl Bounded for TimeBound {
+    fn max_value() -> Self {
+        Infinite
+    }
+    fn min_value() -> Self {
+        MinusInfinite
+    }
+}
+
+impl One for TimeBound {
+    fn one() -> Self {
+        Infinite
+    }
+    fn is_one(&self) -> bool {
+        *self == Infinite
+    }
+}
+
 /// Time interval with bounds either integer of infinite
 #[derive(Debug,Copy,Clone)]
 pub struct TimeInterval(pub TimeBound, pub TimeBound);
@@ -108,6 +162,36 @@ impl TimeInterval {
     pub fn full() -> TimeInterval {
         TimeInterval(MinusInfinite, Infinite)
     }
+    pub fn delta(self, bound : TimeBound) -> TimeInterval {
+        TimeInterval(self.0 - bound, self.1 - bound)
+    }
+    pub fn is_empty(&self) -> bool {
+        match (self.0, self.1) {
+            (Strict(x), Strict(y)) => x >= y,
+            _ => self.0 > self.1
+        }
+    }
+    pub fn random_date(&self) -> f64 {
+        let date : f64 = random();
+
+        date
+    }
+}
+
+impl Mul for TimeInterval {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        TimeInterval(max(self.0, rhs.0), min(self.1, rhs.1))
+    }
+}
+
+impl One for TimeInterval {
+    fn one() -> Self {
+        TimeInterval::full()
+    }
+    fn is_one(&self) -> bool {
+        self.0 == MinusInfinite && self.1 == Infinite
+    }
 }
 
 // Display implementations ---
@@ -116,8 +200,8 @@ impl fmt::Display for TimeBound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let to_print = match self {
             Infinite => "INF".to_string(),
-            Strict(i) => i.to_string(),
-            Large(i) => i.to_string(),
+            Strict(i) => i.to_string() + "!",
+            Large(i) => i.to_string() + "?",
             MinusInfinite => "-INF".to_string(),
         };
         write!(f, "{}", to_print)

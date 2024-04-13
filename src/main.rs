@@ -1,11 +1,9 @@
-extern crate nalgebra as na;
-extern crate num_traits;
-extern crate serde_json as json;
-
 pub mod models;
 pub mod computation;
 pub mod game;
+pub mod verification;
 
+use computation::{DisjointInterval, DBM};
 use models::lbl;
 use models::time::{TimeInterval, TimeBound::*};
 use models::petri;
@@ -13,7 +11,7 @@ use models::petri;
 //use models::class_graph::*;
 
 fn main() {
-    let i0 = TimeInterval(Large(3), Infinite);
+    /*let i0 = TimeInterval(Large(3), Infinite);
     let i1 = TimeInterval(Strict(3), Strict(5));
     let i2 = TimeInterval(MinusInfinite, Large(4));
 
@@ -43,7 +41,7 @@ fn main() {
 
     println!("{}", model);
 
-    /*let mut s = ClassGraph {
+    let mut s = ClassGraph {
         classes: vec![
             ClassGraphClass { sub_states: vec![lbl("a"),lbl("b")], domain: HashMap::new() },
             ClassGraphClass { sub_states: vec![lbl("a"),lbl("b")], domain: HashMap::new() },
@@ -56,5 +54,10 @@ fn main() {
     let c = s.compile();
     //s.states = Vec::new();
     s.classes = Vec::new();*/
-
+    let dbm1 = DBM::new(4);
+    let dbm2 = DBM::new(4);
+    let dbm3 = DBM::empty(4);
+    println!("{}", dbm1.contains(&dbm2));
+    println!("{}", dbm1.contains(&dbm3));
+    println!("{}", dbm3.contains(&dbm2));
 }

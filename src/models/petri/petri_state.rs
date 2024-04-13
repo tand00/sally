@@ -1,12 +1,21 @@
 use super::PetriMarking;
 use crate::computation::DeltaList;
 use crate::computation::ActionSet;
+use crate::verification::Verifiable;
 
 #[derive(Clone)]
 pub struct FiringFunction {
-    timings: DeltaList<f64>
+    timings: DeltaList<f64>,
+    pub increasing : bool
 }
 impl FiringFunction {
+
+    pub fn new() -> Self {
+        FiringFunction {
+            timings : DeltaList::new(0.0),
+            increasing : false
+        }
+    }
 
     pub fn next_actions(&self) -> Vec<usize> {
         self.timings.index_min()
@@ -17,7 +26,8 @@ impl FiringFunction {
     }
 
     pub fn step(&mut self, dt : f64) {
-        self.timings.delta(-dt)
+        let mult = if self.increasing { 1.0 } else { -1.0 };
+        self.timings.delta(mult * dt)
     }
 
     pub fn step_to_next_action(&mut self) {
@@ -37,7 +47,7 @@ impl FiringFunction {
     }
 
     pub fn merge(&mut self, other : FiringFunction) {
-        let other_timings = other.timings;
+        self.timings.merge(other.timings);
     }
 
 }
@@ -57,6 +67,18 @@ impl PetriState {
             self.firing_function.erase(a);
         }
         self.actions = new_set;
+    }
+
+}
+
+impl Verifiable for PetriState {
+    
+    fn evaluate_object(&self, id : usize) -> i32 {
+        self.marking.tokens(id)
+    }
+
+    fn is_deadlocked(&self) -> bool {
+        (self.firing_function.min_time() == 0.0) && (self.actions.is_empty())
     }
 
 }

@@ -68,7 +68,6 @@ impl ActionSet {
             while rem > 0 {
                 if rem % 2 == 1 {
                     res.push(b_i * ACTION_CELL_SIZE + i);
-                    
                 }
                 i += 1;
                 rem >>= 1;
@@ -90,6 +89,15 @@ impl ActionSet {
             i += 1;
         }
         res
+    }
+
+    pub fn is_empty(&self) -> bool {
+        for b in self.enabled.iter() {
+            if *b != 0 {
+                return false;
+            }
+        }
+        return true;
     }
 
 }

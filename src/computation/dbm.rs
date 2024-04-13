@@ -1,45 +1,70 @@
-use std::{cmp::min, iter::zip, ops::{Index, IndexMut, Not}};
+use std::{cmp::min, ops::{Index, IndexMut}};
 
-use crate::models::time::{TimeBound, TimeBound::{Strict, Large, Infinite, MinusInfinite}};
+use nalgebra::DMatrix;
+use num_traits::{Bounded, Zero};
+
+use crate::models::time::{TimeBound, TimeInterval};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct DBM {
     vars : usize,
-    constraints : Vec<TimeBound>,
+    constraints : DMatrix<TimeBound>
 }
 
 // We add an imaginary variable, always equal to zero, at the end of the matrix. That way, we can encode rectangular constraints
 impl DBM {
 
     pub fn new(vars : usize) -> Self {
-        let mut matrix = DBM {
+        DBM {
             vars,
-            constraints: Vec::new()
-        };
-        matrix.constraints.resize((vars + 1) * (vars + 1), Infinite);
-        for i in 0..(vars + 1) {
-            matrix[(i,i)] = Large(0);
+            constraints: DMatrix::from_fn(vars + 1, vars + 1, |i,j| {
+                if i == j { TimeBound::zero() }
+                else { TimeBound::max_value() }
+            })
         }
-        matrix
+    }
+
+    pub fn from(constraints : DMatrix<TimeBound>) -> Self {
+        if !constraints.is_square() {
+            panic!("Constraints matrix not square, can't construct DBM !");
+        }
+        let mut res = DBM {
+            vars : constraints.nrows(),
+            constraints,
+        };
+        res.make_canonical();
+        res
+    }
+
+    pub fn empty(vars : usize) -> Self {
+        DBM {
+            vars,
+            constraints: DMatrix::from_element(vars + 1, vars + 1 , TimeBound::MinusInfinite)
+        }
     }
 
     pub fn at(&self, i : usize, j : usize) -> TimeBound {
         self[(i,j)]
     }
 
-    pub fn rectangulars(&self, i : usize) -> (TimeBound, TimeBound) {
-        let index_1 = i * (self.vars + 1) + 0;
-        let index_2 = i;
-        (-self.constraints[index_2], self.constraints[index_1])
+    pub fn rectangulars(&self, i : usize) -> TimeInterval {
+        TimeInterval(
+            -self.constraints[(0, i)], 
+            self.constraints[(i, 0)]
+        )
+    }
+
+    pub fn diagonals(&self, i : usize, j : usize) -> TimeInterval {
+        TimeInterval(
+            -self.constraints[(j, i)], 
+            self.constraints[(i, j)]
+        )
     }
 
     pub fn intersection(&self, other : &DBM) -> Self {
-        let mins = 
-            zip(&self.constraints, &other.constraints)
-            .map(|(a,b)| a.intersection(*b)).collect();
         DBM {
             vars: min(self.vars, other.vars),
-            constraints: mins
+            constraints: self.constraints.component_mul(&other.constraints)
         }
     }
 
@@ -47,18 +72,81 @@ impl DBM {
         if self.vars != other.vars {
             return false;
         }
-        let any_sup = 
-            zip(&self.constraints, &other.constraints)
-            .any(|(a,b)| (*b) > (*a)); // Any because more optimized than All (might be detail)
-        !any_sup
-    }
-
-    pub fn canonical(&self) -> Self {
-        self.clone()
+        self.constraints >= other.constraints
     }
 
     pub fn vars_count(&self) -> usize {
         self.vars
+    }
+
+    pub fn get_canonical(&self) -> Self {
+        let mut canonical = self.clone();
+        canonical.make_canonical();
+        canonical
+    }
+
+    pub fn set_bound(&mut self, var_i : usize, bound : TimeBound) {
+        self.add(var_i, 0, bound)
+    }
+
+    pub fn free_clock(&mut self, var_i : usize) {
+        for i in 0..(self.vars + 1) {
+            if i == var_i {
+                continue;
+            }
+            self.constraints[(i, var_i)] = self.constraints[(i, 0)];
+            self.constraints[(var_i, i)] = TimeBound::Infinite;
+        }
+    }
+
+    pub fn add(&mut self, var_i : usize, var_j : usize, constraint : TimeBound) {
+        let current = &mut self.constraints[(var_i, var_j)];
+        if *current + constraint < TimeBound::zero() {
+            *self = Self::empty(self.vars);
+        } else if constraint < *current {
+            *current = constraint;
+            let n_rows = self.constraints.nrows();
+            for i in 0..n_rows {
+                for j in 0..n_rows {
+                    self.constraints[(i,j)] = min(
+                        self.constraints[(i,j)],
+                        self.constraints[(i, var_i)] + self.constraints[(var_i, j)] 
+                    );
+                    self.constraints[(i,j)] = min(
+                        self.constraints[(i,j)],
+                        self.constraints[(i, var_j)] + self.constraints[(var_j, j)] 
+                    );
+                }
+            }
+        }
+    }
+
+    pub fn remove_var(&mut self, var_i : usize) {
+        self.free_clock(var_i);
+        self.constraints = self.constraints.clone().remove_column(var_i).remove_column(var_i);
+        
+    }
+
+    pub fn make_canonical(&mut self) {
+        let n_rows = self.constraints.nrows();
+        for k in 0..n_rows {
+            for i in 0..n_rows {
+                for j in 0..n_rows {
+                    self.constraints[(i,j)] = min(
+                        self.constraints[(i,j)],
+                        self.constraints[(i,k)] + self.constraints[(k,j)] 
+                    );
+                    if i == j && self.constraints[(i,j)] < TimeBound::zero() {
+                        *self = Self::empty(self.vars);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.constraints[(0,0)] < TimeBound::zero()
     }
 
 }
@@ -66,14 +154,13 @@ impl DBM {
 impl Index<(usize, usize)> for DBM {
     type Output = TimeBound;
     fn index(&self, index: (usize, usize)) -> &Self::Output {
-        let index = (index.0 * (self.vars + 1)) + index.1;
-        &self.constraints[index]
+        &self.constraints[index] // Index + 1 because virtual var at 0
     }
 }
 
-impl IndexMut<(usize, usize)> for DBM {
+// Prefer using 'add', this will overwrite the current constraint and potentially not preserve the canonical structure
+impl IndexMut<(usize,usize)> for DBM {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
-        let index = (index.0 * (self.vars + 1)) + index.1;
         &mut self.constraints[index]
     }
 }
