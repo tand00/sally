@@ -1,6 +1,6 @@
 type Tokens = i32;
 
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct PetriMarking {
     tokens: Vec<Tokens>
 }

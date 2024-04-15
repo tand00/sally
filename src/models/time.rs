@@ -1,4 +1,4 @@
-use std::{cmp::{max, min}, fmt, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}};
+use std::{cmp::{max, min}, fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}, path::Display};
 
 /// Integer / Infinite time bound, represents a "</<=" integer constraint
 #[derive(Debug,Copy,Clone,PartialEq,Eq,Ord)]
@@ -193,6 +193,86 @@ impl One for TimeInterval {
         self.0 == MinusInfinite && self.1 == Infinite
     }
 }
+
+#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
+pub struct TimeInstant(pub f64);
+
+impl Add for TimeInstant {
+    type Output = TimeInstant;
+    fn add(self, rhs: Self) -> Self::Output {
+        TimeInstant(self.0 + rhs.0)
+    }
+}
+
+impl AddAssign for TimeInstant {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs
+    }
+}
+
+impl Neg for TimeInstant {
+    type Output = TimeInstant;
+    fn neg(self) -> Self::Output {
+        TimeInstant(-self.0)
+    }
+}
+
+impl Sub for TimeInstant {
+    type Output = TimeInstant;
+    fn sub(self, rhs: Self) -> Self::Output {
+        self + (-rhs)
+    }
+}
+
+impl SubAssign for TimeInstant {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs
+    }
+}
+
+impl Mul for TimeInstant {
+    type Output = TimeInstant;
+    fn mul(self, rhs: Self) -> Self::Output {
+        TimeInstant(self.0 * rhs.0)
+    }
+}
+
+impl MulAssign for TimeInstant {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs
+    }
+}
+
+impl Zero for TimeInstant {
+    fn zero() -> Self {
+        TimeInstant(f64::zero())
+    }
+    fn is_zero(&self) -> bool {
+        self.0.is_zero()
+    }
+}
+
+impl One for TimeInstant {
+    fn one() -> Self {
+        TimeInstant(f64::one())
+    }
+    fn is_one(&self) -> bool {
+        self.0.is_one()
+    }
+}
+
+impl fmt::Display for TimeInstant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Hash for TimeInstant {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.to_bits().hash(state)
+    }
+}
+
 
 // Display implementations ---
 

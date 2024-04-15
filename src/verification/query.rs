@@ -1,6 +1,6 @@
-use std::{collections::HashSet, hash::Hash, ops::Not};
+use std::{collections::{hash_map::DefaultHasher, HashSet}, hash::{Hash, Hasher}, ops::Not};
 
-use super::{verifier::Verifiable, VerificationStatus};
+use super::{verifier::Verifiable, EvaluationState, VerificationBound, VerificationStatus};
 use VerificationStatus::*;
 
 // TODO: Might be useless to include both L and G
@@ -18,6 +18,7 @@ pub enum Expr {
     Plus(Box<Expr>, Box<Expr>),
     Minus(Box<Expr>, Box<Expr>),
     Multiply(Box<Expr>, Box<Expr>),
+    Negative(Box<Expr>)
 }
 
 use Expr::*;
@@ -30,7 +31,8 @@ impl Expr {
             Object(id) => state.evaluate_object(*id),
             Plus(e1, e2) => e1.evaluate(state) + e2.evaluate(state),
             Minus(e1, e2) => e1.evaluate(state) - e2.evaluate(state),
-            Multiply(e1, e2) => e1.evaluate(state) * e2.evaluate(state)
+            Multiply(e1, e2) => e1.evaluate(state) * e2.evaluate(state),
+            Negative(e) => -e.evaluate(state),
         }
     }
 
@@ -249,7 +251,7 @@ pub struct Query {
 
     pending_conditions : Vec<Condition>,
 
-    pub collapse_subconditions : bool
+    pub collapse_subconditions : bool,
 }
 
 impl Query {
@@ -262,7 +264,7 @@ impl Query {
             total_status : Maybe,
             run_status : Maybe,
             pending_conditions : Vec::new(),
-            collapse_subconditions : false
+            collapse_subconditions : false,
         }
     }
 
@@ -330,6 +332,19 @@ impl Query {
             }
         }
         collapsed
+    }
+
+    pub fn get_evaluation_state(&self, state : &impl Verifiable) -> EvaluationState {
+        let mut s = DefaultHasher::new();
+        self.pending_conditions.hash(&mut s);
+        state.hash(&mut s);
+        s.finish()
+    }
+
+    pub fn get_progress_hash(&self) -> u64 {
+        let mut s = DefaultHasher::new();
+        self.pending_conditions.hash(&mut s);
+        s.finish()
     }
 
 }

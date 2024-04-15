@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not};
+use std::{collections::HashSet, hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
 use super::query::*;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -9,8 +9,6 @@ pub enum VerificationStatus {
 }
 
 use VerificationStatus::*;
-
-use crate::models::Label;
 
 impl BitOr for VerificationStatus {
     type Output = Self;
@@ -63,29 +61,34 @@ impl Not for VerificationStatus {
 pub enum VerificationBound {
     Time(u32),
     Steps(u32),
-    Var(Label, u32),
+    Var(usize, u32),
     NoBound,
 }
 
-pub trait Verifiable {
-
+pub trait Verifiable : Hash {
     fn evaluate_object(&self, id : usize) -> i32;
-
     fn is_deadlocked(&self) -> bool;
-
 }
+
+pub type EvaluationState = u64; // Hashs of (Query, Verifiable)
 
 pub struct Verification {
     pub query : Query,
     pub status : VerificationStatus,
-    pub bound : VerificationBound
+    pub bound : VerificationBound,
 }
 
 impl Verification {
 
-    pub fn verify(&mut self, state : &impl Verifiable) -> VerificationStatus {
-        Verified
+    pub fn new(query : Query, bound : VerificationBound) -> Self {
+        Verification {
+            query, bound,
+            status : Maybe,
+        }
+    }
+
+    pub fn verify(&mut self, query : &mut Query, state : &impl Verifiable) {
+        
     }
 
 }
-

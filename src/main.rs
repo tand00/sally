@@ -8,6 +8,10 @@ use models::lbl;
 use models::time::{TimeInterval, TimeBound::*};
 use models::petri;
 
+use crate::models::model_solving_graph::ModelSolvingGraph;
+use crate::models::petri::PetriNet;
+use crate::models::Model;
+
 //use models::class_graph::*;
 
 fn main() {
@@ -60,4 +64,8 @@ fn main() {
     println!("{}", dbm1.contains(&dbm2));
     println!("{}", dbm1.contains(&dbm3));
     println!("{}", dbm3.contains(&dbm2));
+
+    let mut solver = ModelSolvingGraph::new();
+    solver.register_model(PetriNet::get_meta());
+    solver.compute_translations();
 }

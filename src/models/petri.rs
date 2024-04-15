@@ -1,7 +1,7 @@
 use std::{collections::{HashMap, HashSet}, fmt};
 
-use super::{Label, Model, Node, Timed};
-use crate::computation::ActionSet;
+use super::{lbl, model_characteristics::*, time::TimeInstant, Label, Model, ModelMeta, Node};
+use crate::{computation::ActionSet, verification::decidable_solutions::{REACHABILITY, SAFETY}};
 
 mod petri_place;
 mod petri_transition;
@@ -100,32 +100,39 @@ impl PetriNet {
 
 impl Model for PetriNet {
     type State = PetriState;
-    type Action = (FiringFunction, usize);
+    type Action = usize;
 
-    fn next(&self, mut state : Self::State, action : Self::Action) -> (Option<Self::State>, Vec<usize>) {
-        state.firing_function.merge(action.0);
-        if !state.firing_function.next_actions().contains(&action.1) {
-            return (None, Vec::new())
-        }
-        let (new_state, newen) = self.fire(&state, action.1);
-        (Some(new_state), newen.get_actions())
+    fn next(&self, state : Self::State, action : Self::Action) -> (Option<Self::State>, Vec<Self::Action>) {
+        let (new_state, _) = self.fire(&state, action);
+        let actions = new_state.actions.get_actions();
+        (Some(new_state), actions)
     }
 
-    fn random_action(&self, state : &Self::State, newen : Vec<usize>) -> Self::Action {
-        let dates = FiringFunction::from(value)
+    fn actions_available(&self, state : &Self::State) -> Vec<Self::Action> {
+        Vec::new()
     }
 
-}
-
-impl Timed for PetriNet {
-
-    fn available_delay(&self, state : &Self::State) -> f64 {
-        state.firing_function.min_time()
+    fn available_delay(&self, state : &Self::State) -> TimeInstant {
+        TimeInstant(0.0)
     }
 
-    fn delay(&self, mut state : Self::State, dt : f64) -> Self::State {
+    fn delay(&self, mut state : Self::State, dt : TimeInstant) -> Option<Self::State> {
         state.firing_function.step(dt);
-        state
+        Some(state)
+    }
+
+    fn get_meta() -> ModelMeta {
+        ModelMeta {
+            name : lbl("Timed Petri Net"),
+            characteristics : TIMED | CONTROLLABLE,
+            solutions : REACHABILITY | SAFETY,
+            translations : vec![
+                lbl("Class Graph"),
+                lbl("Timed-Arcs Petri Net"),
+                lbl("NTA"),
+                lbl("Petri Net"),
+            ]
+        }
     }
 
 }

@@ -1,19 +1,22 @@
+use std::hash::Hash;
+
+use num_traits::Zero;
+
 use super::PetriMarking;
 use crate::computation::DeltaList;
 use crate::computation::ActionSet;
 use crate::verification::Verifiable;
+use crate::models::time::TimeInstant;
 
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct FiringFunction {
-    timings: DeltaList<f64>,
-    pub increasing : bool
+    timings: DeltaList<TimeInstant>
 }
 impl FiringFunction {
 
     pub fn new() -> Self {
         FiringFunction {
-            timings : DeltaList::new(0.0),
-            increasing : false
+            timings : DeltaList::new(TimeInstant::zero())        
         }
     }
 
@@ -21,24 +24,23 @@ impl FiringFunction {
         self.timings.index_min()
     }
 
-    pub fn min_time(&self) -> f64 {
+    pub fn min_time(&self) -> TimeInstant {
         self.timings.min_value()
     }
 
-    pub fn step(&mut self, dt : f64) {
-        let mult = if self.increasing { 1.0 } else { -1.0 };
-        self.timings.delta(mult * dt)
+    pub fn step(&mut self, dt : TimeInstant) {
+        self.timings.delta(dt)
     }
 
     pub fn step_to_next_action(&mut self) {
         self.step(self.timings.min_value())
     }
 
-    pub fn timing(&self, action : usize) -> f64{
+    pub fn timing(&self, action : usize) -> TimeInstant{
         self.timings.at(action)
     }
 
-    pub fn set_timing(&mut self, action : usize, timing : f64) {
+    pub fn set_timing(&mut self, action : usize, timing : TimeInstant) {
         self.timings.push(action, timing);
     }
 
@@ -71,6 +73,13 @@ impl PetriState {
 
 }
 
+impl Hash for PetriState {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.marking.hash(state);
+        self.firing_function.hash(state);
+    }
+}
+
 impl Verifiable for PetriState {
     
     fn evaluate_object(&self, id : usize) -> i32 {
@@ -78,7 +87,7 @@ impl Verifiable for PetriState {
     }
 
     fn is_deadlocked(&self) -> bool {
-        (self.firing_function.min_time() == 0.0) && (self.actions.is_empty())
+        (self.firing_function.min_time().is_zero()) && (self.actions.is_empty())
     }
 
 }

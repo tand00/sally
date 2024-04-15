@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
+use std::hash::Hash;
 use std::ops::Add;
 use std::cmp::PartialOrd;
 
 #[derive(Debug, Clone)]
 pub struct DeltaList<T> {
-    elements: HashMap<usize,T>,
+    elements: BTreeMap<usize,T>,
     delta: T,
     index_min: Vec<usize>
 }
@@ -13,13 +14,13 @@ impl<T : Add<Output = T> + PartialOrd + Copy> DeltaList<T> {
 
     pub fn new(delta: T) -> Self {
         DeltaList {
-            elements: HashMap::new(),
+            elements: BTreeMap::new(),
             delta,
             index_min: Vec::new()
         }
     }
 
-    pub fn from(source : HashMap<usize,T>, delta: T) -> Self {
+    pub fn from(source : BTreeMap<usize,T>, delta: T) -> Self {
         let mut list = Self::new(delta);
         list.elements = source;
         list.refresh_min();
@@ -105,4 +106,11 @@ impl<T : Add<Output = T> + PartialOrd + Copy> DeltaList<T> {
         }
     }
 
+}
+
+impl<T : Hash> Hash for DeltaList<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.elements.hash(state);
+        self.delta.hash(state);
+    }
 }
