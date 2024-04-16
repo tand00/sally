@@ -4,6 +4,8 @@ mod edge;
 mod digraph;
 mod model_state;
 
+use std::collections::HashSet;
+
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
 pub use node::Node;
@@ -42,7 +44,7 @@ pub struct ModelMeta {
     name : Label,
     solutions : DecidableSolution,
     characteristics : ModelCharacteristics,
-    translations : Vec<Label>
+    //translations : Vec<Label> Translations will be added one by one
 }
 impl std::fmt::Display for ModelMeta {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -52,16 +54,13 @@ impl std::fmt::Display for ModelMeta {
 
 /// Generic trait that should be implemented by all Timed Transition Systems
 pub trait Model {
-
-    type State;
-    type Action;
     
     // Given a state and an action, returns a state and actions available
-    fn next(&self, state : Self::State, action : Self::Action) -> (Option<Self::State>, Vec<Self::Action>);
+    fn next(&self, state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>);
 
-    fn actions_available(&self, state : &Self::State) -> Vec<Self::Action>;
+    fn actions_available(&self, state : &ModelState) -> HashSet<usize>;
 
-    fn available_delay(&self, state : &Self::State) -> ClockValue {
+    fn available_delay(&self, state : &ModelState) -> ClockValue {
         ClockValue::zero()
     }
 
@@ -71,7 +70,7 @@ pub trait Model {
         0
     }
 
-    fn delay(&self, state : Self::State, dt : ClockValue) -> Option<Self::State> {
+    fn delay(&self, state : ModelState, dt : ClockValue) -> Option<ModelState> {
         None
     }
 

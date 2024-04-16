@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use crate::models::time::TimeInterval;
-use crate::models::{Edge, Label, Node};
+use crate::models::{Edge, Label, ModelState, Node};
 
 use super::PetriMarking;
 
@@ -62,7 +62,7 @@ impl PetriTransition {
         }
     }
 
-    pub fn is_enabled(&self, marking : &PetriMarking) -> bool {
+    pub fn is_enabled(&self, marking : &ModelState) -> bool {
         for edge in self.input_edges.iter() {
             if marking.tokens(edge.node_from()) < edge.weight {
                 return false

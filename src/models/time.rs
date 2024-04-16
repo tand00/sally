@@ -1,4 +1,5 @@
 use std::{cmp::{max, min}, fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}, path::Display};
+use num_traits::{Bounded, One, Zero};
 
 /// Integer / Infinite time bound, represents a "</<=" integer constraint
 #[derive(Debug,Copy,Clone,PartialEq,Eq,Ord)]
@@ -9,24 +10,23 @@ pub enum TimeBound {
     MinusInfinite,
 }
 
-use num_traits::{Bounded, One, Zero};
-use rand::random;
+use rand::Rng;
 use TimeBound::{Strict, Large, Infinite, MinusInfinite};
 
 impl TimeBound {
-    pub fn greater_than(&self, clock : f64) -> bool {
+    pub fn greater_than(&self, clock : ClockValue) -> bool {
         match *self {
             Infinite => true,
-            Strict(x) => (x as f64) > clock,
-            Large(x) => (x as f64) >= clock,
+            Strict(x) => (x as f64) > clock.0,
+            Large(x) => (x as f64) >= clock.0,
             MinusInfinite => false,
         }
     }
-    pub fn lower_than(&self, clock : f64) -> bool {
+    pub fn lower_than(&self, clock : ClockValue) -> bool {
         match *self {
             Infinite => false,
-            Strict(x) => (x as f64) < clock,
-            Large(x) => (x as f64) <= clock,
+            Strict(x) => (x as f64) < clock.0,
+            Large(x) => (x as f64) <= clock.0,
             MinusInfinite => true,
         }
     }
@@ -156,7 +156,7 @@ impl One for TimeBound {
 pub struct TimeInterval(pub TimeBound, pub TimeBound);
 
 impl TimeInterval {
-    pub fn contains(&self, clock : f64) -> bool {
+    pub fn contains(&self, clock : ClockValue) -> bool {
         self.0.lower_than(clock) && self.1.greater_than(clock)
     }
     pub fn full() -> TimeInterval {
@@ -171,10 +171,26 @@ impl TimeInterval {
             _ => self.0 > self.1
         }
     }
-    pub fn random_date(&self) -> f64 {
-        let date : f64 = random();
-
-        date
+    pub fn random_date(&self) -> ClockValue {
+        let mut gen = rand::thread_rng();
+        if self.is_empty() {
+            panic!("Interval is empty !");
+        }
+        let low = match self.0 {
+            Infinite => f64::NAN,
+            Large(x) | Strict(x) => x as f64,
+            MinusInfinite => f64::NEG_INFINITY
+        };
+        let high = match self.1 {
+            MinusInfinite => f64::NAN,
+            Large(x) | Strict(x) => x as f64,
+            Infinite => f64::INFINITY
+        };
+        let mut chosen = ClockValue(gen.gen_range(low..high));
+        while !self.contains(chosen) {
+            chosen = ClockValue(gen.gen_range(low..high)); // If on strict bound
+        }
+        chosen
     }
 }
 
@@ -214,6 +230,10 @@ impl ClockValue {
 
     pub fn is_disabled(&self) -> bool {
         self.0.is_nan()
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        !self.0.is_nan()
     }
 
 }
@@ -291,6 +311,17 @@ impl fmt::Display for ClockValue {
 impl Hash for ClockValue {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.to_bits().hash(state)
+    }
+}
+
+impl From<TimeBound> for ClockValue {
+    fn from(value: TimeBound) -> Self {
+        match value {
+            Infinite => ClockValue::infinity(),
+            MinusInfinite => ClockValue(f64::NEG_INFINITY),
+            Large(x) => ClockValue(x as f64),
+            Strict(x) => ClockValue(x as f64)
+        }
     }
 }
 

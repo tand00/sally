@@ -1,7 +1,7 @@
 use std::{collections::{HashMap, HashSet}, fmt};
 
-use super::{lbl, model_characteristics::*, time::ClockValue, Label, Model, ModelMeta, Node};
-use crate::{computation::ActionSet, verification::decidable_solutions::{REACHABILITY, SAFETY}};
+use super::{lbl, model_characteristics::*, time::ClockValue, Label, Model, ModelMeta, ModelState, Node};
+use crate::verification::decidable_solutions::{REACHABILITY, SAFETY};
 
 mod petri_place;
 mod petri_transition;
@@ -9,6 +9,7 @@ mod petri_marking;
 mod petri_state;
 mod petri_class;
 
+use num_traits::Zero;
 pub use petri_place::PetriPlace;
 pub use petri_transition::PetriTransition;
 pub use petri_marking::PetriMarking;
@@ -52,86 +53,89 @@ impl PetriNet {
         self.transitions[transition].get_label()
     }
 
-    pub fn enabled_transitions(&self, marking : &PetriMarking) -> ActionSet {
-        let mut en = ActionSet::new();
-        for (i, transi) in self.transitions.iter().enumerate() {
-            if transi.is_enabled(marking) {
-                en.enable(i);
-            }
-        }
-        en
+    pub fn enabled_transitions(&self, marking : &ModelState) -> Vec<usize> {
+        self.transitions.iter().enumerate().filter_map(|(i, transi)| {
+            if transi.is_enabled(marking) { Some(i) }
+            else { None }
+        }).collect()
     }
 
-    pub fn compute_newen_pers(&self, new_marking : &PetriMarking, changed_places : &HashSet<usize>, old_actions : &ActionSet) -> (ActionSet, ActionSet) {
-        let mut pers = old_actions.clone();
-        let mut newen = ActionSet::new();
+    pub fn compute_new_actions(&self, new_state : &mut ModelState, changed_places : &HashSet<usize>) -> (HashSet<usize>, HashSet<usize>) {
+        let mut pers = new_state.enabled_clocks();
+        let mut newen : HashSet<usize> = HashSet::new();
         for place_index in changed_places {
             let place : &PetriPlace = &self.places[*place_index];
             for transi_index in place.get_out_transitions() {
-                pers.disable(transi_index);
+                new_state.disable_clock(transi_index);
+                pers.remove(&transi_index);
                 let transi : &PetriTransition = &self.transitions[transi_index];
-                if transi.is_enabled(new_marking) {
-                    newen.enable(transi_index);
+                if transi.is_enabled(new_state) {
+                    newen.insert(transi_index);
                 }
             }
         }
         (pers, newen)
     }
 
-    pub fn fire(&self, state : &PetriState, action : usize) -> (PetriState, ActionSet) {
-        let mut next_state = state.clone();
-        next_state.firing_function.step_to_next_action();
+    pub fn fire(&self, mut state : ModelState, action : usize) -> (ModelState, HashSet<usize>, HashSet<usize>) {
         let transi = &self.transitions[action];
         let mut changed_places : HashSet<usize> = HashSet::new();
         for edge in transi.input_edges.iter() {
-            next_state.marking.unmark(edge.node_from(), edge.weight);
+            state.unmark(edge.node_from(), edge.weight);
             changed_places.insert(edge.node_from());
         }
         for edge in transi.output_edges.iter() {
-            next_state.marking.mark(edge.node_to(), edge.weight);
+            state.mark(edge.node_to(), edge.weight);
             changed_places.insert(edge.node_to());
         }
-        let (newen, pers) = self.compute_newen_pers(&next_state.marking, &changed_places, &state.actions);
-        next_state.new_actions(&newen | &pers);
-        (next_state, newen)
+        let (newen, pers) = self.compute_new_actions(&mut state, &changed_places);
+        (state, newen, pers)
     }
 
 }
 
 impl Model for PetriNet {
-    type State = PetriState;
-    type Action = usize;
 
-    fn next(&self, state : Self::State, action : Self::Action) -> (Option<Self::State>, Vec<Self::Action>) {
-        let (new_state, _) = self.fire(&state, action);
-        let actions = new_state.actions.get_actions();
+    fn next(&self, state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>) {
+        let (mut new_state, _, _) = self.fire(state, action);
+        let actions: HashSet<usize> = self.actions_available(&new_state);
+        if actions.is_empty() && self.available_delay(&new_state).is_zero() {
+            new_state.deadlocked = true;
+        }
         (Some(new_state), actions)
     }
 
-    fn actions_available(&self, state : &Self::State) -> Vec<Self::Action> {
-        Vec::new()
+    fn actions_available(&self, state : &ModelState) -> HashSet<usize> {
+        state.clocks.iter().enumerate().filter_map(|(i,c)| {
+            if c.is_enabled() && self.transitions[i].interval.contains(*c) {
+                Some(i)
+            } else {
+                None
+            }
+        }).collect()
     }
 
-    fn available_delay(&self, state : &Self::State) -> ClockValue {
-        ClockValue(0.0)
+    fn available_delay(&self, state : &ModelState) -> ClockValue {
+        let m = state.clocks.iter().enumerate().map(|(i,c)| {
+            (ClockValue::from(self.transitions[i].interval.1) - *c).0
+        }).reduce(f64::min);
+        if m.is_none() {
+            ClockValue::zero()
+        } else {
+            ClockValue(m.unwrap())
+        }
     }
 
-    fn delay(&self, mut state : Self::State, dt : ClockValue) -> Option<Self::State> {
-        state.firing_function.step(dt);
+    fn delay(&self, mut state : ModelState, dt : ClockValue) -> Option<ModelState> {
+        state.step(dt);
         Some(state)
     }
 
     fn get_meta() -> ModelMeta {
         ModelMeta {
-            name : lbl("Timed Petri Net"),
+            name : lbl("TimedPetriNet"),
             characteristics : TIMED | CONTROLLABLE,
             solutions : REACHABILITY | SAFETY,
-            translations : vec![
-                lbl("Class Graph"),
-                lbl("Timed-Arcs Petri Net"),
-                lbl("NTA"),
-                lbl("Petri Net"),
-            ]
         }
     }
 

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use nalgebra::DVector;
 
 use crate::verification::Verifiable;
@@ -61,7 +63,7 @@ impl ModelState {
         self.discrete[id] > 0
     }
 
-    pub fn enabled_clocks(&self) -> Vec<usize> {
+    pub fn enabled_clocks(&self) -> HashSet<usize> {
         let all_clocks = self.clocks.data.as_vec().to_vec();
         all_clocks.iter().enumerate().filter_map(|(i,c)| {
             if c.is_disabled() { None }
@@ -71,6 +73,18 @@ impl ModelState {
 
     pub fn covers(&self, marking : DVector<i32>) -> bool {
         self.discrete >= marking
+    }
+
+    pub fn tokens(&self, var : usize) -> i32 {
+        self.discrete[var]
+    }
+
+    pub fn mark(&mut self, var : usize, tokens : i32) {
+        self.discrete[var] += tokens
+    }
+
+    pub fn unmark(&mut self, var : usize, tokens : i32) {
+        self.discrete[var] -= tokens
     }
 
 }
