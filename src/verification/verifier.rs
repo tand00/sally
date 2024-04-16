@@ -67,6 +67,9 @@ pub enum VerificationBound {
 
 pub trait Verifiable : Hash {
     fn evaluate_object(&self, id : usize) -> i32;
+    fn evaluate_clock(&self, _ : usize) -> f64 {
+        f64::NAN
+    }
     fn is_deadlocked(&self) -> bool;
 }
 

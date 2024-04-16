@@ -194,80 +194,101 @@ impl One for TimeInterval {
     }
 }
 
+// Wrapper for f64 to implement extern traits
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
-pub struct TimeInstant(pub f64);
+pub struct ClockValue(pub f64);
 
-impl Add for TimeInstant {
-    type Output = TimeInstant;
+impl ClockValue {
+
+    pub fn infinity() -> Self {
+        ClockValue(f64::INFINITY)
+    }
+
+    pub fn disabled() -> Self {
+        ClockValue(f64::NAN)
+    }
+
+    pub fn is_infinite(&self) -> bool {
+        self.0.is_infinite()
+    }
+
+    pub fn is_disabled(&self) -> bool {
+        self.0.is_nan()
+    }
+
+}
+
+impl Add for ClockValue {
+    type Output = ClockValue;
     fn add(self, rhs: Self) -> Self::Output {
-        TimeInstant(self.0 + rhs.0)
+        ClockValue(self.0 + rhs.0)
     }
 }
 
-impl AddAssign for TimeInstant {
+impl AddAssign for ClockValue {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs
     }
 }
 
-impl Neg for TimeInstant {
-    type Output = TimeInstant;
+impl Neg for ClockValue {
+    type Output = ClockValue;
     fn neg(self) -> Self::Output {
-        TimeInstant(-self.0)
+        ClockValue(-self.0)
     }
 }
 
-impl Sub for TimeInstant {
-    type Output = TimeInstant;
+impl Sub for ClockValue {
+    type Output = ClockValue;
     fn sub(self, rhs: Self) -> Self::Output {
         self + (-rhs)
     }
 }
 
-impl SubAssign for TimeInstant {
+impl SubAssign for ClockValue {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs
     }
 }
 
-impl Mul for TimeInstant {
-    type Output = TimeInstant;
+impl Mul for ClockValue {
+    type Output = ClockValue;
     fn mul(self, rhs: Self) -> Self::Output {
-        TimeInstant(self.0 * rhs.0)
+        ClockValue(self.0 * rhs.0)
     }
 }
 
-impl MulAssign for TimeInstant {
+impl MulAssign for ClockValue {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs
     }
 }
 
-impl Zero for TimeInstant {
+impl Zero for ClockValue {
     fn zero() -> Self {
-        TimeInstant(f64::zero())
+        ClockValue(f64::zero())
     }
     fn is_zero(&self) -> bool {
         self.0.is_zero()
     }
 }
 
-impl One for TimeInstant {
+impl One for ClockValue {
     fn one() -> Self {
-        TimeInstant(f64::one())
+        ClockValue(f64::one())
     }
     fn is_one(&self) -> bool {
         self.0.is_one()
     }
 }
 
-impl fmt::Display for TimeInstant {
+impl fmt::Display for ClockValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl Hash for TimeInstant {
+impl Hash for ClockValue {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.to_bits().hash(state)
     }

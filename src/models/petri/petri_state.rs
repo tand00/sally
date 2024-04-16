@@ -6,17 +6,17 @@ use super::PetriMarking;
 use crate::computation::DeltaList;
 use crate::computation::ActionSet;
 use crate::verification::Verifiable;
-use crate::models::time::TimeInstant;
+use crate::models::time::ClockValue;
 
 #[derive(Clone, Hash)]
 pub struct FiringFunction {
-    timings: DeltaList<TimeInstant>
+    timings: DeltaList<ClockValue>
 }
 impl FiringFunction {
 
     pub fn new() -> Self {
         FiringFunction {
-            timings : DeltaList::new(TimeInstant::zero())        
+            timings : DeltaList::new(ClockValue::zero())        
         }
     }
 
@@ -24,11 +24,11 @@ impl FiringFunction {
         self.timings.index_min()
     }
 
-    pub fn min_time(&self) -> TimeInstant {
+    pub fn min_time(&self) -> ClockValue {
         self.timings.min_value()
     }
 
-    pub fn step(&mut self, dt : TimeInstant) {
+    pub fn step(&mut self, dt : ClockValue) {
         self.timings.delta(dt)
     }
 
@@ -36,11 +36,11 @@ impl FiringFunction {
         self.step(self.timings.min_value())
     }
 
-    pub fn timing(&self, action : usize) -> TimeInstant{
+    pub fn timing(&self, action : usize) -> ClockValue{
         self.timings.at(action)
     }
 
-    pub fn set_timing(&mut self, action : usize, timing : TimeInstant) {
+    pub fn set_timing(&mut self, action : usize, timing : ClockValue) {
         self.timings.push(action, timing);
     }
 

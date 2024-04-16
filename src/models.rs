@@ -2,8 +2,10 @@ mod label;
 mod node;
 mod edge;
 mod digraph;
+mod model_state;
 
 pub use label::{lbl, Label};
+pub use model_state::ModelState;
 pub use node::Node;
 pub use edge::Edge;
 pub use digraph::Digraph;
@@ -18,7 +20,7 @@ pub mod translation;
 
 use crate::verification::decidable_solutions::DecidableSolution;
 
-use self::{model_characteristics::*, node::SimpleNode, time::TimeInstant};
+use self::{model_characteristics::*, node::SimpleNode, time::ClockValue};
 
 pub mod model_characteristics {
     use crate::flag;
@@ -59,11 +61,17 @@ pub trait Model {
 
     fn actions_available(&self, state : &Self::State) -> Vec<Self::Action>;
 
-    fn available_delay(&self, state : &Self::State) -> TimeInstant {
-        TimeInstant::zero()
+    fn available_delay(&self, state : &Self::State) -> ClockValue {
+        ClockValue::zero()
     }
 
-    fn delay(&self, state : Self::State, dt : TimeInstant) -> Option<Self::State> {
+    fn n_vars(&self) -> usize;
+    
+    fn n_clocks(&self) -> usize {
+        0
+    }
+
+    fn delay(&self, state : Self::State, dt : ClockValue) -> Option<Self::State> {
         None
     }
 

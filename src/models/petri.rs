@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, fmt};
 
-use super::{lbl, model_characteristics::*, time::TimeInstant, Label, Model, ModelMeta, Node};
+use super::{lbl, model_characteristics::*, time::ClockValue, Label, Model, ModelMeta, Node};
 use crate::{computation::ActionSet, verification::decidable_solutions::{REACHABILITY, SAFETY}};
 
 mod petri_place;
@@ -112,11 +112,11 @@ impl Model for PetriNet {
         Vec::new()
     }
 
-    fn available_delay(&self, state : &Self::State) -> TimeInstant {
-        TimeInstant(0.0)
+    fn available_delay(&self, state : &Self::State) -> ClockValue {
+        ClockValue(0.0)
     }
 
-    fn delay(&self, mut state : Self::State, dt : TimeInstant) -> Option<Self::State> {
+    fn delay(&self, mut state : Self::State, dt : ClockValue) -> Option<Self::State> {
         state.firing_function.step(dt);
         Some(state)
     }
@@ -133,6 +133,14 @@ impl Model for PetriNet {
                 lbl("Petri Net"),
             ]
         }
+    }
+
+    fn n_vars(&self) -> usize {
+        self.places.len()
+    }
+
+    fn n_clocks(&self) -> usize {
+        self.transitions.len()
     }
 
 }
