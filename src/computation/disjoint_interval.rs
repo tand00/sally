@@ -2,7 +2,8 @@ use std::{fmt::Display, ops::{AddAssign, Sub}};
 
 use num_traits::Zero;
 
-pub struct DisjointInterval<T> {
+#[derive(Clone)]
+pub struct DisjointInterval<T : Clone> {
     data : Vec<(T,T)>
 }
 
@@ -106,9 +107,54 @@ impl<T : Clone + Zero + AddAssign + PartialOrd + Sub<Output = T>> DisjointInterv
         }
     }
 
+    pub fn intersects(&self, other : &Self) -> Self {
+        let mut res = Self::new();
+        let mut this_index = 0;
+        let mut other_index = 0;
+        while this_index < self.data.len() && other_index < other.data.len() {
+            let interv = &self.data[this_index];
+            let other_interv = &other.data[other_index];
+            if (other_interv.0 <= interv.1) && (other_interv.1 >= interv.0) {
+                let lower = if other_interv.0 > interv.0 {
+                    other_interv.0.clone()
+                } else {
+                    interv.0.clone()
+                };
+                let upper = if other_interv.1 < interv.1 {
+                    other_interv.1.clone()
+                } else {
+                    interv.1.clone()
+                };
+                res.add_interval(lower, upper);
+            }
+            if other_interv.1 > interv.1 {
+                this_index += 1;
+            } else {
+                other_index += 1;
+            }
+        }
+        res
+    }
+
+    pub fn intersection(lhs : &Self, rhs : &Self) -> Self {
+        lhs.intersects(rhs)
+    }
+
+    pub fn union(lhs : &Self, rhs : &Self) -> Self {
+        let mut res = lhs.clone();
+        for interv in rhs.data.iter() {
+            res.add_interval(interv.0.clone(), interv.1.clone());
+        }
+        res
+    }
+
+    pub fn contains_other(&self, other : &Self) -> bool {
+        self.intersects(other).len() == other.len()
+    }
+
 }
 
-impl<T : ToString> Display for DisjointInterval<T> {
+impl<T : ToString + Clone> Display for DisjointInterval<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut res = String::new();
         for (a,b) in self.data.iter() {

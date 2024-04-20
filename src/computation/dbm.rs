@@ -2,10 +2,11 @@ use std::{cmp::min, ops::{Index, IndexMut}};
 
 use nalgebra::DMatrix;
 use num_traits::{Bounded, Zero};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-use crate::models::time::{TimeBound, TimeInterval};
+use crate::models::time::{ClockValue, TimeBound, TimeInterval};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct DBM {
     vars : usize,
     constraints : DMatrix<TimeBound>
@@ -147,6 +148,20 @@ impl DBM {
 
     pub fn is_empty(&self) -> bool {
         self.constraints[(0,0)] < TimeBound::zero()
+    }
+
+    pub fn delta(&mut self, delta : TimeBound) {
+        for i in 1..(self.vars + 1) {
+            self.constraints[(i,0)] += delta;
+            self.constraints[(0,i)] -= delta;
+        }
+    }
+
+    pub fn closure(&self) -> DBM {
+        let mut res = self.clone();
+        let max_delta = self.constraints.column(0).iter().min().unwrap().clone();
+        
+        res
     }
 
 }

@@ -1,5 +1,7 @@
 use std::{collections::{hash_map::DefaultHasher, HashSet}, hash::{Hash, Hasher}, ops::Not};
 
+use crate::models::time::ClockValue;
+
 use super::{verifier::Verifiable, EvaluationState, VerificationBound, VerificationStatus};
 use VerificationStatus::*;
 
@@ -15,6 +17,7 @@ use PropositionType::*;
 pub enum Expr {
     Object(usize),
     Constant(i32),
+    ClockComparison(PropositionType, usize, i32),
     Plus(Box<Expr>, Box<Expr>),
     Minus(Box<Expr>, Box<Expr>),
     Multiply(Box<Expr>, Box<Expr>),
@@ -29,6 +32,14 @@ impl Expr {
         match self {
             Constant(i) => *i,
             Object(id) => state.evaluate_object(*id),
+            ClockComparison(prop_type, clock, value) => match prop_type {
+                EQ => (state.evaluate_clock(*clock) == (*value as f64)) as i32,
+                NE => (state.evaluate_clock(*clock) != (*value as f64)) as i32,
+                LE => (state.evaluate_clock(*clock) <= (*value as f64)) as i32,
+                GE => (state.evaluate_clock(*clock) >= (*value as f64)) as i32,
+                LS => (state.evaluate_clock(*clock) < (*value as f64)) as i32,
+                GS => (state.evaluate_clock(*clock) > (*value as f64)) as i32,
+            }
             Plus(e1, e2) => e1.evaluate(state) + e2.evaluate(state),
             Minus(e1, e2) => e1.evaluate(state) - e2.evaluate(state),
             Multiply(e1, e2) => e1.evaluate(state) * e2.evaluate(state),

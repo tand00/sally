@@ -2,70 +2,44 @@ pub mod models;
 pub mod computation;
 pub mod game;
 pub mod verification;
+pub mod solution;
 
-use computation::{DisjointInterval, DBM};
-use models::lbl;
-use models::time::{TimeInterval, TimeBound::*};
-use models::petri;
-
+use crate::models::class_graph::ClassGraph;
 use crate::models::model_solving_graph::ModelSolvingGraph;
 use crate::models::petri::PetriNet;
+use crate::models::translation::PetriClassGraphTranslation;
 use crate::models::Model;
+use crate::solution::ClassGraphReachabilitySynthesis;
 
 //use models::class_graph::*;
 
 fn main() {
-    /*let i0 = TimeInterval(Large(3), Infinite);
-    let i1 = TimeInterval(Strict(3), Strict(5));
-    let i2 = TimeInterval(MinusInfinite, Large(4));
+    println!(" [#] Sally Model Checker - v.1.0");
+    println!(" -> Models translation");
+    println!(" -> Analytic solutions");
+    println!(" -> Statistical Model Checking");
+    println!(" -> Discrete verification");
+    println!("");
 
-    println!("{i0}");
-    println!("{i1}");
-    println!("{i2}");
+    println!(" [.] Building Model Solving Graph...");
+    let solver = build_solver();
+    println!(" [+] Models loaded : \t[{}]", solver.models.len());
+    println!(" [+] Solutions : \t[{}]", solver.translations.len());
+    println!(" [+] Translations : \t[{}]", solver.solutions.len());
+    println!("");
 
-    let t0 = petri::PetriTransition::new(
-        lbl("t0"),
-        vec![lbl("a")],
-        vec![lbl("b")],
-        i0
-    );
-    let t1 = petri::PetriTransition::new(
-        lbl("t1"),
-        vec![lbl("a")],
-        vec![lbl("c")],
-        i1
-    );
+    println!(" [.] Starting verification server...");
+    println!(" [.] Starting web server...");
+    println!(" [+] Ready to rock : http://127.0.0.1:7799");
+    println!("");
+}
 
-    let place_a = petri::PetriPlace::new(lbl("a"));
-    let place_b = petri::PetriPlace::new(lbl("b"));
-
-    let model = petri::PetriNet::new(
-        vec![place_a, place_b], 
-        vec![t0, t1]);
-
-    println!("{}", model);
-
-    let mut s = ClassGraph {
-        classes: vec![
-            ClassGraphClass { sub_states: vec![lbl("a"),lbl("b")], domain: HashMap::new() },
-            ClassGraphClass { sub_states: vec![lbl("a"),lbl("b")], domain: HashMap::new() },
-        ],
-        transitions: vec![
-            ClassGraphTransition { interval: TimeInterval(Large(0), Infinite), from:  }
-        ],
-        initial_states: vec![lbl("a")],
-    };
-    let c = s.compile();
-    //s.states = Vec::new();
-    s.classes = Vec::new();*/
-    let dbm1 = DBM::new(4);
-    let dbm2 = DBM::new(4);
-    let dbm3 = DBM::empty(4);
-    println!("{}", dbm1.contains(&dbm2));
-    println!("{}", dbm1.contains(&dbm3));
-    println!("{}", dbm3.contains(&dbm2));
-
+fn build_solver() -> ModelSolvingGraph {
     let mut solver = ModelSolvingGraph::new();
     solver.register_model(PetriNet::get_meta());
-    solver.compute_translations();
+    solver.register_model(ClassGraph::get_meta());
+    solver.register_translation(Box::new(PetriClassGraphTranslation::new()));
+    solver.register_solution(Box::new(ClassGraphReachabilitySynthesis::new()));
+    solver.compile();
+    solver
 }

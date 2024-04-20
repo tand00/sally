@@ -1,21 +1,15 @@
 use std::{collections::{HashMap, HashSet}, fmt};
 
-use super::{lbl, model_characteristics::*, time::ClockValue, Label, Model, ModelMeta, ModelState, Node};
-use crate::verification::decidable_solutions::{REACHABILITY, SAFETY};
+use super::{lbl, model_characteristics::*, time::ClockValue, translation, Label, Model, ModelMeta, ModelState, Node};
 
 mod petri_place;
 mod petri_transition;
-mod petri_marking;
-mod petri_state;
-mod petri_class;
 
 use num_traits::Zero;
 pub use petri_place::PetriPlace;
 pub use petri_transition::PetriTransition;
-pub use petri_marking::PetriMarking;
-pub use petri_state::{PetriState, FiringFunction};
-pub use petri_class::PetriClass;
 
+#[derive(Clone)]
 pub struct PetriNet {
     pub places: Vec<PetriPlace>,
     pub transitions: Vec<PetriTransition>,
@@ -26,13 +20,15 @@ pub struct PetriNet {
 impl PetriNet {
 
     pub fn new(places: Vec<PetriPlace>, transitions : Vec<PetriTransition>) -> Self {
+        let mut transitions = transitions;
         let mut places_dic : HashMap<Label, usize> = HashMap::new();
         let mut transitions_dic : HashMap<Label, usize> = HashMap::new();
         for (key, place) in places.iter().enumerate() {
             places_dic.insert(place.get_label(), key);
         }
-        for (key, transi) in transitions.iter().enumerate() {
+        for (key, transi) in transitions.iter_mut().enumerate() {
             transitions_dic.insert(transi.get_label(), key);
+            transi.create_edges(key, &places_dic);
         }
         PetriNet { places, transitions, places_dic, transitions_dic }
     }
@@ -133,9 +129,9 @@ impl Model for PetriNet {
 
     fn get_meta() -> ModelMeta {
         ModelMeta {
-            name : lbl("TimedPetriNet"),
+            name : lbl("TimePetriNet"),
+            description : String::from("Time Petri net, every transition is associated with a firing interval."),
             characteristics : TIMED | CONTROLLABLE,
-            solutions : REACHABILITY | SAFETY,
         }
     }
 

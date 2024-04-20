@@ -1,8 +1,8 @@
-use std::{cmp::{max, min}, fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}, path::Display};
+use std::{cmp::{max, min}, fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}, path::Display};
 use num_traits::{Bounded, One, Zero};
 
 /// Integer / Infinite time bound, represents a "</<=" integer constraint
-#[derive(Debug,Copy,Clone,PartialEq,Eq,Ord)]
+#[derive(Debug,Copy,Clone,PartialEq,Eq,Ord,Hash)]
 pub enum TimeBound {
     Strict(i32),
     Large(i32),
@@ -94,6 +94,17 @@ impl Mul for TimeBound {
 impl MulAssign for TimeBound {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs
+    }
+}
+
+impl Not for TimeBound {
+    type Output = Self;
+    fn not(self) -> Self::Output {
+        match self {
+            Large(x) => Strict(x),
+            Strict(x) => Large(x),
+            _ => self
+        }
     }
 }
 

@@ -4,8 +4,6 @@ use std::fmt;
 use crate::models::time::TimeInterval;
 use crate::models::{Edge, Label, ModelState, Node};
 
-use super::PetriMarking;
-
 #[derive(Clone)]
 pub struct PetriTransition {
     pub label: Label,
@@ -13,7 +11,8 @@ pub struct PetriTransition {
     pub to: Vec<Label>,
     pub interval: TimeInterval,
     pub input_edges: Vec<Edge<i32>>,
-    pub output_edges: Vec<Edge<i32>>
+    pub output_edges: Vec<Edge<i32>>,
+    pub controllable : bool
 }
 
 impl Node for PetriTransition {
@@ -28,13 +27,19 @@ impl PetriTransition {
 
     pub fn new(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
-            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new()
+            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : true
         }
     }
 
     pub fn new_untimed(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
         PetriTransition {
-            label, from, to, interval: TimeInterval::full(), input_edges: Vec::new(), output_edges: Vec::new()
+            label, from, to, interval: TimeInterval::full(), input_edges: Vec::new(), output_edges: Vec::new(), controllable : true
+        }
+    }
+
+    pub fn new_uncontrollable(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
+        PetriTransition {
+            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : false
         }
     }
 
@@ -46,8 +51,7 @@ impl PetriTransition {
         self.output_edges.iter().collect()
     }
 
-    pub fn create_edges(&mut self, places_dic : HashMap<Label, usize>, transitions_dic : HashMap<Label, usize>) {
-        let this_index = transitions_dic[&self.label];
+    pub fn create_edges(&mut self, this_index : usize, places_dic : &HashMap<Label, usize>) {
         for place_label in self.from.iter() {
             let mut edge = Edge::new(place_label.clone(), self.get_label());
             edge.set_node_to(this_index);

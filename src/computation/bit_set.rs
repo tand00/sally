@@ -2,26 +2,27 @@ use std::ops::{BitAnd, BitOr, Not};
 use std::cmp::min;
 
 
-// Each action cell is a 64bit int, on 6bit processors should take the same time as bytes
-const ACTION_CELL_SIZE : usize = 64; 
+// Each cell is a 64bit int, on 64bit processors should take the same time as bytes
+const CELL_SIZE : usize = 64; 
 
+// Structure for fast operations on boolean sets : And, Or, Not... Complexity O(n) to retrieve indexs after computation
 #[derive(Clone)]
-pub struct ActionSet {
+pub struct BitSet {
     enabled: Vec<u64>
 }
-impl ActionSet {
+impl BitSet {
 
     pub fn new() -> Self {
-        ActionSet { enabled: Vec::new() }
+        BitSet { enabled: Vec::new() }
     }
 
     pub fn from(enabled : Vec<u64>) -> Self {
-        ActionSet { enabled }
+        BitSet { enabled }
     }
 
     pub fn action_byte(action : usize) -> (u64, usize) {
-        let a_byte = 1 << (action % ACTION_CELL_SIZE);
-        let byte_index = action / ACTION_CELL_SIZE;
+        let a_byte = 1 << (action % CELL_SIZE);
+        let byte_index = action / CELL_SIZE;
         (a_byte, byte_index)
     }
 
@@ -34,8 +35,8 @@ impl ActionSet {
     }
 
     pub fn disable(&mut self, action : usize) {
-        let new_byte = !(1 << (action % ACTION_CELL_SIZE));
-        let byte_index = action / ACTION_CELL_SIZE;
+        let new_byte = !(1 << (action % CELL_SIZE));
+        let byte_index = action / CELL_SIZE;
         if byte_index >= self.enabled.len() {
             self.enabled.resize(byte_index + 1, 0);
         }
@@ -51,7 +52,7 @@ impl ActionSet {
         }
     }
 
-    pub fn merge(&mut self, other : &ActionSet) {
+    pub fn merge(&mut self, other : &BitSet) {
         if self.enabled.len() < other.enabled.len() {
             self.enabled.resize(other.enabled.len(), 0);
         }
@@ -67,7 +68,7 @@ impl ActionSet {
             let mut i : usize = 0;
             while rem > 0 {
                 if rem % 2 == 1 {
-                    res.push(b_i * ACTION_CELL_SIZE + i);
+                    res.push(b_i * CELL_SIZE + i);
                 }
                 i += 1;
                 rem >>= 1;
@@ -76,8 +77,8 @@ impl ActionSet {
         res
     }
 
-    pub fn get_newen(old : &ActionSet, new : &ActionSet) -> ActionSet {
-        let mut res = ActionSet::new();
+    pub fn get_newen(old : &BitSet, new : &BitSet) -> BitSet {
+        let mut res = BitSet::new();
         let mut i : usize = 0;
         while i < new.enabled.len() {
             if old.enabled.len() <= i {
@@ -102,8 +103,8 @@ impl ActionSet {
 
 }
 
-impl BitOr for ActionSet {
-    type Output = ActionSet;
+impl BitOr for BitSet {
+    type Output = BitSet;
     
     fn bitor(self, rhs: Self) -> Self::Output {
         let mut res = self.clone();
@@ -113,8 +114,8 @@ impl BitOr for ActionSet {
     
 }
 
-impl BitOr for &ActionSet {
-    type Output = ActionSet;
+impl BitOr for &BitSet {
+    type Output = BitSet;
     
     fn bitor(self, rhs: Self) -> Self::Output {
         let mut res = self.clone();
@@ -124,8 +125,8 @@ impl BitOr for &ActionSet {
     
 }
 
-impl BitAnd for ActionSet {
-    type Output = ActionSet;
+impl BitAnd for BitSet {
+    type Output = BitSet;
     
     fn bitand(self, rhs: Self) -> Self::Output {
         let len = min(self.enabled.len(), rhs.enabled.len());
@@ -134,13 +135,13 @@ impl BitAnd for ActionSet {
             let byte = self.enabled[i] & rhs.enabled[i];
             res.push(byte);
         }
-        ActionSet::from(res)
+        BitSet::from(res)
     }
     
 }
 
-impl BitAnd for &ActionSet {
-    type Output = ActionSet;
+impl BitAnd for &BitSet {
+    type Output = BitSet;
     
     fn bitand(self, rhs: Self) -> Self::Output {
         let len = min(self.enabled.len(), rhs.enabled.len());
@@ -149,31 +150,31 @@ impl BitAnd for &ActionSet {
             let byte = self.enabled[i] & rhs.enabled[i];
             res.push(byte);
         }
-        ActionSet::from(res)
+        BitSet::from(res)
     }
     
 }
 
-impl Not for ActionSet {
-    type Output = ActionSet;
+impl Not for BitSet {
+    type Output = BitSet;
 
     fn not(self) -> Self::Output {
         let mut res : Vec<u64> = Vec::new();
         for i in self.enabled {
             res.push(!i);
         }
-        ActionSet::from(res)
+        BitSet::from(res)
     }
 }
 
-impl Not for &ActionSet {
-    type Output = ActionSet;
+impl Not for &BitSet {
+    type Output = BitSet;
 
     fn not(self) -> Self::Output {
         let mut res : Vec<u64> = Vec::new();
         for i in self.enabled.iter() {
             res.push(!(*i));
         }
-        ActionSet::from(res)
+        BitSet::from(res)
     }
 }

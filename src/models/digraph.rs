@@ -159,24 +159,6 @@ impl<T,U> Digraph<T,U> {
 
 }
 
-/*impl<T,U> Model for Digraph<T,U> {
-
-    type State = usize;
-    type Action = usize;
-
-    fn next(&self, state : Self::State, action : Self::Action) -> (Option<Self::State>, Vec<usize>) {
-        let node = &self.nodes[state];
-        let edge = &self.edges[action];
-        if !node.out_edges.contains(&action) || !edge.has_target() {
-            return (None, Vec::new());
-        }
-        let new_state = edge.node_to();
-        let actions = self.nodes[new_state].out_edges.clone();
-        (Some(new_state), actions)
-    }
-
-}*/
-
 impl Digraph<usize, TimeBound> {
 
     pub fn from_dbm(matrix : DBM) -> Self {
