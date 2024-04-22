@@ -13,7 +13,6 @@ pub struct PetriTransition {
     pub input_edges: Vec<Edge<i32>>,
     pub output_edges: Vec<Edge<i32>>,
     pub controllable : bool,
-    pub index : usize,
 }
 
 impl Node for PetriTransition {
@@ -28,19 +27,19 @@ impl PetriTransition {
 
     pub fn new(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
-            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : true, index : 0
+            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : true,
         }
     }
 
     pub fn new_untimed(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
         PetriTransition {
-            label, from, to, interval: TimeInterval::full(), input_edges: Vec::new(), output_edges: Vec::new(), controllable : true, index : 0
+            label, from, to, interval: TimeInterval::full(), input_edges: Vec::new(), output_edges: Vec::new(), controllable : true,
         }
     }
 
     pub fn new_uncontrollable(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
-            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : false, index : 0
+            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : false,
         }
     }
 

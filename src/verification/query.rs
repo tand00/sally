@@ -47,6 +47,18 @@ impl Expr {
         }
     }
 
+    pub fn contains_clock_proposition(&self) -> bool {
+        match self {
+            Plus(e1,e2) | 
+            Minus(e1, e2) | 
+            Multiply(e1,e2)
+                => e1.contains_clock_proposition() || e2.contains_clock_proposition(),
+            Negative(e) => e.contains_clock_proposition(),
+            ClockComparison(_,_,_) => true,
+            _ => false,
+        }
+    }
+
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -90,6 +102,20 @@ impl Condition {
             Implies(c1, c2)
                 => c1.is_pure() && c2.is_pure(),
             _ => true
+        }
+    }
+
+    pub fn contains_clock_proposition(&self) -> bool {
+        match self {
+            Next(c) | Not(c) => c.contains_clock_proposition(),
+            And(c1,c2) | 
+            Or(c1, c2) | 
+            Until(c1, c2) |
+            Implies(c1, c2)
+                => c1.contains_clock_proposition() || c2.contains_clock_proposition(),
+            Evaluation(e) => e.contains_clock_proposition(),
+            Proposition(_, e1, e2) => e1.contains_clock_proposition() || e2.contains_clock_proposition(),
+            _ => false
         }
     }
 
@@ -376,9 +402,6 @@ impl Query {
     }
 
     pub fn get_as_quantifier(&self, quantifier : Quantifier) -> Query {
-        if self.logic == RawCondition {
-            panic!("Can't convert RawCondition to A or E !");
-        }
         if self.quantifier == quantifier {
             return Query::new(quantifier, self.logic, self.condition.clone());
         }

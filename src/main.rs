@@ -31,10 +31,7 @@ fn main() {
     println!(" [+] Translations : \t[{}]", solver.solutions.len());
     println!("");
 
-    println!(" [*] Starting verification server...");
-    println!(" [*] Starting web server...");
-    println!(" [+] Ready to rock : http://127.0.0.1:7799");
-    println!("");
+    todo!("Bah faire la suite quoi mdr");
 }
 
 fn build_solver() -> ModelSolvingGraph {
