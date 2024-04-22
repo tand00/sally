@@ -16,7 +16,7 @@ impl ClassGraphReachabilitySynthesis {
 
 impl Solution for ClassGraphReachabilitySynthesis {
 
-    fn get_meta() -> SolutionMeta {
+    fn get_meta(&self) -> SolutionMeta {
         SolutionMeta {
             name : lbl("ClassGraphReachabilitySynthesis"),
             description : String::from("Compute the reachability game strategy for a two players class graph"),

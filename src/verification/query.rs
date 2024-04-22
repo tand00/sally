@@ -216,6 +216,13 @@ impl Condition {
 
 }
 
+impl Not for Condition {
+    type Output = Self;
+    fn not(self) -> Self::Output {
+        Not(Box::new(self))
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Quantifier {
     Exists, ForAll
@@ -356,6 +363,26 @@ impl Query {
         let mut s = DefaultHasher::new();
         self.pending_conditions.hash(&mut s);
         s.finish()
+    }
+
+    pub fn get_as_logic(&self, logic : StateLogic) -> Query {
+        if self.logic == RawCondition {
+            panic!("Can't convert RawCondition to F or G !");
+        }
+        if self.logic == logic {
+            return Query::new(self.quantifier, logic, self.condition.clone());
+        }
+        return Query::new(!self.quantifier, logic, !self.condition.clone());
+    }
+
+    pub fn get_as_quantifier(&self, quantifier : Quantifier) -> Query {
+        if self.logic == RawCondition {
+            panic!("Can't convert RawCondition to A or E !");
+        }
+        if self.quantifier == quantifier {
+            return Query::new(quantifier, self.logic, self.condition.clone());
+        }
+        return Query::new(quantifier, !self.logic, !self.condition.clone());
     }
 
 }

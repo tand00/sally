@@ -20,7 +20,7 @@ impl PetriClassGraphTranslation {
 
 impl Translation for PetriClassGraphTranslation {
 
-    fn get_meta() -> TranslationMeta {
+    fn get_meta(&self) -> TranslationMeta {
         TranslationMeta {
             name : lbl("PetriClassGraphTranslation"),
             description : String::from("Computes the class graph of a Time Petri Net"),
@@ -36,7 +36,13 @@ impl Translation for PetriClassGraphTranslation {
             return false;
         }
         let petri = petri.unwrap();
-        self.class_graph = Some(ClassGraph::from(petri, initial_state));
+        let graph = ClassGraph::from(petri, initial_state);
+        
+        let mut initial_state = graph.classes[0].generate_image_state();
+        let vars = initial_state.discrete.nrows();
+        initial_state.discrete = initial_state.discrete.insert_row(vars, 0);
+        self.initial_state = initial_state;
+        self.class_graph = Some(graph);
         true
     }
 

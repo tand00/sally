@@ -1,6 +1,4 @@
-use crate::{models::*, solution::Solution, verification::query::Query};
-
-use self::translation::Translation;
+use crate::{models::*, solution::Solution, verification::query::Query, translation::Translation};
 
 pub struct ModelSolvingGraph {
     pub models : Vec<SimpleNode<ModelMeta>>,

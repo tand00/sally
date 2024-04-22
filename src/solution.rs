@@ -50,11 +50,7 @@ pub struct SolutionMeta {
 
 pub trait Solution {
 
-    fn get_meta() -> SolutionMeta where Self : Sized;
-
-    fn get_solution_meta(&self) -> SolutionMeta where Self : Sized {
-        Self::get_meta()
-    }
+    fn get_meta(&self) -> SolutionMeta;
 
     fn is_compatible(&self, model : &dyn Any, query : &Query) -> bool;
 

@@ -6,7 +6,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::models::time::{ClockValue, TimeBound, TimeInterval};
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DBM {
     vars : usize,
     constraints : DMatrix<TimeBound>
@@ -123,7 +123,7 @@ impl DBM {
     }
 
     pub fn remove_var(&mut self, var_i : usize) {
-        self.free_clock(var_i);
+        //self.free_clock(var_i);
         self.constraints = self.constraints.clone().remove_column(var_i).remove_column(var_i);
         
     }

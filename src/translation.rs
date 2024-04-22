@@ -3,7 +3,7 @@ use std::any::Any;
 
 pub use petri_class_graph::PetriClassGraphTranslation;
 
-use super::{lbl, Label, Model, ModelState};
+use crate::models::{lbl, Label, Model, ModelState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TranslationType {
@@ -32,11 +32,7 @@ pub trait Translation {
     fn get_translated(&mut self) -> (&mut dyn Any, &ModelState);
     fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelState);
 
-    fn get_meta() -> TranslationMeta where Self : Sized;
-
-    fn get_translation_meta(&self) -> TranslationMeta where Self : Sized {
-        Self::get_meta()
-    }
+    fn get_meta(&self) -> TranslationMeta;
 
     fn is_stable(&self, state : &ModelState) -> bool {
         match self.back_translate(state.clone()) {
@@ -62,12 +58,18 @@ pub struct TranslationChain {
 
 impl Translation for TranslationChain {
 
-    fn get_meta() -> TranslationMeta where Self : Sized {
+    fn get_meta(&self) -> TranslationMeta {
         TranslationMeta {
             name : lbl("TranslationChain"),
             description : String::from("Structs used to chain translations into a more complex one."),
-            input : lbl("any"),
-            output : lbl("any"),
+            input : match self.translations.first() {
+                None => lbl("any"),
+                Some(x) => x.get_meta().input
+            },
+            output : match self.translations.last() {
+                None => lbl("any"),
+                Some(x) => x.get_meta().output
+            },
             translation_type : Unspecified,
         }
     }

@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, fmt};
 
-use super::{lbl, model_characteristics::*, time::ClockValue, translation, Label, Model, ModelMeta, ModelState, Node};
+use super::{lbl, model_characteristics::*, time::ClockValue, Label, Model, ModelMeta, ModelState, Node};
 
 mod petri_place;
 mod petri_transition;
@@ -29,6 +29,7 @@ impl PetriNet {
         for (key, transi) in transitions.iter_mut().enumerate() {
             transitions_dic.insert(transi.get_label(), key);
             transi.create_edges(key, &places_dic);
+            transi.index = key;
         }
         PetriNet { places, transitions, places_dic, transitions_dic }
     }

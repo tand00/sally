@@ -18,7 +18,6 @@ pub mod petri;
 pub mod observation;
 pub mod class_graph;
 pub mod model_solving_graph;
-pub mod translation;
 
 use self::{model_characteristics::*, node::SimpleNode, time::ClockValue};
 
