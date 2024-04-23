@@ -13,7 +13,7 @@ pub use petri_transition::PetriTransition;
 pub struct PetriNet {
     pub places: Vec<PetriPlace>,
     pub transitions: Vec<PetriTransition>,
-    places_dic: HashMap<Label, usize>,
+    pub places_dic: HashMap<Label, usize>,
     transitions_dic: HashMap<Label, usize>,
 }
 
@@ -141,6 +141,13 @@ impl Model for PetriNet {
 
     fn n_clocks(&self) -> usize {
         self.transitions.len()
+    }
+
+    fn map_label_to_var(&self, var : Label) -> Option<usize> {
+        if !self.places_dic.contains_key(&var) {
+            return None;
+        }
+        Some(self.places_dic[&var])
     }
 
 }

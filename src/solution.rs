@@ -29,6 +29,7 @@ pub fn get_problem_type(quantifier : Quantifier, logic : StateLogic) -> ProblemT
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum SolverResult {
     Unsatisfied,
     BoolResult(bool),
@@ -39,7 +40,7 @@ pub enum SolverResult {
     StrategyResult,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SolutionMeta {
     pub name : Label,
     pub description : String,

@@ -14,7 +14,7 @@ pub enum TranslationType {
     CompleteOneByMany
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TranslationMeta {
     pub name : Label,
     pub description : String,

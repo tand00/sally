@@ -1,5 +1,4 @@
 mod state_class;
-use nalgebra::DVector;
 pub use state_class::StateClass;
 
 use core::panic;
@@ -18,7 +17,8 @@ const CLASS_LIMIT : usize = 4096;
 pub struct ClassGraph {
     pub classes: Vec<StateClass>,
     pub edges: Vec<Edge<usize>>,
-    pub n_clocks : usize
+    pub n_clocks : usize,
+    pub places_dic : HashMap<Label, usize>,
 }
 
 impl ClassGraph {
@@ -27,7 +27,8 @@ impl ClassGraph {
         let mut cg = ClassGraph {
             classes: Vec::new(),
             edges: Vec::new(),
-            n_clocks : p_net.n_clocks()
+            n_clocks : p_net.n_clocks(),
+            places_dic : p_net.places_dic.clone()
         };
         let mut seen : HashMap<u64, usize> = HashMap::new();
         let mut to_see : VecDeque<usize> = VecDeque::new();
@@ -198,6 +199,13 @@ impl Model for ClassGraph {
 
     fn n_clocks(&self) -> usize {
         self.n_clocks
+    }
+
+    fn map_label_to_var(&self, var : Label) -> Option<usize> {
+        if !self.places_dic.contains_key(&var) { 
+            return None;
+        }
+        Some(self.places_dic[&var])
     }
 
 }

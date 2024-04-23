@@ -83,7 +83,7 @@ impl Verifiable for StateClass {
     }
 
     fn is_deadlocked(&self) -> bool {
-        self.dbm.vars_count() == 0
+        self.dbm.vars_count() == 0 || self.dbm.is_empty() // DBM should not be empty in a state class !
     }
 
 }

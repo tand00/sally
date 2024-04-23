@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
+use std::{hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
 use super::query::*;
 
 #[derive(Clone, Copy, PartialEq, Eq)]

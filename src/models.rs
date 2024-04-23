@@ -37,7 +37,7 @@ pub mod model_characteristics {
 
 use model_characteristics::ModelCharacteristics;
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ModelMeta {
     name : Label,
     description : String,
@@ -58,6 +58,7 @@ pub trait Model : Any {
     fn actions_available(&self, state : &ModelState) -> HashSet<usize>;
 
     fn available_delay(&self, state : &ModelState) -> ClockValue {
+        let _ = state;
         ClockValue::zero()
     }
 
@@ -68,6 +69,8 @@ pub trait Model : Any {
     }
 
     fn delay(&self, state : ModelState, dt : ClockValue) -> Option<ModelState> {
+        let _ = dt;
+        let _ = state;
         None
     }
 
@@ -80,5 +83,7 @@ pub trait Model : Any {
     fn is_timed(&self) -> bool where Self : Sized {
         has_characteristic(Self::get_meta().characteristics, TIMED)
     }
+
+    fn map_label_to_var(&self, var : Label) -> Option<usize>;
 
 }

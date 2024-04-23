@@ -1,8 +1,6 @@
 use std::{collections::{hash_map::DefaultHasher, HashSet}, hash::{Hash, Hasher}, ops::Not};
 
-use crate::models::time::ClockValue;
-
-use super::{verifier::Verifiable, EvaluationState, VerificationBound, VerificationStatus};
+use super::{verifier::Verifiable, EvaluationState, VerificationStatus};
 use VerificationStatus::*;
 
 // TODO: Might be useless to include both L and G
@@ -391,7 +389,7 @@ impl Query {
         s.finish()
     }
 
-    pub fn get_as_logic(&self, logic : StateLogic) -> Query {
+    pub fn as_logic(self, logic : StateLogic) -> Query {
         if self.logic == RawCondition {
             panic!("Can't convert RawCondition to F or G !");
         }
@@ -401,7 +399,7 @@ impl Query {
         return Query::new(!self.quantifier, logic, !self.condition.clone());
     }
 
-    pub fn get_as_quantifier(&self, quantifier : Quantifier) -> Query {
+    pub fn as_quantifier(self, quantifier : Quantifier) -> Query {
         if self.quantifier == quantifier {
             return Query::new(quantifier, self.logic, self.condition.clone());
         }

@@ -1,11 +1,11 @@
-use std::{cmp::min, ops::Add};
+use std::{cmp::min, collections::HashSet, ops::Add};
 
-use nalgebra::{DMatrix, Scalar};
+use nalgebra::{DMatrix, DVector, Scalar};
 use num_traits::{Bounded, Zero};
 
 use crate::computation::DBM;
 
-use super::{node::SimpleNode, time::TimeBound, Edge, Label, Model, Node};
+use super::{lbl, node::SimpleNode, time::{ClockValue, TimeBound}, Edge, Label, Model, ModelMeta, ModelState, Node, NONE};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
 pub struct Digraph<T,U> {
@@ -176,6 +176,62 @@ impl Digraph<usize, TimeBound> {
 
     pub fn to_dbm(&self) -> DBM {
         DBM::from(self.to_matrix())
+    }
+
+}
+
+impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
+
+    fn get_meta() -> ModelMeta {
+        ModelMeta {
+            name : lbl("Digraph"),
+            description : String::from("Simple generic directed graph, whose types can be set to anything"),
+            characteristics : NONE
+        }
+    }
+
+    fn next(&self, state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>) {
+        if state.discrete.nrows() == 0 {
+            return (None, HashSet::new());
+        }
+        let index = state.discrete.argmax().0;
+        let from_node = &self.nodes[index];
+        if from_node.out_edges.contains(&action) {
+            return (None, HashSet::new());
+        }
+        let edge = &self.edges[action];
+        let node_to_index = edge.node_to();
+        let node_to = &self.nodes[node_to_index];
+        let next_discrete : DVector<i32> = DVector::from_fn(self.n_vars(), |i, _j| {
+            if i == node_to_index { 1 } else { 0 }
+        });
+        let next_actions = node_to.out_edges.iter().map(|i| *i).collect();
+        (Some(ModelState {
+            discrete : next_discrete,
+            clocks : DVector::from_element(0, ClockValue::disabled()),
+            deadlocked : node_to.out_edges.len() == 0
+        }), next_actions)
+    }
+
+    fn actions_available(&self, state : &ModelState) -> HashSet<usize> {
+        if state.discrete.nrows() == 0 {
+            return HashSet::new();
+        }
+        let index = state.discrete.argmax().0;
+        self.nodes[index].out_edges.iter().map(|i| *i).collect()
+    }
+
+    fn n_vars(&self) -> usize {
+        self.nodes.len()
+    }
+
+    fn map_label_to_var(&self, var : Label) -> Option<usize> {
+        for (i,n) in self.nodes.iter().enumerate() {
+            if n.get_label() == var {
+                return Some(i);
+            }
+        }
+        return None;
     }
 
 }
