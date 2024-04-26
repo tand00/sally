@@ -1,3 +1,5 @@
+use core::fmt;
+use std::io::{Read, Write};
 use std::{cmp::min, ops::{Index, IndexMut}};
 
 use nalgebra::DMatrix;
@@ -177,5 +179,21 @@ impl Index<(usize, usize)> for DBM {
 impl IndexMut<(usize,usize)> for DBM {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
         &mut self.constraints[index]
+    }
+}
+
+impl fmt::Display for DBM {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        /*let mut lines = Vec::new();
+        for i in 0..(self.vars + 1) {
+            let mut line_i : Vec<u8> = Vec::new();
+            for j in 0..(self.vars + 1) {
+                write!(line_i, "\t{},", self[(i,j)]);
+            }
+            let line_i = String::from_utf8(line_i).unwrap();
+            lines.push(line_i);
+        }
+        write!(f, "DBM(\n{}\n)", lines.join("\n"))*/
+        write!(f, "DBM{}", self.constraints)
     }
 }

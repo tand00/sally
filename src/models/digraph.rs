@@ -8,12 +8,12 @@ use crate::computation::DBM;
 use super::{lbl, node::SimpleNode, time::{ClockValue, TimeBound}, Edge, Label, Model, ModelMeta, ModelState, Node, NONE};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
-pub struct Digraph<T,U> {
-    pub edges : Vec<Edge<U>>,
+pub struct Digraph<T : ToString + 'static, U> {
+    pub edges : Vec<Edge<U, SimpleNode<T>, SimpleNode<T>>>,
     pub nodes : Vec<SimpleNode<T>>
 }
 
-impl<T,U> Digraph<T,U> {
+impl<T : ToString + 'static, U> Digraph<T,U> {
 
     pub fn new() -> Self {
         Digraph {
@@ -38,7 +38,7 @@ impl<T,U> Digraph<T,U> {
     }
 
     pub fn make_edge(&mut self, from : T, to : T, weight : U) 
-    where T : ToString + PartialEq
+    where T : PartialEq
     {
         let mut e = Edge::new_weighted(
             Label::new(), 
@@ -93,7 +93,7 @@ impl<T,U> Digraph<T,U> {
 
     pub fn shortest_digraph(&self) -> Self 
     where 
-        T : ToString + Clone,
+        T : Clone,
         U : Add<Output = U> + Ord + Zero + Bounded + Scalar
     {
         let distances = self.shortest_paths();
@@ -107,7 +107,7 @@ impl<T,U> Digraph<T,U> {
 
     pub fn from_matrix(elements : Vec<T>, relations : DMatrix<U>) -> Self 
     where
-        T : ToString + Clone,
+        T : Clone,
         U : Ord + Clone + Bounded + Zero
     {
         let mut graph = Self::from(elements);
@@ -135,7 +135,7 @@ impl<T,U> Digraph<T,U> {
 
     pub fn create_relations(&mut self, relations : DMatrix<U>) 
     where
-        T : ToString + Clone,
+        T : Clone,
         U : Ord + Clone + Bounded + Zero
     {
         let n_nodes = self.nodes.len();

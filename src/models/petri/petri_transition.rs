@@ -1,8 +1,12 @@
-use std::collections::HashMap;
 use std::fmt;
 
 use crate::models::time::TimeInterval;
 use crate::models::{Edge, Label, ModelState, Node};
+
+use super::PetriPlace;
+
+pub type InputEdge = Edge<i32, PetriPlace, PetriTransition>;
+pub type OutputEdge = Edge<i32, PetriTransition, PetriPlace>;
 
 #[derive(Clone)]
 pub struct PetriTransition {
@@ -10,9 +14,10 @@ pub struct PetriTransition {
     pub from: Vec<Label>,
     pub to: Vec<Label>,
     pub interval: TimeInterval,
-    pub input_edges: Vec<Edge<i32>>,
-    pub output_edges: Vec<Edge<i32>>,
+    pub input_edges: Vec<InputEdge>,
+    pub output_edges: Vec<OutputEdge>,
     pub controllable : bool,
+    pub index : usize,
 }
 
 impl Node for PetriTransition {
@@ -27,48 +32,36 @@ impl PetriTransition {
 
     pub fn new(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
-            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : true,
+            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : true, index : 0
         }
     }
 
     pub fn new_untimed(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
         PetriTransition {
-            label, from, to, interval: TimeInterval::full(), input_edges: Vec::new(), output_edges: Vec::new(), controllable : true,
+            label, from, to, interval: TimeInterval::full(), input_edges: Vec::new(), output_edges: Vec::new(), controllable : true, index : 0
         }
     }
 
     pub fn new_uncontrollable(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
-            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : false,
+            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : false, index : 0
         }
     }
 
-    pub fn get_inputs(&self) -> Vec<&Edge<i32>> {
+    pub fn get_inputs(&self) -> Vec<&InputEdge> {
         self.input_edges.iter().collect()
     }
 
-    pub fn get_outputs(&self) -> Vec<&Edge<i32>> {
+    pub fn get_outputs(&self) -> Vec<&OutputEdge> {
         self.output_edges.iter().collect()
-    }
-
-    pub fn create_edges(&mut self, this_index : usize, places_dic : &HashMap<Label, usize>) {
-        for place_label in self.from.iter() {
-            let mut edge = Edge::new(place_label.clone(), self.get_label());
-            edge.set_node_to(this_index);
-            edge.set_node_from(places_dic[place_label]);
-            self.input_edges.push(edge);
-        }
-        for place_label in self.to.iter() {
-            let mut edge = Edge::new(self.get_label(), place_label.clone());
-            edge.set_node_from(this_index);
-            edge.set_node_to(places_dic[place_label]);
-            self.output_edges.push(edge);
-        }
     }
 
     pub fn is_enabled(&self, marking : &ModelState) -> bool {
         for edge in self.input_edges.iter() {
-            if marking.tokens(edge.node_from()) < edge.weight {
+            if !edge.has_source() {
+                panic!("Every transition edge should have a source");
+            }
+            if marking.tokens(edge.ptr_node_from().borrow().index) < edge.weight {
                 return false
             }
         }

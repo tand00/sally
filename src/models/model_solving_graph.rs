@@ -4,7 +4,7 @@ pub struct ModelSolvingGraph {
     pub models : Vec<SimpleNode<ModelMeta>>,
     pub translations : Vec<Box<dyn Translation>>,
     pub solutions : Vec<Box<dyn Solution>>,
-    pub edges : Vec<Edge<usize>>,
+    pub edges : Vec<Edge<usize, usize, usize>>,
 }
 
 impl ModelSolvingGraph {

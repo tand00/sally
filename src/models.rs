@@ -1,16 +1,16 @@
 mod label;
 mod node;
 mod edge;
-mod digraph;
+//mod digraph;
 mod model_state;
 
-use std::{any::Any, collections::HashSet};
+use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc};
 
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
 pub use node::Node;
 pub use edge::Edge;
-pub use digraph::Digraph;
+//pub use digraph::Digraph;
 use num_traits::Zero;
 
 pub mod time;
@@ -20,6 +20,11 @@ pub mod class_graph;
 pub mod model_solving_graph;
 
 use self::{model_characteristics::*, node::SimpleNode, time::ClockValue};
+
+pub type ComponentPtr<T> = Rc<RefCell<T>>;
+pub fn new_ptr<T>(x : T) -> ComponentPtr<T> {
+    Rc::new(RefCell::new(x))
+}
 
 pub mod model_characteristics {
     use crate::flag;
@@ -84,6 +89,6 @@ pub trait Model : Any {
         has_characteristic(Self::get_meta().characteristics, TIMED)
     }
 
-    fn map_label_to_var(&self, var : Label) -> Option<usize>;
+    fn map_label_to_var(&self, var : &Label) -> Option<usize>;
 
 }

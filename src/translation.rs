@@ -5,7 +5,7 @@ pub use petri_class_graph::PetriClassGraphTranslation;
 
 use crate::models::{lbl, Label, Model, ModelState};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TranslationType {
     Unspecified,
     SymbolicSpace,

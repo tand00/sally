@@ -1,8 +1,8 @@
-use std::{cmp::{max, min}, fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}, path::Display};
+use std::{cmp::{max, min}, fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}};
 use num_traits::{Bounded, One, Zero};
 
 /// Integer / Infinite time bound, represents a "</<=" integer constraint
-#[derive(Debug,Copy,Clone,PartialEq,Eq,Ord,Hash)]
+#[derive(Debug,Copy,Clone,PartialEq,Eq,Hash)]
 pub enum TimeBound {
     Strict(i32),
     Large(i32),
@@ -132,6 +132,12 @@ impl PartialOrd for TimeBound {
                     Some(std::cmp::Ordering::Less)
                 }
         }
+    }
+}
+
+impl Ord for TimeBound {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 
@@ -321,7 +327,7 @@ impl fmt::Display for ClockValue {
 
 impl Hash for ClockValue {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.to_bits().hash(state)
+        ((self.0 * 100_000_000.0) as u64).hash(state)
     }
 }
 
@@ -343,8 +349,8 @@ impl fmt::Display for TimeBound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let to_print = match self {
             Infinite => "INF".to_string(),
-            Strict(i) => i.to_string() + "!",
-            Large(i) => i.to_string() + "?",
+            Strict(i) => format!("<{}", i),
+            Large(i) => format!("<={}", i),
             MinusInfinite => "-INF".to_string(),
         };
         write!(f, "{}", to_print)

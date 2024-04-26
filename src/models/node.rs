@@ -1,8 +1,16 @@
+use std::rc::Weak;
+
 use super::Label;
 
-/// Generic trait that should be implemented by all types of states
+/// Generic trait that should be implemented by all types of nodes
 pub trait Node {
     fn get_label(&self) -> Label;
+}
+
+impl Node for usize {
+    fn get_label(&self) -> Label {
+        Label::from_string(self)
+    }
 }
 
 pub struct SimpleNode<T> {
@@ -23,7 +31,7 @@ impl<T> SimpleNode<T> {
 
 }
 
-impl<T : ToString> Node for SimpleNode<T> {
+impl<T : ToString + 'static> Node for SimpleNode<T> {
     fn get_label(&self) -> Label {
         Label::from_string(self.element.to_string())
     }

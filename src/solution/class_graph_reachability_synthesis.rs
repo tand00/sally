@@ -2,9 +2,7 @@ use crate::models::{lbl, Label};
 
 use super::{Solution, SolutionMeta, SolverResult, REACHABILITY, SYNTHESIS, TWO_PLAYERS};
 
-pub struct ClassGraphReachabilitySynthesis {
-
-}
+pub struct ClassGraphReachabilitySynthesis;
 
 impl ClassGraphReachabilitySynthesis {
 
@@ -31,7 +29,7 @@ impl Solution for ClassGraphReachabilitySynthesis {
     }
 
     fn solve(&mut self, model : &dyn std::any::Any, query : &crate::verification::query::Query) -> SolverResult {
-        SolverResult::Unsatisfied
+        SolverResult::SolverError
     }
 
 }

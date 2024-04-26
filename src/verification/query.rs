@@ -1,5 +1,7 @@
 use std::{collections::{hash_map::DefaultHasher, HashSet}, hash::{Hash, Hasher}, ops::Not};
 
+use crate::solution::{get_problem_type, ProblemType};
+
 use super::{verifier::Verifiable, EvaluationState, VerificationStatus};
 use VerificationStatus::*;
 
@@ -322,11 +324,18 @@ impl Query {
             Exists => self.total_status |= self.run_status,
             ForAll => self.total_status &= self.run_status,
         };
-        match self.logic {
-            Finally => Maybe,
-            Globally => Verified,
-            RawCondition => Maybe,
-        };
+        if self.is_decided() {
+            self.end_verification();
+        }
+    }
+
+    pub fn end_verification(&mut self) {
+        if self.total_status == Maybe {
+            self.total_status = match self.quantifier {
+                Exists => Unverified,
+                ForAll => Verified,
+            }
+        }
     }
 
     pub fn verify_state(&mut self, state : &impl Verifiable) {
@@ -389,21 +398,19 @@ impl Query {
         s.finish()
     }
 
-    pub fn as_logic(self, logic : StateLogic) -> Query {
-        if self.logic == RawCondition {
-            panic!("Can't convert RawCondition to F or G !");
-        }
-        if self.logic == logic {
-            return Query::new(self.quantifier, logic, self.condition.clone());
-        }
-        return Query::new(!self.quantifier, logic, !self.condition.clone());
+    pub fn complement(self) -> Query {
+        return Query::new(!self.quantifier, !self.logic, !self.condition.clone());
     }
 
-    pub fn as_quantifier(self, quantifier : Quantifier) -> Query {
-        if self.quantifier == quantifier {
-            return Query::new(quantifier, self.logic, self.condition.clone());
+    pub fn is_decided(&self) -> bool {
+        match self.total_status {
+            Maybe => false,
+            _ => true
         }
-        return Query::new(quantifier, !self.logic, !self.condition.clone());
+    }
+
+    pub fn problem_type(&self) -> ProblemType {
+        get_problem_type(self.quantifier, self.logic)
     }
 
 }

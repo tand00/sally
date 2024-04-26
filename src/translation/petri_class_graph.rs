@@ -4,6 +4,8 @@ use crate::models::{class_graph::ClassGraph, lbl, petri::PetriNet, Model, ModelS
 
 use super::{Translation, TranslationMeta, TranslationType::SymbolicSpace};
 
+use crate::log::*;
+
 pub struct PetriClassGraphTranslation {
     pub initial_state : ModelState,
     pub class_graph : Option<ClassGraph>,
@@ -24,21 +26,23 @@ impl Translation for PetriClassGraphTranslation {
         TranslationMeta {
             name : lbl("PetriClassGraphTranslation"),
             description : String::from("Computes the class graph of a Time Petri Net"),
-            input : lbl("TimePetriNet"),
+            input : lbl("TPN"),
             output : lbl("ClassGraph"),
             translation_type : SymbolicSpace,
         }
     }
 
     fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> bool {
+        pending("Computing Petri net Class graph...");
         let petri: Option<&PetriNet> = base.downcast_ref::<PetriNet>();
         if petri.is_none() {
+            error("Unable to compute Class graph !");
             return false;
         }
         let petri = petri.unwrap();
         let graph = ClassGraph::from(petri, initial_state);
-        
-        let mut initial_state = graph.classes[0].generate_image_state();
+        positive("Class graph computed !");
+        let mut initial_state = graph.classes[0].borrow().generate_image_state();
         let vars = initial_state.discrete.nrows();
         initial_state.discrete = initial_state.discrete.insert_row(vars, 0);
         self.initial_state = initial_state;

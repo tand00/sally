@@ -1,10 +1,12 @@
 pub mod class_graph_reachability_synthesis;
 pub use class_graph_reachability_synthesis::ClassGraphReachabilitySynthesis;
+pub mod class_graph_reachability;
+pub use class_graph_reachability::ClassGraphReachability;
 
 use std::any::Any;
 
 use crate::flag;
-use crate::models::{Label, ModelState};
+use crate::models::{lbl, Label, ModelState};
 use crate::verification::query::{Quantifier, Query, StateLogic};
 use Quantifier::*;
 use StateLogic::*;
@@ -29,9 +31,37 @@ pub fn get_problem_type(quantifier : Quantifier, logic : StateLogic) -> ProblemT
     }
 }
 
+pub fn get_quantifiers(problem : ProblemType) -> (Quantifier, StateLogic) {
+    match problem {
+        LIVENESS => (ForAll, Finally),
+        SAFETY => (ForAll, Globally),
+        REACHABILITY => (Exists, Finally),
+        PRESERVABILITY => (Exists, Globally),
+        _ => (ForAll, RawCondition)
+    }
+}
+
+pub fn problem_label(problem : ProblemType) -> Label {
+    match problem {
+        LIVENESS => lbl("Liveness"),
+        SAFETY => lbl("Safety"),
+        REACHABILITY => lbl("Reachability"),
+        PRESERVABILITY => lbl("Preservability"),
+        BOUNDEDNESS => lbl("Boundedness"),
+        SYNTHESIS => lbl("Synthesis"),
+        TWO_PLAYERS => lbl("TwoPlayers"),
+        _ => lbl("Unclassified")
+    }
+}
+
+pub fn complementary_equivalent(problem : ProblemType) -> ProblemType {
+    let (q,l) = get_quantifiers(problem);
+    get_problem_type(!q, !l)
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum SolverResult {
-    Unsatisfied,
+    SolverError,
     BoolResult(bool),
     IntResult(i32),
     FloatResult(f64),

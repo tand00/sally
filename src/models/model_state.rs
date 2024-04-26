@@ -1,10 +1,10 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use nalgebra::DVector;
 
 use crate::verification::Verifiable;
 
-use super::{time::ClockValue, Model};
+use super::{time::ClockValue, Label, Model};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Hash)]
 pub struct ModelState {

@@ -1,17 +1,19 @@
-use std::{collections::HashSet, hash::{DefaultHasher, Hash, Hasher}};
+use core::fmt;
+use std::{cell::RefCell, collections::HashSet, hash::{DefaultHasher, Hash, Hasher}, rc::Weak};
 
 use nalgebra::DVector;
 use num_traits::Zero;
 
-use crate::{computation::DBM, models::{petri::PetriNet, time::ClockValue, Model, ModelState}, verification::Verifiable};
+use crate::{computation::DBM, models::{petri::PetriNet, time::ClockValue, ComponentPtr, Label, Model, ModelState, Node}, verification::Verifiable};
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Debug)]
 pub struct StateClass {
     pub discrete : DVector<i32>,
     pub dbm : DBM,
     pub to_dbm_index : Vec<usize>,
     pub from_dbm_index : Vec<usize>,
-    pub predecessors : Vec<(usize,usize)>, // Pred index, Action
+    pub predecessors : Vec<(Weak<RefCell<StateClass>>, usize)>,
+    pub index : usize
 }
 
 impl StateClass {
@@ -47,7 +49,7 @@ impl StateClass {
         let discrete = state.discrete.clone();
         let enabled_clocks = state.enabled_clocks().len();
         let mut dbm = DBM::new(enabled_clocks);
-        let mut to_dbm = Vec::new();
+        let mut to_dbm = vec![0; petri.transitions.len()];
         let mut from_dbm = vec![0];
         for (i, transi) in petri.transitions.iter().enumerate() {
             if !state.is_enabled(i) {
@@ -56,15 +58,16 @@ impl StateClass {
             let dbm_index = from_dbm.len();
             to_dbm[i] = dbm_index;
             from_dbm.push(i);
-            dbm.add(dbm_index, 0, transi.interval.1);
-            dbm.add(0, dbm_index, transi.interval.0);
+            dbm.add(dbm_index, 0, transi.borrow().interval.1);
+            dbm.add(0, dbm_index, -transi.borrow().interval.0);
         }
         StateClass {
             discrete,
             dbm,
             to_dbm_index : to_dbm,
             from_dbm_index : from_dbm,
-            predecessors : Vec::new()
+            predecessors : Vec::new(),
+            index : 0,
         }
     }
 
@@ -72,6 +75,10 @@ impl StateClass {
         let mut s = DefaultHasher::new();
         self.hash(&mut s);
         s.finish()
+    }
+
+    pub fn as_verifiable(&self) -> &impl Verifiable {
+        self
     }
 
 }
@@ -91,5 +98,30 @@ impl Verifiable for StateClass {
 impl From<StateClass> for ModelState {
     fn from(value: StateClass) -> Self {
         value.generate_image_state()
+    }
+}
+
+impl Hash for StateClass {
+
+    fn hash<H: Hasher>(&self, state: &mut H) { // Every other field is rendundant
+        self.discrete.hash(state);
+        self.dbm.hash(state);
+    }
+
+}
+
+impl PartialEq for StateClass {
+    fn eq(&self, other: &Self) -> bool {
+        (self.discrete == other.discrete) && (self.dbm == other.dbm)
+    }
+}
+
+impl fmt::Display for StateClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut transitions = String::from("");
+        if self.from_dbm_index.len() > 1 {
+            transitions = self.from_dbm_index[1..].iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",");
+        }
+        write!(f, "Class_{}\n- Marking {}- Transitions\n  [{}]\n\n- {}", self.index, self.discrete, transitions, self.dbm)
     }
 }
