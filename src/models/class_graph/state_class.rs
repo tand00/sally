@@ -3,24 +3,28 @@ use std::{cell::RefCell, collections::HashSet, hash::{DefaultHasher, Hash, Hashe
 
 use nalgebra::DVector;
 use num_traits::Zero;
+use serde::{Deserialize, Serialize};
 
-use crate::{computation::DBM, models::{petri::PetriNet, time::ClockValue, ComponentPtr, Label, Model, ModelState, Node}, verification::Verifiable};
+use crate::{computation::DBM, models::{petri::PetriNet, time::ClockValue, Label, ModelState, Node}, verification::Verifiable};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StateClass {
     pub discrete : DVector<i32>,
     pub dbm : DBM,
     pub to_dbm_index : Vec<usize>,
     pub from_dbm_index : Vec<usize>,
+    pub index : usize,
+
+    #[serde(skip)]
     pub predecessors : Vec<(Weak<RefCell<StateClass>>, usize)>,
-    pub index : usize
+    
 }
 
 impl StateClass {
     
     pub fn generate_image_state(&self) -> ModelState {
         let deadlocked = self.is_deadlocked();
-        let clocks : Vec<ClockValue> = self.to_dbm_index.iter().enumerate().map(|(t,i)| {
+        let clocks : Vec<ClockValue> = self.to_dbm_index.iter().enumerate().map(|(_, i)| {
             if *i == 0 {
                 ClockValue::disabled()
             } else {
@@ -123,5 +127,11 @@ impl fmt::Display for StateClass {
             transitions = self.from_dbm_index[1..].iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",");
         }
         write!(f, "Class_{}\n- Marking {}- Transitions\n  [{}]\n\n- {}", self.index, self.discrete, transitions, self.dbm)
+    }
+}
+
+impl Node for StateClass {
+    fn get_label(&self) -> Label {
+        Label::from("Class_:".to_owned() + &self.index.to_string())
     }
 }

@@ -1,7 +1,8 @@
 use std::{hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
 use super::query::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationStatus {
     Maybe,
     Unverified,
@@ -57,7 +58,13 @@ impl Not for VerificationStatus {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+impl Default for VerificationStatus {
+    fn default() -> Self {
+        Maybe
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationBound {
     Time(u32),
     Steps(u32),

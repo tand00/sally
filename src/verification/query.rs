@@ -1,20 +1,22 @@
 use std::{collections::{hash_map::DefaultHasher, HashSet}, hash::{Hash, Hasher}, ops::Not};
 
-use crate::solution::{get_problem_type, ProblemType};
+use crate::{models::{Label, Model}, solution::{get_problem_type, ProblemType}};
 
 use super::{verifier::Verifiable, EvaluationState, VerificationStatus};
+use serde::{Deserialize, Serialize};
 use VerificationStatus::*;
 
 // TODO: Might be useless to include both L and G
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PropositionType {
     EQ, NE, LE, GE, LS, GS
 }
 
 use PropositionType::*;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Expr {
+    Name(Label),
     Object(usize),
     Constant(i32),
     ClockComparison(PropositionType, usize, i32),
@@ -30,6 +32,7 @@ impl Expr {
 
     pub fn evaluate(&self, state : &impl Verifiable) -> i32 {
         match self {
+            Name(_) => 0,
             Constant(i) => *i,
             Object(id) => state.evaluate_object(*id),
             ClockComparison(prop_type, clock, value) => match prop_type {
@@ -59,9 +62,27 @@ impl Expr {
         }
     }
 
+    // Translate Name(x) to Object(m[x])
+    pub fn apply_to_model(&self, model : &impl Model) -> Expr {
+        match self {
+            Name(x) => Object(model.map_label_to_var(x).unwrap()),
+            Plus(e1, e2) => Plus(
+                Box::new(e1.apply_to_model(model)), Box::new(e2.apply_to_model(model))
+            ),
+            Minus(e1, e2) => Minus(
+                Box::new(e1.apply_to_model(model)), Box::new(e2.apply_to_model(model))
+            ),
+            Multiply(e1, e2) => Multiply(
+                Box::new(e1.apply_to_model(model)), Box::new(e2.apply_to_model(model))
+            ),
+            Negative(e) => Negative(Box::new(e.apply_to_model(model))),
+            _ => self.clone()
+        }
+    }
+
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Condition {
     True,
     False,
@@ -116,6 +137,30 @@ impl Condition {
             Evaluation(e) => e.contains_clock_proposition(),
             Proposition(_, e1, e2) => e1.contains_clock_proposition() || e2.contains_clock_proposition(),
             _ => false
+        }
+    }
+
+    pub fn apply_to_model(&self, model : &impl Model) -> Condition {
+        match self {
+            Evaluation(e) => Evaluation(e.apply_to_model(model)),
+            Proposition(p_type, e1, e2) => Proposition(
+                *p_type, e1.apply_to_model(model), e2.apply_to_model(model)
+            ),
+            And(c1, c2) => And(
+                Box::new(c1.apply_to_model(model)), Box::new(c2.apply_to_model(model))
+            ),
+            Or(c1, c2) => Or(
+                Box::new(c1.apply_to_model(model)), Box::new(c2.apply_to_model(model))
+            ),
+            Not(c) => Not(Box::new(c.apply_to_model(model))),
+            Implies(c1, c2) => Implies(
+                Box::new(c1.apply_to_model(model)), Box::new(c2.apply_to_model(model))
+            ),
+            Next(c) => Next(Box::new(c.apply_to_model(model))),
+            Until(c1, c2) => Until(
+                Box::new(c1.apply_to_model(model)), Box::new(c2.apply_to_model(model))
+            ),
+            _ => self.clone()
         }
     }
 
@@ -249,9 +294,12 @@ impl Not for Condition {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Quantifier {
-    Exists, ForAll
+    #[serde(rename="E")]
+    Exists,
+    #[serde(rename="A")]
+    ForAll
 }
 
 use Quantifier::*;
@@ -266,9 +314,14 @@ impl Not for Quantifier {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StateLogic {
-    Finally, Globally, RawCondition
+    #[serde(rename="F")]
+    Finally, 
+    #[serde(rename="G")]
+    Globally, 
+    #[serde(rename="raw")]
+    RawCondition
 }
 
 use StateLogic::*;
@@ -284,17 +337,21 @@ impl Not for StateLogic {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Query {
     pub quantifier : Quantifier,
     pub logic : StateLogic,
     pub condition : Condition,
 
+    #[serde(skip)]
     pub total_status : VerificationStatus,
+    #[serde(skip)]
     pub run_status : VerificationStatus,
 
+    #[serde(skip)]
     pending_conditions : Vec<Condition>,
 
+    #[serde(skip)]
     pub collapse_subconditions : bool,
 }
 
@@ -411,6 +468,10 @@ impl Query {
 
     pub fn problem_type(&self) -> ProblemType {
         get_problem_type(self.quantifier, self.logic)
+    }
+
+    pub fn apply_to_model(&mut self, model : &impl Model) {
+        self.condition = self.condition.apply_to_model(model);
     }
 
 }

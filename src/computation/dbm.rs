@@ -1,25 +1,22 @@
 use core::fmt;
-use std::io::{Read, Write};
 use std::{cmp::min, ops::{Index, IndexMut}};
 
 use nalgebra::DMatrix;
 use num_traits::{Bounded, Zero};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use serde::{Deserialize, Serialize};
 
-use crate::models::time::{ClockValue, TimeBound, TimeInterval};
+use crate::models::time::{TimeBound, TimeInterval};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DBM {
-    vars : usize,
     constraints : DMatrix<TimeBound>
 }
 
-// We add an imaginary variable, always equal to zero, at the end of the matrix. That way, we can encode rectangular constraints
+// We add an imaginary variable, always equal to zero, at the beginning of the matrix. That way, we can encode rectangular constraints
 impl DBM {
 
     pub fn new(vars : usize) -> Self {
         DBM {
-            vars,
             constraints: DMatrix::from_fn(vars + 1, vars + 1, |i,j| {
                 if i == j { TimeBound::zero() }
                 else { TimeBound::max_value() }
@@ -32,7 +29,6 @@ impl DBM {
             panic!("Constraints matrix not square, can't construct DBM !");
         }
         let mut res = DBM {
-            vars : constraints.nrows(),
             constraints,
         };
         res.make_canonical();
@@ -41,7 +37,6 @@ impl DBM {
 
     pub fn empty(vars : usize) -> Self {
         DBM {
-            vars,
             constraints: DMatrix::from_element(vars + 1, vars + 1 , TimeBound::MinusInfinite)
         }
     }
@@ -66,20 +61,19 @@ impl DBM {
 
     pub fn intersection(&self, other : &DBM) -> Self {
         DBM {
-            vars: min(self.vars, other.vars),
             constraints: self.constraints.component_mul(&other.constraints)
         }
     }
 
     pub fn contains(&self, other : &DBM) -> bool {
-        if self.vars != other.vars {
+        if self.vars_count() != other.vars_count() {
             return false;
         }
         self.constraints >= other.constraints
     }
 
     pub fn vars_count(&self) -> usize {
-        self.vars
+        self.constraints.nrows() - 1
     }
 
     pub fn get_canonical(&self) -> Self {
@@ -93,7 +87,7 @@ impl DBM {
     }
 
     pub fn free_clock(&mut self, var_i : usize) {
-        for i in 0..(self.vars + 1) {
+        for i in 0..(self.vars_count() + 1) {
             if i == var_i {
                 continue;
             }
@@ -105,7 +99,7 @@ impl DBM {
     pub fn add(&mut self, var_i : usize, var_j : usize, constraint : TimeBound) {
         let current = &mut self.constraints[(var_i, var_j)];
         if *current + constraint < TimeBound::zero() {
-            *self = Self::empty(self.vars);
+            *self = Self::empty(self.vars_count());
         } else if constraint < *current {
             *current = constraint;
             let n_rows = self.constraints.nrows();
@@ -126,7 +120,7 @@ impl DBM {
 
     pub fn remove_var(&mut self, var_i : usize) {
         //self.free_clock(var_i);
-        self.constraints = self.constraints.clone().remove_column(var_i).remove_column(var_i);
+        self.constraints = self.constraints.clone().remove_column(var_i).remove_row(var_i);
         
     }
 
@@ -140,7 +134,7 @@ impl DBM {
                         self.constraints[(i,k)] + self.constraints[(k,j)] 
                     );
                     if i == j && self.constraints[(i,j)] < TimeBound::zero() {
-                        *self = Self::empty(self.vars);
+                        *self = Self::empty(self.vars_count());
                         return;
                     }
                 }
@@ -153,16 +147,16 @@ impl DBM {
     }
 
     pub fn delta(&mut self, delta : TimeBound) {
-        for i in 1..(self.vars + 1) {
+        for i in 1..(self.vars_count() + 1) {
             self.constraints[(i,0)] += delta;
             self.constraints[(0,i)] -= delta;
         }
     }
 
-    pub fn closure(&self) -> DBM {
+    pub fn time_closure(&self) -> DBM { 
         let mut res = self.clone();
         let max_delta = self.constraints.column(0).iter().min().unwrap().clone();
-        
+        //TODO!
         res
     }
 
@@ -184,16 +178,6 @@ impl IndexMut<(usize,usize)> for DBM {
 
 impl fmt::Display for DBM {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        /*let mut lines = Vec::new();
-        for i in 0..(self.vars + 1) {
-            let mut line_i : Vec<u8> = Vec::new();
-            for j in 0..(self.vars + 1) {
-                write!(line_i, "\t{},", self[(i,j)]);
-            }
-            let line_i = String::from_utf8(line_i).unwrap();
-            lines.push(line_i);
-        }
-        write!(f, "DBM(\n{}\n)", lines.join("\n"))*/
         write!(f, "DBM{}", self.constraints)
     }
 }

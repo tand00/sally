@@ -19,13 +19,13 @@ const CLASS_LIMIT : usize = 4096;
 pub struct ClassGraph {
     pub classes: Vec<ComponentPtr<StateClass>>,
     pub edges: Vec<Edge<usize, StateClass, StateClass>>,
-    pub n_clocks : usize,
+    n_clocks : usize,
     pub places_dic : HashMap<Label, usize>,
 }
 
 impl ClassGraph {
 
-    pub fn from(p_net : &PetriNet, initial_state : &ModelState) -> Self {
+    pub fn compute(p_net : &PetriNet, initial_state : &ModelState) -> Self {
         let mut cg = ClassGraph {
             classes: Vec::new(),
             edges: Vec::new(),
@@ -136,7 +136,7 @@ impl ClassGraph {
         for class in self.classes.iter() {
             for (pred, action) in class.borrow().predecessors.iter() {
                 let edge = Edge {
-                    label : Label::from_string(action),
+                    label : Label::from(action.to_string()),
                     from : None,
                     to : None,
                     weight : *action,

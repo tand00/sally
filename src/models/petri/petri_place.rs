@@ -1,13 +1,22 @@
 use std::{cell::RefCell, fmt, rc::{Rc, Weak}};
+
+use serde::{Serialize, Deserialize};
+
 use crate::models::{ComponentPtr, Label, Node};
 
 use super::PetriTransition;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PetriPlace {
     pub name: Label,
+    
+    #[serde(skip)]
     pub index : usize,
+
+    #[serde(skip)]
     in_transitions : Vec<Weak<RefCell<PetriTransition>>>,
+
+    #[serde(skip)]
     out_transitions: Vec<Weak<RefCell<PetriTransition>>>
 }
 

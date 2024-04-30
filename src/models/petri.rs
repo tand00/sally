@@ -8,6 +8,13 @@ mod petri_transition;
 use num_traits::Zero;
 pub use petri_place::PetriPlace;
 pub use petri_transition::PetriTransition;
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PetriStructure {
+    pub places : Vec<PetriPlace>,
+    pub transitions : Vec<PetriTransition>
+}
 
 #[derive(Clone)]
 pub struct PetriNet {
@@ -162,6 +169,20 @@ impl PetriNet {
         state
     }
 
+    pub fn get_structure(&self) -> impl Serialize {
+        let mut places : Vec<PetriPlace> = Vec::new();
+        let mut transitions : Vec<PetriTransition> = Vec::new();
+        for place_ptr in self.places.iter() {
+            let place = place_ptr.borrow().clone();
+            places.push(place);
+        }
+        for transi_ptr in self.transitions.iter() {
+            let transi = transi_ptr.borrow().clone();
+            transitions.push(transi);
+        }
+        PetriStructure { places, transitions }
+    }
+
 }
 
 impl Model for PetriNet {
@@ -230,5 +251,11 @@ impl Model for PetriNet {
 impl fmt::Display for PetriNet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "TimePetriNet")
+    }
+}
+
+impl From<PetriStructure> for PetriNet {
+    fn from(value: PetriStructure) -> Self {
+        PetriNet::new(value.places, value.transitions)
     }
 }

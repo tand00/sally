@@ -1,5 +1,7 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::models::time::TimeInterval;
 use crate::models::{Edge, Label, ModelState, Node};
 
@@ -8,15 +10,21 @@ use super::PetriPlace;
 pub type InputEdge = Edge<i32, PetriPlace, PetriTransition>;
 pub type OutputEdge = Edge<i32, PetriTransition, PetriPlace>;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PetriTransition {
     pub label: Label,
     pub from: Vec<Label>,
     pub to: Vec<Label>,
     pub interval: TimeInterval,
-    pub input_edges: Vec<InputEdge>,
-    pub output_edges: Vec<OutputEdge>,
     pub controllable : bool,
+
+    #[serde(skip)]
+    pub input_edges: Vec<InputEdge>,
+
+    #[serde(skip)]
+    pub output_edges: Vec<OutputEdge>,
+    
+    #[serde(skip)]
     pub index : usize,
 }
 

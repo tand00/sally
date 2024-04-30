@@ -1,7 +1,9 @@
 use crate::{models::*, solution::Solution, verification::query::Query, translation::Translation};
 
+use self::node::DataNode;
+
 pub struct ModelSolvingGraph {
-    pub models : Vec<SimpleNode<ModelMeta>>,
+    pub models : Vec<DataNode<ModelMeta, usize>>,
     pub translations : Vec<Box<dyn Translation>>,
     pub solutions : Vec<Box<dyn Solution>>,
     pub edges : Vec<Edge<usize, usize, usize>>,
@@ -19,7 +21,7 @@ impl ModelSolvingGraph {
     }
 
     pub fn register_model(&mut self, meta : ModelMeta) {
-        let node = SimpleNode::from(meta);
+        let node = DataNode::from(meta);
         self.models.push(node);
     }
 

@@ -1,7 +1,9 @@
 mod petri_class_graph;
+mod petri_partial_observation;
 use std::any::Any;
 
 pub use petri_class_graph::PetriClassGraphTranslation;
+pub use petri_partial_observation::PetriPartialObservation;
 
 use crate::models::{lbl, Label, Model, ModelState};
 

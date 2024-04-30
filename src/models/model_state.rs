@@ -1,12 +1,13 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use nalgebra::DVector;
+use serde::{Deserialize, Serialize};
 
 use crate::verification::Verifiable;
 
-use super::{time::ClockValue, Label, Model};
+use super::{time::ClockValue, Model};
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Hash)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct ModelState {
     pub discrete : DVector<i32>,
     pub clocks : DVector<ClockValue>,

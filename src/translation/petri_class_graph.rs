@@ -40,7 +40,7 @@ impl Translation for PetriClassGraphTranslation {
             return false;
         }
         let petri = petri.unwrap();
-        let graph = ClassGraph::from(petri, initial_state);
+        let graph = ClassGraph::compute(petri, initial_state);
         positive("Class graph computed !");
         let mut initial_state = graph.classes[0].borrow().generate_image_state();
         let vars = initial_state.discrete.nrows();

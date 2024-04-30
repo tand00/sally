@@ -1,7 +1,7 @@
 mod label;
 mod node;
 mod edge;
-//mod digraph;
+mod digraph;
 mod model_state;
 
 use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc};
@@ -15,11 +15,10 @@ use num_traits::Zero;
 
 pub mod time;
 pub mod petri;
-pub mod observation;
 pub mod class_graph;
 pub mod model_solving_graph;
 
-use self::{model_characteristics::*, node::SimpleNode, time::ClockValue};
+use self::{model_characteristics::*, time::ClockValue};
 
 pub type ComponentPtr<T> = Rc<RefCell<T>>;
 pub fn new_ptr<T>(x : T) -> ComponentPtr<T> {
@@ -28,6 +27,8 @@ pub fn new_ptr<T>(x : T) -> ComponentPtr<T> {
 
 pub mod model_characteristics {
     use crate::flag;
+
+    use super::{lbl, Label};
     pub type ModelCharacteristics = u16;
     pub const NONE : ModelCharacteristics = 0;
     pub const TIMED : ModelCharacteristics = flag!(0);
@@ -38,6 +39,27 @@ pub mod model_characteristics {
     pub fn has_characteristic(model_characteristics : ModelCharacteristics, characteristic : ModelCharacteristics) -> bool {
         (model_characteristics & characteristic) != 0
     }
+
+    pub fn characteristics_label(model : ModelCharacteristics) -> Label {
+        let mut characteritics : Vec<&str> = Vec::new();
+        if model == 0 {
+            return lbl("()");
+        }
+        if has_characteristic(model, TIMED) {
+            characteritics.push("Timed");
+        }
+        if has_characteristic(model, CONTROLLABLE) {
+            characteritics.push("Controllable");
+        }
+        if has_characteristic(model, STOCHASTIC) {
+            characteritics.push("Stochastic");
+        }
+        if has_characteristic(model, SYMBOLIC) {
+            characteritics.push("Symbolic");
+        }
+        Label::from(characteritics.join("|"))
+    }
+
 }
 
 use model_characteristics::ModelCharacteristics;
@@ -50,7 +72,7 @@ pub struct ModelMeta {
 }
 impl std::fmt::Display for ModelMeta {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Model_{}_{}_{}", self.name, self.description, self.characteristics)
+        write!(f, " [.] Model ({})\n | Description : \n | {}\n | Characteristics : {}", self.name, self.description, characteristics_label(self.characteristics))
     }
 }
 

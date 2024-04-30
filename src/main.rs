@@ -9,10 +9,9 @@ pub mod log;
 use std::collections::HashMap;
 
 use models::lbl;
-use models::petri::{PetriPlace, PetriTransition};
+use models::petri::{PetriPlace, PetriTransition, PetriStructure};
 use models::time::{TimeInterval, TimeBound::*};
 use solution::ClassGraphReachability;
-use verification::query::{Condition, Expr, Query};
 
 use crate::models::class_graph::ClassGraph;
 use crate::models::model_solving_graph::ModelSolvingGraph;
@@ -20,8 +19,13 @@ use crate::models::petri::PetriNet;
 use crate::translation::{PetriClassGraphTranslation, Translation};
 use crate::models::Model;
 use crate::solution::{ClassGraphReachabilitySynthesis, Solution};
+use crate::verification::query::*;
 
 use log::*;
+
+extern crate nalgebra as na;
+extern crate num_traits;
+extern crate rand;
 
 //use models::class_graph::*;
 
@@ -29,10 +33,10 @@ fn main() {
     println!(" [#] Sally Model Checker - v.1.0");
     lf();
     println!(" [.] Features :");
-    println!(" -> Models translation");
-    println!(" -> Analytic solutions");
-    println!(" -> Statistical Model Checking");
-    println!(" -> Discrete verification");
+    println!(" | - Models translation");
+    println!(" | - Analytic solutions");
+    println!(" | - Statistical Model Checking");
+    println!(" | - Discrete verification");
     lf();
 
     pending("Building Model Solving Graph...");
@@ -43,7 +47,11 @@ fn main() {
     lf();
 
     let net = sample_petri();
-    let query = sample_query();
+    println!("{}", net.get_model_meta());
+    lf();
+
+    let mut query = sample_query();
+    query.apply_to_model(&net);
     let mut translation = PetriClassGraphTranslation::new();
     let mut solution = ClassGraphReachability::new();
     let initial_state = net.get_initial_state(HashMap::from([
@@ -51,16 +59,27 @@ fn main() {
     ]));
     translation.translate(&net, &initial_state);
     let cg = translation.get_translated().0.downcast_ref::<ClassGraph>().unwrap();
+    println!("{}", cg.get_model_meta());
+    lf();
     
     if solution.is_compatible(cg, &query) {
         positive("Solution compatible, ready to solve !");
         solution.solve(cg, &query);
     }
-
     lf();
+
     for c in cg.classes.iter() {
         println!("{}", c.borrow());
     }
+    let json_net = serde_json::to_string(&net.get_structure()).unwrap();
+    println!("{}", json_net);
+
+    let new_net : PetriStructure = serde_json::from_str(&json_net).unwrap();
+    let new_net = PetriNet::from(new_net);
+    println!("{}", new_net);
+
+    let json_q = serde_json::to_string(&query).unwrap();
+    println!("{}", json_q);
 }
 
 fn build_solver() -> ModelSolvingGraph {
@@ -113,6 +132,9 @@ fn sample_petri() -> PetriNet {
 }
 
 fn sample_query() -> Query {
-    let condition = Condition::Evaluation(Expr::Object(4));
-    Query::new(verification::query::Quantifier::Exists, verification::query::StateLogic::Finally, condition)
+    let condition = Condition::Or(
+        Box::new(Condition::Evaluation(Expr::Name(lbl("p5")))),
+        Box::new(Condition::Deadlock)
+    );
+    Query::new(Quantifier::Exists, StateLogic::Finally, condition)
 }

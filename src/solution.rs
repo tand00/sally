@@ -21,6 +21,10 @@ pub const BOUNDEDNESS : ProblemType = flag!(4);
 pub const SYNTHESIS : ProblemType = flag!(5);
 pub const TWO_PLAYERS : ProblemType = flag!(6);
 
+pub fn has_problem_type(problem : ProblemType, p_type : ProblemType) -> bool {
+    (problem & p_type) > 0
+}
+
 pub fn get_problem_type(quantifier : Quantifier, logic : StateLogic) -> ProblemType {
     match (quantifier, logic) {
         (ForAll, Finally) => LIVENESS,
@@ -31,32 +35,33 @@ pub fn get_problem_type(quantifier : Quantifier, logic : StateLogic) -> ProblemT
     }
 }
 
-pub fn get_quantifiers(problem : ProblemType) -> (Quantifier, StateLogic) {
-    match problem {
-        LIVENESS => (ForAll, Finally),
-        SAFETY => (ForAll, Globally),
-        REACHABILITY => (Exists, Finally),
-        PRESERVABILITY => (Exists, Globally),
-        _ => (ForAll, RawCondition)
-    }
-}
-
 pub fn problem_label(problem : ProblemType) -> Label {
-    match problem {
-        LIVENESS => lbl("Liveness"),
-        SAFETY => lbl("Safety"),
-        REACHABILITY => lbl("Reachability"),
-        PRESERVABILITY => lbl("Preservability"),
-        BOUNDEDNESS => lbl("Boundedness"),
-        SYNTHESIS => lbl("Synthesis"),
-        TWO_PLAYERS => lbl("TwoPlayers"),
-        _ => lbl("Unclassified")
+    let mut characteritics : Vec<&str> = Vec::new(); 
+    if problem == 0 {
+        return lbl("()");
     }
-}
-
-pub fn complementary_equivalent(problem : ProblemType) -> ProblemType {
-    let (q,l) = get_quantifiers(problem);
-    get_problem_type(!q, !l)
+    if has_problem_type(problem, LIVENESS) {
+        characteritics.push("Liveness(AF)");
+    }
+    if has_problem_type(problem, REACHABILITY) {
+        characteritics.push("Reachability(EF)");
+    }
+    if has_problem_type(problem, PRESERVABILITY) {
+        characteritics.push("Preservability(EG)");
+    }
+    if has_problem_type(problem, SAFETY) {
+        characteritics.push("Safety(AG)");
+    }
+    if has_problem_type(problem, BOUNDEDNESS) {
+        characteritics.push("Boundedness");
+    }
+    if has_problem_type(problem, SYNTHESIS) {
+        characteritics.push("Synthesis");
+    }
+    if has_problem_type(problem, TWO_PLAYERS) {
+        characteritics.push("TwoPlayers");
+    }
+    Label::from(characteritics.join("|"))
 }
 
 #[derive(Debug, Clone, PartialEq)]
