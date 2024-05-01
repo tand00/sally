@@ -3,6 +3,11 @@ pub fn info<S: AsRef<str>>(msg : S) {
     println!(" [.] {}", msg);
 }
 
+pub fn continue_info<S: AsRef<str>>(msg : S) {
+    let msg = msg.as_ref();
+    println!(" | - {}", msg);
+}
+
 pub fn lf() {
     println!("");
 }

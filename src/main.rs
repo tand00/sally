@@ -21,6 +21,7 @@ use crate::translation::{PetriClassGraphTranslation, Translation};
 use crate::models::Model;
 use crate::solution::{ClassGraphReachabilitySynthesis, Solution};
 use crate::verification::query::*;
+use crate::verification::smc::{ProbabilityEstimation, ProbabilityFloatComparison, SMCQueryVerification};
 
 use log::*;
 
@@ -84,8 +85,16 @@ fn main() {
 
     let dg = sample_digraph();
     println!("{}", dg.get_model_meta());
-    println!("{}", dg.shortest_paths());
     lf();
+
+    let mut estim  = ProbabilityEstimation::new(0.95, 0.05);
+    let res = estim.verify(&net, &initial_state, &query);
+    println!("{:?}", res);
+
+    let mut comp  = ProbabilityFloatComparison::new(0.7, 0.05, 0.2, 0.1, 0.1);
+    let res = comp.verify(&net, &initial_state, &query);
+    println!("{:?}", res);
+
 }
 
 fn build_solver() -> ModelSolvingGraph {
@@ -151,7 +160,7 @@ fn sample_digraph() -> Digraph<usize, i32> {
 }
 
 fn sample_query() -> Query {
-    let condition = Condition::Or(
+    let condition = Condition::And(
         Box::new(Condition::Evaluation(Expr::Name(lbl("p5")))),
         Box::new(Condition::Deadlock)
     );

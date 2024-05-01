@@ -207,8 +207,12 @@ impl Model for PetriNet {
     }
 
     fn available_delay(&self, state : &ModelState) -> ClockValue {
-        let m = state.clocks.iter().enumerate().map(|(i,c)| {
-            (ClockValue::from(self.transitions[i].borrow().interval.1) - *c).0
+        let m = state.clocks.iter().enumerate().filter_map(|(i,c)| {
+            if c.is_enabled() {
+                Some((ClockValue::from(self.transitions[i].borrow().interval.1) - *c).0)
+            } else {
+                None
+            }
         }).reduce(f64::min);
         if m.is_none() {
             ClockValue::zero()

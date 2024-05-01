@@ -10,18 +10,27 @@ use crate::{models::{Model, ModelState}, solution::SolverResult, Query};
 
 use super::{VerificationStatus, Verifiable};
 
+use crate::log::*;
+
 pub trait SMCQueryVerification {
 
     fn must_do_another_run(&self) -> bool;
     fn handle_run_result(&mut self, result : VerificationStatus);
     fn get_result(&self) -> SolverResult;
+    fn prepare(&self) { }
+    fn finish(&self) { }
 
     fn verify(&mut self, model : &impl Model, initial_state : &ModelState, query : &Query) -> SolverResult {
+        info("SMC verification");
+        self.prepare();
+        pending("Starting...");
         let mut query = query.clone();
         while self.must_do_another_run() {
             let result = self.execute_run(model, initial_state, &mut query);
             self.handle_run_result(result);
         }
+        self.finish();
+        positive("Verification finished");
         self.get_result()
     }
 

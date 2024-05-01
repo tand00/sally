@@ -4,6 +4,8 @@ use super::SMCQueryVerification;
 
 use VerificationStatus::*;
 
+use crate::log::*;
+
 #[derive(Debug, Clone)]
 pub struct ProbabilityFloatComparison {
     pub target_probability : f64,
@@ -16,7 +18,8 @@ pub struct ProbabilityFloatComparison {
     pub bound_h0 : f64,
     pub bound_h1 : f64,
     pub current_ratio : f64,
-    pub status : VerificationStatus
+    pub status : VerificationStatus,
+    pub runs_executed : usize
 }
 
 // Tests if P(Phi) >= p
@@ -35,16 +38,29 @@ impl ProbabilityFloatComparison {
             indifference_down,
             p0 : target_probability + indifference_up,
             p1 : target_probability - indifference_down,
-            bound_h0 : (false_positives / (1.0 - false_positives)).ln(),
-            bound_h1 : ((1.0 - false_positives) / false_positives).ln(),
+            bound_h0 : (false_negatives / (1.0 - false_positives)).ln(),
+            bound_h1 : ((1.0 - false_negatives) / false_positives).ln(),
             current_ratio : 0.0,
-            status : VerificationStatus::Maybe
+            status : VerificationStatus::Maybe,
+            runs_executed : 0
         }
     }
 
 }
 
 impl SMCQueryVerification for ProbabilityFloatComparison {
+
+    fn prepare(&self) {
+        continue_info("Type : Probability comparison");
+        continue_info(format!("Comparing : P >= {}", self.target_probability));
+        continue_info(format!("Allowed false positives : {}%", self.false_positives * 100.0));
+        continue_info(format!("Allowed false negatives : {}%", self.false_negatives * 100.0));
+        continue_info(format!("Indifference region : [{},{}]", self.p1, self.p0));
+    }
+
+    fn finish(&self) {
+        continue_info(format!("Runs executed : [{}]", self.runs_executed));
+    }
 
     fn handle_run_result(&mut self, result : VerificationStatus) {
         self.current_ratio += match result {
@@ -53,10 +69,11 @@ impl SMCQueryVerification for ProbabilityFloatComparison {
             _ => 0.0
         };
         if self.current_ratio <= self.bound_h0 {
-            self.status = Verified
+            self.status = Verified;
         } else if self.current_ratio >= self.bound_h1 {
-            self.status = Unverified
+            self.status = Unverified;
         }
+        self.runs_executed += 1;
     }
 
     fn get_result(&self) -> SolverResult {
@@ -64,7 +81,7 @@ impl SMCQueryVerification for ProbabilityFloatComparison {
     }
 
     fn must_do_another_run(&self) -> bool {
-        self.status.unsure()
+        self.runs_executed == 0 || self.status.unsure()
     }
 
 }
