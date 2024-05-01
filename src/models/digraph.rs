@@ -89,6 +89,9 @@ impl<T : ToString + 'static, U> Digraph<T,U> {
         for k in 0..n_nodes {
             for i in 0..n_nodes {
                 for j in 0..n_nodes {
+                    if distances[(i,k)] == U::max_value() || distances[(k,j)] == U::max_value() {
+                        continue;
+                    }
                     distances[(i,j)] = min(
                         distances[(i,j)].clone(),
                         distances[(i,k)].clone() + distances[(k,j)].clone()

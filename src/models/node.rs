@@ -1,5 +1,7 @@
 use std::{cell::RefCell, rc::{Rc, Weak}};
 
+use serde::{Deserialize, Serialize};
+
 use super::{ComponentPtr, Edge, Label};
 
 /// Generic trait that should be implemented by all types of nodes (useless at the moment)
@@ -17,7 +19,7 @@ impl Node for usize {
 pub struct DataNode<T, U> {
     pub element : T,
     pub out_edges : Vec<Rc<Edge<U, Self, Self>>>, // I must admit that this is not very pretty
-    pub in_edges : Vec<Rc<Edge<U, Self, Self>>>, // Maybe just Rc and not Rc<Refcell<>> ?
+    pub in_edges : Vec<Rc<Edge<U, Self, Self>>>,
     pub index : usize,
 }
 

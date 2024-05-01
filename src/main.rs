@@ -8,6 +8,7 @@ pub mod log;
 
 use std::collections::HashMap;
 
+use models::digraph::Digraph;
 use models::lbl;
 use models::petri::{PetriPlace, PetriTransition, PetriStructure};
 use models::time::{TimeInterval, TimeBound::*};
@@ -80,6 +81,11 @@ fn main() {
 
     let json_q = serde_json::to_string(&query).unwrap();
     println!("{}", json_q);
+
+    let dg = sample_digraph();
+    println!("{}", dg.get_model_meta());
+    println!("{}", dg.shortest_paths());
+    lf();
 }
 
 fn build_solver() -> ModelSolvingGraph {
@@ -129,6 +135,19 @@ fn sample_petri() -> PetriNet {
         vec![t0, a, b, c]
     );
     net
+}
+
+fn sample_digraph() -> Digraph<usize, i32> {
+    let mut g : Digraph<usize, i32> = Digraph::new();
+    g.make_node(3);
+    g.make_node(4);
+    g.make_node(2);
+    g.make_node(1);
+    g.make_edge(3, 2, 1);
+    g.make_edge(3, 4, 3);
+    g.make_edge(2, 1, 5);
+    g.make_edge(4, 1, 1);
+    g
 }
 
 fn sample_query() -> Query {

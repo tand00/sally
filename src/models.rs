@@ -1,7 +1,6 @@
 mod label;
 mod node;
 mod edge;
-mod digraph;
 mod model_state;
 
 use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc};
@@ -17,6 +16,8 @@ pub mod time;
 pub mod petri;
 pub mod class_graph;
 pub mod model_solving_graph;
+pub mod digraph;
+pub mod markov_chain;
 
 use self::{model_characteristics::*, time::ClockValue};
 
