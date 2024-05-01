@@ -11,6 +11,7 @@ pub use node::Node;
 pub use edge::Edge;
 //pub use digraph::Digraph;
 use num_traits::Zero;
+use rand::{thread_rng, Rng, seq::SliceRandom};
 
 pub mod time;
 pub mod petri;
@@ -83,7 +84,7 @@ pub trait Model : Any {
     // Given a state and an action, returns a state and actions available
     fn next(&self, state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>);
 
-    fn actions_available(&self, state : &ModelState) -> HashSet<usize>;
+    fn available_actions(&self, state : &ModelState) -> HashSet<usize>;
 
     fn available_delay(&self, state : &ModelState) -> ClockValue {
         let _ = state;
@@ -110,6 +111,28 @@ pub trait Model : Any {
 
     fn is_timed(&self) -> bool where Self : Sized {
         has_characteristic(Self::get_meta().characteristics, TIMED)
+    }
+
+    // Default implementation of random_next sampler for SMC. 
+    // Should be overrided by stochastic models with a more relevant behaviour !
+    fn random_next(&self, state : ModelState) -> (Option<ModelState>, ClockValue, Option<usize>) {
+        let mut rng = thread_rng();
+        let max_delay = self.available_delay(&state);
+        let mut delayed_state = state;
+        let mut delay = ClockValue::zero();
+        if !max_delay.is_zero() {
+            let delay_range = (ClockValue::zero())..(max_delay);
+            delay = rng.gen_range(delay_range);
+            delayed_state = self.delay(delayed_state, delay).unwrap();
+        }
+        let actions : Vec<usize> = self.available_actions(&delayed_state).into_iter().collect();
+        let action = actions.choose(&mut rng);
+        if action.is_none() {
+            return (Some(delayed_state), delay, None)
+        }
+        let action = *action.unwrap();
+        let (next, _) = self.next(delayed_state, action);
+        (next, delay, Some(action))
     }
 
     fn map_label_to_var(&self, var : &Label) -> Option<usize>;

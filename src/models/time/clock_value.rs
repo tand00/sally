@@ -1,5 +1,6 @@
-use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}};
+use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Range, Sub, SubAssign}};
 use num_traits::{One, Zero};
+use rand::{distributions::{uniform::{SampleBorrow, SampleRange, SampleUniform, UniformFloat, UniformSampler}, Distribution, Standard}, Rng, RngCore};
 use serde::{Deserialize, Serialize};
 use super::TimeBound;
 
@@ -107,6 +108,52 @@ impl Hash for ClockValue {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         ((self.0 * 100_000_000.0) as u64).hash(state)
     }
+}
+
+impl Distribution<ClockValue> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ClockValue {
+        let rand_f = rng.gen();
+        ClockValue(rand_f)
+    }
+}
+
+/*impl SampleRange<ClockValue> for Range<ClockValue> {
+    fn sample_single<R: RngCore + ?Sized>(self, rng: &mut R) -> ClockValue {
+        let f_range = (self.start.0)..(self.end.0);
+        let rand_f = rng.gen_range(f_range);
+        ClockValue(rand_f)
+    }
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
+}*/
+
+pub struct UniformClockValue(UniformFloat<f64>);
+
+impl UniformSampler for UniformClockValue {
+    type X = ClockValue;
+    fn new<B1, B2>(low: B1, high: B2) -> Self
+        where B1: SampleBorrow<Self::X> + Sized,
+              B2: SampleBorrow<Self::X> + Sized
+    {
+        UniformClockValue(UniformFloat::<f64>::new(low.borrow().0, high.borrow().0))
+    }
+    fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
+        where B1: SampleBorrow<Self::X> + Sized,
+              B2: SampleBorrow<Self::X> + Sized
+    {
+        UniformClockValue(UniformFloat::<f64>::new_inclusive(
+            low.borrow().0,
+            high.borrow().0,
+        ))
+    }
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::X {
+        ClockValue(self.0.sample(rng))
+    }
+}
+
+impl SampleUniform for ClockValue {
+    type Sampler = UniformClockValue;
 }
 
 impl From<TimeBound> for ClockValue {

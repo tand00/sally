@@ -222,7 +222,7 @@ impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
         (Some(state), actions)
     }
 
-    fn actions_available(&self, state : &ModelState) -> HashSet<usize> {
+    fn available_actions(&self, state : &ModelState) -> HashSet<usize> {
         let (index, _) = state.discrete.argmax();
         let len_actions = self.nodes[index].borrow().out_edges.len();
         (0..len_actions).collect()

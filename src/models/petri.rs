@@ -189,14 +189,14 @@ impl Model for PetriNet {
 
     fn next(&self, state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>) {
         let (mut new_state, _, _) = self.fire(state, action);
-        let actions: HashSet<usize> = self.actions_available(&new_state);
+        let actions: HashSet<usize> = self.available_actions(&new_state);
         if actions.is_empty() && self.available_delay(&new_state).is_zero() {
             new_state.deadlocked = true;
         }
         (Some(new_state), actions)
     }
 
-    fn actions_available(&self, state : &ModelState) -> HashSet<usize> {
+    fn available_actions(&self, state : &ModelState) -> HashSet<usize> {
         state.clocks.iter().enumerate().filter_map(|(i,c)| {
             if c.is_enabled() && self.transitions[i].borrow().interval.contains(*c) {
                 Some(i)

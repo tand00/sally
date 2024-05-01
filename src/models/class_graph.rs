@@ -179,11 +179,11 @@ impl Model for ClassGraph {
         let next_class = &self.classes[next_index].borrow();
         let mut next_state = next_class.generate_image_state();
         next_state.discrete = next_state.discrete.insert_row(next_class.discrete.nrows(), next_index as i32);
-        let actions = self.actions_available(&next_state);
+        let actions = self.available_actions(&next_state);
         (Some(next_state), actions)
     }
 
-    fn actions_available(&self, state : &ModelState) -> HashSet<usize> {
+    fn available_actions(&self, state : &ModelState) -> HashSet<usize> {
         let mut actions = HashSet::new();
         let class_index = state.discrete[state.discrete.nrows() - 1] as usize;
         for e in self.edges.iter() {
