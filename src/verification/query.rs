@@ -2,7 +2,7 @@ use std::{collections::{hash_map::DefaultHasher, HashSet}, hash::{Hash, Hasher},
 
 use crate::{models::{Label, Model}, solution::{get_problem_type, ProblemType}};
 
-use super::{verifier::Verifiable, EvaluationState, VerificationStatus};
+use super::{verifier::Verifiable, EvaluationState, VerificationBound, VerificationStatus};
 use serde::{Deserialize, Serialize};
 use VerificationStatus::*;
 
@@ -299,7 +299,9 @@ pub enum Quantifier {
     #[serde(rename="E")]
     Exists,
     #[serde(rename="A")]
-    ForAll
+    ForAll,
+    #[serde(rename="P")]
+    Probability
 }
 
 use Quantifier::*;
@@ -310,6 +312,7 @@ impl Not for Quantifier {
         match self {
             Self::Exists => Self::ForAll,
             Self::ForAll => Self::Exists,
+            Self::Probability => Self::Probability,
         }
     }
 }
@@ -353,6 +356,8 @@ pub struct Query {
 
     #[serde(skip)]
     pub collapse_subconditions : bool,
+
+    pub run_bound : VerificationBound
 }
 
 impl Query {
@@ -366,10 +371,12 @@ impl Query {
             run_status : Maybe,
             pending_conditions : Vec::new(),
             collapse_subconditions : false,
+            run_bound : VerificationBound::NoRunBound
         }
     }
 
     pub fn end_run(&mut self) {
+        self.pending_conditions.clear();
         if self.run_status == Maybe {
             self.run_status = match self.logic {
                 Finally => Unverified,
@@ -380,10 +387,15 @@ impl Query {
         match self.quantifier {
             Exists => self.total_status |= self.run_status,
             ForAll => self.total_status &= self.run_status,
+            _ => ()
         };
         if self.is_decided() {
             self.end_verification();
         }
+    }
+
+    pub fn reset_run(&mut self) {
+        self.run_status = Maybe;
     }
 
     pub fn end_verification(&mut self) {
@@ -391,6 +403,7 @@ impl Query {
             self.total_status = match self.quantifier {
                 Exists => Unverified,
                 ForAll => Verified,
+                _ => Maybe
             }
         }
     }
@@ -457,6 +470,13 @@ impl Query {
 
     pub fn complement(self) -> Query {
         return Query::new(!self.quantifier, !self.logic, !self.condition.clone());
+    }
+
+    pub fn is_run_decided(&self) -> bool {
+        match self.run_status {
+            Maybe => false,
+            _ => true
+        }
     }
 
     pub fn is_decided(&self) -> bool {

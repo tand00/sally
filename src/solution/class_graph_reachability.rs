@@ -1,4 +1,4 @@
-use crate::{models::{class_graph::ClassGraph, lbl}, verification::VerificationStatus};
+use crate::{models::{class_graph::ClassGraph, lbl}, verification::{VerificationStatus, Verifiable}};
 
 use super::{Solution, SolutionMeta, SolverResult, REACHABILITY};
 

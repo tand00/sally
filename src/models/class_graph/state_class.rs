@@ -81,9 +81,9 @@ impl StateClass {
         s.finish()
     }
 
-    pub fn as_verifiable(&self) -> &impl Verifiable {
+    /*pub fn as_verifiable(&self) -> &impl Verifiable {
         self
-    }
+    }*/
 
 }
 

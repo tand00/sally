@@ -19,6 +19,7 @@ pub mod class_graph;
 pub mod model_solving_graph;
 pub mod digraph;
 pub mod markov_chain;
+pub mod run;
 
 use self::{model_characteristics::*, time::ClockValue};
 

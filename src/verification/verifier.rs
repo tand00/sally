@@ -2,7 +2,7 @@ use std::{hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
 use super::query::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationStatus {
     Maybe,
     Unverified,
@@ -10,6 +10,15 @@ pub enum VerificationStatus {
 }
 
 use VerificationStatus::*;
+
+impl VerificationStatus {
+    pub fn good(&self) -> bool {
+        return *self == Verified
+    }
+    pub fn unsure(&self) -> bool {
+        return *self == Maybe
+    }
+}
 
 impl BitOr for VerificationStatus {
     type Output = Self;
@@ -64,12 +73,12 @@ impl Default for VerificationStatus {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationBound {
-    Time(u32),
-    Steps(u32),
-    Var(usize, u32),
-    NoBound,
+    TimeRunBound(u32),
+    StepsRunBound(usize),
+    VarRunBound(usize, i32),
+    NoRunBound,
 }
 
 pub trait Verifiable : Hash {
@@ -78,6 +87,11 @@ pub trait Verifiable : Hash {
         f64::NAN
     }
     fn is_deadlocked(&self) -> bool;
+    fn as_verifiable(&self) -> &impl Verifiable
+        where Self : Sized 
+    {
+        self
+    }
 }
 
 pub type EvaluationState = u64; // Hashs of (Query, Verifiable)
