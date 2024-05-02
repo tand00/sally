@@ -32,7 +32,7 @@ impl Expr {
 
     pub fn evaluate(&self, state : &impl Verifiable) -> i32 {
         match self {
-            Name(_) => 0,
+            Name(_) => panic!("This query contains non-translated names, unable to evaluate !"),
             Constant(i) => *i,
             Object(id) => state.evaluate_object(*id),
             ClockComparison(prop_type, clock, value) => match prop_type {
@@ -77,6 +77,19 @@ impl Expr {
             ),
             Negative(e) => Negative(Box::new(e.apply_to_model(model))),
             _ => self.clone()
+        }
+    }
+
+    pub fn accept(&self, visitor : &impl QueryVisitor) {
+        match self {
+            Plus(e1, e2) |
+            Minus(e1, e2) |
+            Multiply(e1, e2) => {
+                visitor.visit_expression(self);
+                e1.accept(visitor);
+                e2.accept(visitor);
+            },
+            _ => visitor.visit_expression(self)
         }
     }
 
@@ -282,6 +295,34 @@ impl Condition {
                         )))
                 }
             }
+        }
+    }
+
+    pub fn accept(&self, visitor : &impl QueryVisitor) {
+        match self {
+            Not(c) | Next(c) => {
+                visitor.visit_condition(self);
+                c.accept(visitor);
+            },
+            And(c1,c2) | 
+            Or(c1, c2) | 
+            Until(c1, c2) |
+            Implies(c1, c2)
+                => {
+                    visitor.visit_condition(self);
+                    c1.accept(visitor);
+                    c2.accept(visitor);
+                },
+            Evaluation(e) => {
+                visitor.visit_condition(self);
+                e.accept(visitor);
+            },
+            Proposition(_, e1, e2) => {
+                visitor.visit_condition(self);
+                e1.accept(visitor);
+                e2.accept(visitor);
+            },
+            _ => visitor.visit_condition(self)
         }
     }
 
@@ -493,5 +534,18 @@ impl Query {
     pub fn apply_to_model(&mut self, model : &impl Model) {
         self.condition = self.condition.apply_to_model(model);
     }
+
+    pub fn accept_visitor(&self, visitor : &impl QueryVisitor) {
+        visitor.visit_query(self);
+        self.condition.accept(visitor);
+    }
+
+}
+
+pub trait QueryVisitor {
+
+    fn visit_query(&self, query : &Query);
+    fn visit_condition(&self, condition : &Condition);
+    fn visit_expression(&self, expr : &Expr);
 
 }

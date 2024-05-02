@@ -111,7 +111,11 @@ pub trait Model : Any {
     }
 
     fn is_timed(&self) -> bool where Self : Sized {
-        has_characteristic(Self::get_meta().characteristics, TIMED)
+        has_characteristic(self.get_model_meta().characteristics, TIMED)
+    }
+
+    fn is_stochastic(&self) -> bool where Self : Sized {
+        has_characteristic(self.get_model_meta().characteristics, STOCHASTIC)
     }
 
     // Default implementation of random_next sampler for SMC. 

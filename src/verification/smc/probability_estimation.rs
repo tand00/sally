@@ -22,6 +22,16 @@ impl ProbabilityEstimation {
         }
     }
 
+    pub fn fixed_runs(runs : usize, confidence : f64) -> Self {
+        ProbabilityEstimation {
+            confidence, 
+            interval_width : (4.0 * (2.0 / (1.0 - confidence)).ln() / (runs as f64)).sqrt(),
+            runs_needed : runs,
+            executed_runs : 0,
+            valid_runs: 0
+        }
+    }
+
     fn chernoff_hoeffding_bound(confidence : f64, interval_width : f64) -> usize {
         let bound = 4.0 * (2.0 / (1.0 - confidence)).ln() / interval_width.powi(2);
         bound.ceil() as usize
@@ -34,7 +44,7 @@ impl SMCQueryVerification for ProbabilityEstimation {
     fn prepare(&self) {
         continue_info("Type : Probability estimation");
         continue_info(format!("Confidence : {}%", self.confidence * 100.0));
-        continue_info(format!("Interval width : {}%", self.interval_width));
+        continue_info(format!("Interval width : {}", self.interval_width));
         continue_info(format!("Need to execute [{}] runs", self.runs_needed));
     }
 

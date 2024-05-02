@@ -13,10 +13,13 @@ use VerificationStatus::*;
 
 impl VerificationStatus {
     pub fn good(&self) -> bool {
-        return *self == Verified
+        *self == Verified
     }
     pub fn unsure(&self) -> bool {
-        return *self == Maybe
+        *self == Maybe
+    }
+    pub fn bad(&self) -> bool {
+        *self == Unverified
     }
 }
 
@@ -79,6 +82,12 @@ pub enum VerificationBound {
     StepsRunBound(usize),
     VarRunBound(usize, i32),
     NoRunBound,
+}
+
+impl Default for VerificationBound {
+    fn default() -> Self {
+        Self::NoRunBound
+    }
 }
 
 pub trait Verifiable : Hash {

@@ -9,6 +9,7 @@ pub struct RandomRunIterator<'a> {
     pub initial_state : &'a ModelState,
     pub run_status : RunStatus,
     pub bound : VerificationBound,
+    pub started : bool,
 }
 
 impl<'a> RandomRunIterator<'a> {
@@ -23,7 +24,8 @@ impl<'a> RandomRunIterator<'a> {
                 time : ClockValue::zero(),
                 maximal : false
             },
-            bound
+            bound,
+            started : false
         }
     }
 
@@ -43,9 +45,16 @@ impl<'a> Iterator for RandomRunIterator<'a> {
     type Item = (Rc<ModelState>, ClockValue, Option<usize>);
 
     fn next(&mut self) -> Option<Self::Item> {
+        
+        if !self.started { // Yield the initial state
+            self.started = true;
+            return Some((Rc::clone(&self.run_status.current_state), ClockValue::zero(), None));
+        }
+
         if self.run_status.maximal {
             return None;
         }
+
         let state = self.run_status.current_state.as_ref().clone();
         let (next_state, delay, action) = self.model.random_next(state);
 

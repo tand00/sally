@@ -91,8 +91,12 @@ fn main() {
     let res = estim.verify(&net, &initial_state, &query);
     println!("{:?}", res);
 
-    let mut comp  = ProbabilityFloatComparison::new(0.7, 0.05, 0.2, 0.1, 0.1);
+    let mut comp  = ProbabilityFloatComparison::new(0.5, 0.01, 0.01, 0.01, 0.01);
     let res = comp.verify(&net, &initial_state, &query);
+    println!("{:?}", res);
+
+    let mut estim  = ProbabilityEstimation::fixed_runs(50000, 0.95);
+    let res = estim.verify(&net, &initial_state, &query);
     println!("{:?}", res);
 
 }
