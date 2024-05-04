@@ -1,4 +1,4 @@
-use std::{collections::{hash_map::DefaultHasher, HashSet}, hash::{Hash, Hasher}, ops::Not};
+use std::{collections::{hash_map::DefaultHasher, HashSet}, fmt::Display, hash::{Hash, Hasher}, ops::Not};
 
 use crate::{models::{Label, Model}, solution::{get_problem_type, ProblemType}};
 
@@ -6,15 +6,25 @@ use super::{verifier::Verifiable, EvaluationState, VerificationBound, Verificati
 use serde::{Deserialize, Serialize};
 use VerificationStatus::*;
 
+#[derive(Debug, Clone)]
+pub struct MappingError(pub Label);
+impl Display for MappingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Mapping error : label {} not found in context", self.0)
+    }
+}
+
+pub type MappingResult<T> = Result<T, MappingError>;
+
 // TODO: Might be useless to include both L and G
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PropositionType {
     EQ, NE, LE, GE, LS, GS
 }
 
 use PropositionType::*;
 
-#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Expr {
     Name(Label),
     Object(usize),
@@ -63,20 +73,23 @@ impl Expr {
     }
 
     // Translate Name(x) to Object(m[x])
-    pub fn apply_to_model(&self, model : &impl Model) -> Expr {
+    pub fn apply_to_model(&self, model : &impl Model) -> MappingResult<Expr> {
         match self {
-            Name(x) => Object(model.map_label_to_var(x).unwrap()),
-            Plus(e1, e2) => Plus(
-                Box::new(e1.apply_to_model(model)), Box::new(e2.apply_to_model(model))
-            ),
-            Minus(e1, e2) => Minus(
-                Box::new(e1.apply_to_model(model)), Box::new(e2.apply_to_model(model))
-            ),
-            Multiply(e1, e2) => Multiply(
-                Box::new(e1.apply_to_model(model)), Box::new(e2.apply_to_model(model))
-            ),
-            Negative(e) => Negative(Box::new(e.apply_to_model(model))),
-            _ => self.clone()
+            Name(x) => match model.map_label_to_var(x) {
+                Some(x) => Ok(Object(x)),
+                None => Err(MappingError(x.clone()))
+            },
+            Plus(e1, e2) => Ok(Plus(
+                Box::new(e1.apply_to_model(model)?), Box::new(e2.apply_to_model(model)?)
+            )),
+            Minus(e1, e2) => Ok(Minus(
+                Box::new(e1.apply_to_model(model)?), Box::new(e2.apply_to_model(model)?)
+            )),
+            Multiply(e1, e2) => Ok(Multiply(
+                Box::new(e1.apply_to_model(model)?), Box::new(e2.apply_to_model(model)?)
+            )),
+            Negative(e) => Ok(Negative(Box::new(e.apply_to_model(model)?))),
+            _ => Ok(self.clone())
         }
     }
 
@@ -95,7 +108,7 @@ impl Expr {
 
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Condition {
     True,
     False,
@@ -153,27 +166,27 @@ impl Condition {
         }
     }
 
-    pub fn apply_to_model(&self, model : &impl Model) -> Condition {
+    pub fn apply_to_model(&self, model : &impl Model) -> MappingResult<Condition> {
         match self {
-            Evaluation(e) => Evaluation(e.apply_to_model(model)),
-            Proposition(p_type, e1, e2) => Proposition(
-                *p_type, e1.apply_to_model(model), e2.apply_to_model(model)
-            ),
-            And(c1, c2) => And(
-                Box::new(c1.apply_to_model(model)), Box::new(c2.apply_to_model(model))
-            ),
-            Or(c1, c2) => Or(
-                Box::new(c1.apply_to_model(model)), Box::new(c2.apply_to_model(model))
-            ),
-            Not(c) => Not(Box::new(c.apply_to_model(model))),
-            Implies(c1, c2) => Implies(
-                Box::new(c1.apply_to_model(model)), Box::new(c2.apply_to_model(model))
-            ),
-            Next(c) => Next(Box::new(c.apply_to_model(model))),
-            Until(c1, c2) => Until(
-                Box::new(c1.apply_to_model(model)), Box::new(c2.apply_to_model(model))
-            ),
-            _ => self.clone()
+            Evaluation(e) => Ok(Evaluation(e.apply_to_model(model)?)),
+            Proposition(p_type, e1, e2) => Ok(Proposition(
+                *p_type, e1.apply_to_model(model)?, e2.apply_to_model(model)?
+            )),
+            And(c1, c2) => Ok(And(
+                Box::new(c1.apply_to_model(model)?), Box::new(c2.apply_to_model(model)?)
+            )),
+            Or(c1, c2) => Ok(Or(
+                Box::new(c1.apply_to_model(model)?), Box::new(c2.apply_to_model(model)?)
+            )),
+            Not(c) => Ok(Not(Box::new(c.apply_to_model(model)?))),
+            Implies(c1, c2) => Ok(Implies(
+                Box::new(c1.apply_to_model(model)?), Box::new(c2.apply_to_model(model)?)
+            )),
+            Next(c) => Ok(Next(Box::new(c.apply_to_model(model)?))),
+            Until(c1, c2) => Ok(Until(
+                Box::new(c1.apply_to_model(model)?), Box::new(c2.apply_to_model(model)?)
+            )),
+            _ =>Ok(self.clone())
         }
     }
 
@@ -335,14 +348,15 @@ impl Not for Condition {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Quantifier {
     #[serde(rename="E")]
     Exists,
     #[serde(rename="A")]
     ForAll,
     #[serde(rename="P")]
-    Probability
+    Probability,
+    LTL
 }
 
 use Quantifier::*;
@@ -353,12 +367,12 @@ impl Not for Quantifier {
         match self {
             Self::Exists => Self::ForAll,
             Self::ForAll => Self::Exists,
-            Self::Probability => Self::Probability,
+            _ => self
         }
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StateLogic {
     #[serde(rename="F")]
     Finally, 
@@ -381,7 +395,7 @@ impl Not for StateLogic {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Query {
     pub quantifier : Quantifier,
     pub logic : StateLogic,
@@ -531,8 +545,9 @@ impl Query {
         get_problem_type(self.quantifier, self.logic)
     }
 
-    pub fn apply_to_model(&mut self, model : &impl Model) {
-        self.condition = self.condition.apply_to_model(model);
+    pub fn apply_to_model(&mut self, model : &impl Model) -> MappingResult<()> {
+        self.condition = self.condition.apply_to_model(model)?;
+        Ok(())
     }
 
     pub fn accept_visitor(&self, visitor : &impl QueryVisitor) {

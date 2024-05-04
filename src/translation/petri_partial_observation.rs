@@ -2,7 +2,7 @@ use std::any::Any;
 
 use crate::models::{class_graph::ClassGraph, lbl, petri::PetriNet, Model, ModelState};
 
-use super::{Translation, TranslationMeta, TranslationType::Observation};
+use super::{Translation, TranslationMeta, TranslationResult, TranslationType::Observation};
 
 use crate::log::*;
 
@@ -30,7 +30,7 @@ impl Translation for PetriPartialObservation {
         }
     }
 
-    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> bool {
+    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> TranslationResult {
         panic!("Nothing for now")
     }
 

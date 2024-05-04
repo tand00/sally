@@ -20,16 +20,15 @@ use crate::models::petri::PetriNet;
 use crate::translation::{PetriClassGraphTranslation, Translation};
 use crate::models::Model;
 use crate::solution::{ClassGraphReachabilitySynthesis, Solution};
-use crate::verification::query::*;
-use crate::verification::smc::{ProbabilityEstimation, ProbabilityFloatComparison, SMCQueryVerification};
+use crate::verification::text_query_parser::parse_query;
+use crate::verification::{query::*, VerificationBound};
+use crate::verification::smc::{ProbabilityEstimation, ProbabilityFloatComparison, SMCMaxSeen, SMCQueryVerification};
 
 use log::*;
 
 extern crate nalgebra as na;
 extern crate num_traits;
 extern crate rand;
-
-//use models::class_graph::*;
 
 fn main() {
     println!(" [#] Sally Model Checker - v.1.0");
@@ -52,14 +51,14 @@ fn main() {
     println!("{}", net.get_model_meta());
     lf();
 
-    let mut query = sample_query();
-    query.apply_to_model(&net);
+    /*let mut query = sample_query();
+    query.apply_to_model(&net).unwrap();
     let mut translation = PetriClassGraphTranslation::new();
     let mut solution = ClassGraphReachability::new();
     let initial_state = net.get_initial_state(HashMap::from([
         (lbl("p0"), 1),
     ]));
-    translation.translate(&net, &initial_state);
+    translation.translate(&net, &initial_state).unwrap();
     let cg = translation.get_translated().0.downcast_ref::<ClassGraph>().unwrap();
     println!("{}", cg.get_model_meta());
     lf();
@@ -98,6 +97,13 @@ fn main() {
     let mut estim  = ProbabilityEstimation::fixed_runs(50000, 0.95);
     let res = estim.verify(&net, &initial_state, &query);
     println!("{:?}", res);
+
+    let max_estim = SMCMaxSeen::new(50000);
+    max_estim.estimate_max(&net, &initial_state, VerificationBound::StepsRunBound(50));*/
+
+    let q1 = parse_query(String::from("A <> ((P1 + 2) * 3 > 4 | deadlock) & 'p 2.3' = 3")).unwrap();
+    println!("-> {:#?}", q1);
+    println!("-> {:#?}", serde_json::to_string(&q1).unwrap());
 
 }
 

@@ -1,11 +1,20 @@
 mod petri_class_graph;
 mod petri_partial_observation;
-use std::any::Any;
+use std::{any::Any, fmt::Display};
 
 pub use petri_class_graph::PetriClassGraphTranslation;
 pub use petri_partial_observation::PetriPartialObservation;
 
 use crate::models::{lbl, Label, Model, ModelState};
+
+#[derive(Debug, Clone)]
+pub struct TranslationError(pub String);
+pub type TranslationResult = Result<(), TranslationError>;
+impl Display for TranslationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Translation error : {}", self.0)
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TranslationType {
@@ -29,7 +38,7 @@ use TranslationType::*;
 
 pub trait Translation {
 
-    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> bool;
+    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> TranslationResult;
 
     fn get_translated(&mut self) -> (&mut dyn Any, &ModelState);
     fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelState);
@@ -76,20 +85,17 @@ impl Translation for TranslationChain {
         }
     }
 
-    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> bool {
+    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> TranslationResult {
         if self.translations.is_empty() {
-            return false;
+            return Err(TranslationError(String::from("Empty translation chain")));
         }
         let mut current_model = base;
         let mut initial_state = initial_state;
         for translation in self.translations.iter_mut() {
-            let result = translation.translate(current_model, initial_state);
-            if !result {
-                return false;
-            }
+            let result = translation.translate(current_model, initial_state)?;
             (current_model, initial_state) = translation.get_translated();
         }
-        true
+        Ok(())
     }
 
     fn get_translated(&mut self) -> (&mut dyn Any, &ModelState) {

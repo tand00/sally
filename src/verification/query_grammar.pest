@@ -1,0 +1,57 @@
+WHITESPACE = _{ " " | "\t" }
+alpha = _{ 'a'..'z' | 'A'..'Z' }
+digit = _{ '0'..'9' }
+ident = @{ (alpha | digit | ".")+ }
+string_ident = { (alpha | digit | ".")+ }
+quoted_ident = _{ "\"" ~ string_ident ~ "\"" | "'" ~ string_ident ~ "'" }
+name = _{ ident | quoted_ident }
+
+always = { "A" }
+exists = { "E" }
+proba = { "P" | "Pr" }
+finally = { "F" | "<>" }
+globally = { "G" | "[]" }
+
+until = { "U" }
+next = { "X" }
+and = @{ "&"{1,2} | ^"and" }
+or = @{ "|"{1,2} | ^"or" }
+not = { "!" | ^"not" }
+implies = { "=>" }
+
+eq = @{ "="{1,2} }
+ls = { "<" }
+le = { "<=" }
+gs = { ">" }
+ge = { ">=" }
+ne = { "!=" | "/=" }
+prop_type = _{ eq | ls | le | gs | ge | ne }
+
+add = { "+" }
+subtract = { "-" }
+multiply = { "*" }
+minus = { "-" }
+
+deadlock = { ^"deadlock" }
+true = { ^"true" }
+false = { ^"false" }
+
+quantifier = _{ always | exists | proba }
+ltl_logic = _{ finally | globally }
+
+expr = { atom_expr ~ (expr_op ~ atom_expr)* }
+expr_op = _{ add | subtract | multiply }
+
+int_constant = @{ digit+ }
+primary_expr = _{ int_constant | name | "(" ~ expr ~ ")" }
+atom_expr = _{ minus? ~ primary_expr }
+
+cond = { atom_cond ~ (cond_op ~ atom_cond)* }
+cond_op = _{ and | or | until | implies }
+
+prop = _{ expr ~ (prop_type ~ expr )?}
+
+primary_cond = _{ true | false | deadlock | prop | "(" ~ cond ~ ")" }
+atom_cond = _{ (not | next)? ~ primary_cond }
+
+query = _{ SOI ~ quantifier? ~ ltl_logic? ~ cond }

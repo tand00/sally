@@ -76,7 +76,7 @@ impl Default for VerificationStatus {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationBound {
     TimeRunBound(u32),
     StepsRunBound(usize),

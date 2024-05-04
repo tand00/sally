@@ -2,7 +2,7 @@ use std::any::Any;
 
 use crate::models::{class_graph::ClassGraph, lbl, petri::PetriNet, Model, ModelState};
 
-use super::{Translation, TranslationMeta, TranslationType::SymbolicSpace};
+use super::{Translation, TranslationError, TranslationMeta, TranslationResult, TranslationType::SymbolicSpace};
 
 use crate::log::*;
 
@@ -32,12 +32,12 @@ impl Translation for PetriClassGraphTranslation {
         }
     }
 
-    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> bool {
+    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> TranslationResult {
         pending("Computing Petri net Class graph...");
         let petri: Option<&PetriNet> = base.downcast_ref::<PetriNet>();
         if petri.is_none() {
             error("Unable to compute Class graph !");
-            return false;
+            return Err(TranslationError(String::from("Cannot parse a Petri net from input parameter")));
         }
         let petri = petri.unwrap();
         let graph = ClassGraph::compute(petri, initial_state);
@@ -47,7 +47,7 @@ impl Translation for PetriClassGraphTranslation {
         initial_state.discrete = initial_state.discrete.insert_row(vars, 0);
         self.initial_state = initial_state;
         self.class_graph = Some(graph);
-        true
+        Ok(())
     }
 
     fn get_translated(&mut self) -> (&mut dyn Any, &ModelState) {

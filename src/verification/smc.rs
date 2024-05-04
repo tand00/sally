@@ -1,10 +1,12 @@
 mod random_run_generator;
 mod probability_estimation;
 mod probability_float_comparison;
+mod smc_max_seen;
 
 pub use random_run_generator::RandomRunIterator;
 pub use probability_estimation::ProbabilityEstimation;
 pub use probability_float_comparison::ProbabilityFloatComparison;
+pub use smc_max_seen::SMCMaxSeen;
 
 use crate::{models::{Model, ModelState}, solution::SolverResult, Query};
 

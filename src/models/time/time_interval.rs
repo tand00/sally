@@ -30,7 +30,7 @@ impl TimeInterval {
     pub fn random_date(&self) -> ClockValue {
         let mut gen = rand::thread_rng();
         if self.is_empty() {
-            panic!("Interval is empty !");
+            return ClockValue::disabled();
         }
         let low = match self.0 {
             Infinite => f64::NAN,
