@@ -101,7 +101,7 @@ fn main() {
     let max_estim = SMCMaxSeen::new(50000);
     max_estim.estimate_max(&net, &initial_state, VerificationBound::StepsRunBound(50));*/
 
-    let q1 = parse_query(String::from("A <> ((P1 + 2) * 3 > 4 | deadlock) & 'p 2.3' = 3")).unwrap();
+    let q1 = parse_query(String::from("   A <> [# <= 50 ] ((P1 + 2) * 3 > 4 | deadlock) & 'p 2.3' = 3   ")).unwrap();
     println!("-> {:#?}", q1);
     println!("-> {:#?}", serde_json::to_string(&q1).unwrap());
 

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::Label;
 
-use super::query::*;
+use super::{query::*, VerificationBound};
 
 // Parser for text queries, using Pest for now... Might be fun to build an automata later :) !
 
@@ -25,6 +25,7 @@ lazy_static::lazy_static! {
         PrattParser::new()
             // Addition and subtract have equal precedence
             .op(Op::prefix(always) | Op::prefix(exists) | Op::prefix(proba) | Op::prefix(finally) | Op::prefix(globally))
+            .op(Op::prefix(timebound) | Op::prefix(stepsbound))
             .op(Op::infix(or, Left))
             .op(Op::infix(and, Left))
             .op(Op::infix(until, Left) | Op::infix(implies, Left))
@@ -44,6 +45,7 @@ enum CondOp { CondAnd, CondOr, CondUntil, CondImplies, CondNot, CondNext }
 #[derive(Debug)]
 enum ExprOp { ExprAdd, ExprSubtract, ExprMultiply, ExprMinus }
 
+//Generic struct to build an uniform-type syntax tree, and later reconstruct the final Query with Quantifier, Logic, Condtions, Exprs...
 #[derive(Debug)]
 enum ParsedQuery {
     ParsedExpr(Expr),
@@ -55,6 +57,7 @@ enum ParsedQuery {
     ParsedBinProp(PropositionType, Box<ParsedQuery>, Box<ParsedQuery>),
     ParsedQuantifier(Quantifier, Box<ParsedQuery>),
     ParsedLogic(StateLogic, Box<ParsedQuery>),
+    ParsedBound(VerificationBound, Box<ParsedQuery>)
 }
 
 impl ParsedQuery {
@@ -67,8 +70,14 @@ impl ParsedQuery {
                 Ok(next)
             }
             ParsedLogic(l, sub) => {
-                let cond = sub.build_cond()?;
-                Ok(Query::new(Quantifier::LTL, l, cond))
+                let mut next = sub.build_query()?;
+                next.logic = l;
+                Ok(next)
+            }
+            ParsedBound(b, sub) => {
+                let mut next = sub.build_query()?;
+                next.run_bound = b;
+                Ok(next)
             }
             _ => {
                 let cond = self.build_cond()?;
@@ -185,6 +194,14 @@ fn parse_query_pairs(pairs: Pairs<Rule>) -> ParsedQuery {
                 Rule::proba => ParsedQuantifier(Quantifier::Probability, rhs),
                 Rule::finally => ParsedLogic(StateLogic::Finally, rhs),
                 Rule::globally => ParsedLogic(StateLogic::Globally, rhs),
+                Rule::timebound => {
+                    let value = op.into_inner().as_str().parse::<u32>().unwrap();
+                    ParsedBound(VerificationBound::TimeRunBound(value), rhs)
+                },
+                Rule::stepsbound => {
+                    let value = op.into_inner().as_str().parse::<usize>().unwrap();
+                    ParsedBound(VerificationBound::StepsRunBound(value), rhs)
+                }
                 _ => unreachable!(),
             }
         })

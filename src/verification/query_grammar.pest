@@ -1,4 +1,4 @@
-WHITESPACE = _{ " " | "\t" }
+WHITESPACE = _{ " " | "\t" | NEWLINE }
 alpha = _{ 'a'..'z' | 'A'..'Z' }
 digit = _{ '0'..'9' }
 ident = @{ (alpha | digit | ".")+ }
@@ -8,7 +8,7 @@ name = _{ ident | quoted_ident }
 
 always = { "A" }
 exists = { "E" }
-proba = { "P" | "Pr" }
+proba = { ^"P" ~ ^"r"? }
 finally = { "F" | "<>" }
 globally = { "G" | "[]" }
 
@@ -54,4 +54,8 @@ prop = _{ expr ~ (prop_type ~ expr )?}
 primary_cond = _{ true | false | deadlock | prop | "(" ~ cond ~ ")" }
 atom_cond = _{ (not | next)? ~ primary_cond }
 
-query = _{ SOI ~ quantifier? ~ ltl_logic? ~ cond }
+timebound = { ^"t" ~ "<=" ~ int_constant }
+stepsbound = { ^"#" ~ "<=" ~ int_constant }
+runbound = _{ "[" ~ (timebound | stepsbound) ~ "]" }
+
+query = _{ SOI ~ quantifier? ~ ltl_logic? ~ runbound? ~ cond }
