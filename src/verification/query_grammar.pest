@@ -31,6 +31,8 @@ add = { "+" }
 subtract = { "-" }
 multiply = { "*" }
 minus = { "-" }
+modulo = { "%" }
+pow = { "^" }
 
 deadlock = { ^"deadlock" }
 true = { ^"true" }
@@ -40,7 +42,7 @@ quantifier = _{ always | exists | proba }
 ltl_logic = _{ finally | globally }
 
 expr = { atom_expr ~ (expr_op ~ atom_expr)* }
-expr_op = _{ add | subtract | multiply }
+expr_op = _{ add | subtract | multiply | modulo | pow }
 
 int_constant = @{ digit+ }
 primary_expr = _{ int_constant | name | "(" ~ expr ~ ")" }

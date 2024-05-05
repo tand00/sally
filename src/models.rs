@@ -14,6 +14,8 @@ use num_traits::Zero;
 use rand::{thread_rng, Rng, seq::SliceRandom};
 
 pub mod time;
+pub mod expressions;
+pub mod program;
 pub mod petri;
 pub mod class_graph;
 pub mod model_solving_graph;
@@ -79,11 +81,11 @@ pub struct ModelMeta {
     characteristics : ModelCharacteristics,
 }
 impl ModelMeta {
-    fn is_timed(&self) -> bool where Self : Sized {
+    pub fn is_timed(&self) -> bool where Self : Sized {
         has_characteristic(self.characteristics, TIMED)
     }
 
-    fn is_stochastic(&self) -> bool where Self : Sized {
+    pub fn is_stochastic(&self) -> bool where Self : Sized {
         has_characteristic(self.characteristics, STOCHASTIC)
     }
 }
@@ -168,14 +170,5 @@ pub trait Model : Any {
     fn compile(&mut self) -> CompilationResult<()> {
         Ok(())
     }
-
-}
-
-pub enum ModelVar {
-    Name(Label),
-    StateIndex(usize)
-}
-
-impl ModelVar {
 
 }

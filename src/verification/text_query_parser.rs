@@ -2,7 +2,7 @@ use pest_derive::Parser;
 use pest::{iterators::Pairs, pratt_parser::PrattParser, Parser};
 use serde::{Deserialize, Serialize};
 
-use crate::models::Label;
+use crate::models::expressions::{Condition, Expr, ModelVar, PropositionType};
 
 use super::{query::*, VerificationBound};
 
@@ -36,6 +36,8 @@ lazy_static::lazy_static! {
             )
             .op(Op::infix(add, Left) | Op::infix(subtract, Left))
             .op(Op::infix(multiply, Left))
+            .op(Op::infix(modulo, Left))
+            .op(Op::infix(pow, Left))
             .op(Op::prefix(minus))
     };
 }
@@ -43,7 +45,7 @@ lazy_static::lazy_static! {
 #[derive(Debug)]
 enum CondOp { CondAnd, CondOr, CondUntil, CondImplies, CondNot, CondNext }
 #[derive(Debug)]
-enum ExprOp { ExprAdd, ExprSubtract, ExprMultiply, ExprMinus }
+enum ExprOp { ExprAdd, ExprSubtract, ExprMultiply, ExprMinus, ExprModulo, ExprPow }
 
 //Generic struct to build an uniform-type syntax tree, and later reconstruct the final Query with Quantifier, Logic, Condtions, Exprs...
 #[derive(Debug)]
@@ -137,6 +139,8 @@ impl ParsedQuery {
                     ExprAdd => Ok(Expr::Plus(expr1, expr2)),
                     ExprSubtract => Ok(Expr::Minus(expr1, expr2)),
                     ExprMultiply => Ok(Expr::Multiply(expr1, expr2)),
+                    ExprModulo => Ok(Expr::Modulo(expr1, expr2)),
+                    ExprPow => Ok(Expr::Pow(expr1, expr2)),
                     _ => Err(QueryParsingError)
                 }
             }
@@ -153,8 +157,7 @@ use ExprOp::*;
 fn parse_query_pairs(pairs: Pairs<Rule>) -> ParsedQuery {
     QUERY_PRATT_PASER
         .map_primary(|primary| match primary.as_rule() {
-            Rule::ident => ParsedExpr(Expr::Name(Label::from(primary.as_str()))),
-            Rule::string_ident => ParsedExpr(Expr::Name(Label::from(primary.as_str()))),
+            Rule::ident | Rule::string_ident => ParsedExpr(Expr::Var(ModelVar::from(primary.as_str()))),
             Rule::int_constant => ParsedExpr(Expr::Constant(primary.as_str().parse::<i32>().unwrap())),
             Rule::r#true => ParsedCond(Condition::True),
             Rule::r#false => ParsedCond(Condition::False),
@@ -170,6 +173,8 @@ fn parse_query_pairs(pairs: Pairs<Rule>) -> ParsedQuery {
                 Rule::add => ParsedBinExpr(ExprAdd, lhs, rhs),
                 Rule::subtract => ParsedBinExpr(ExprSubtract, lhs, rhs),
                 Rule::multiply => ParsedBinExpr(ExprMultiply, lhs, rhs),
+                Rule::modulo => ParsedBinExpr(ExprModulo, lhs, rhs),
+                Rule::pow => ParsedBinExpr(ExprPow, lhs, rhs),
                 Rule::and => ParsedBinCond(CondAnd, lhs, rhs),
                 Rule::or => ParsedBinCond(CondOr, lhs, rhs),
                 Rule::until => ParsedBinCond(CondUntil, lhs, rhs),

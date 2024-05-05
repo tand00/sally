@@ -92,7 +92,7 @@ impl Translation for TranslationChain {
         let mut current_model = base;
         let mut initial_state = initial_state;
         for translation in self.translations.iter_mut() {
-            let result = translation.translate(current_model, initial_state)?;
+            translation.translate(current_model, initial_state)?;
             (current_model, initial_state) = translation.get_translated();
         }
         Ok(())

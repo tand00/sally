@@ -63,7 +63,7 @@ impl ClassGraph {
                 }
             }
         }
-        cg.compile();
+        cg.compile().unwrap(); //TODO! Move compile out of init maybe ?
         cg
     }
 

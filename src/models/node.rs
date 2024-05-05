@@ -1,8 +1,6 @@
-use std::{cell::RefCell, rc::{Rc, Weak}};
+use std::rc::Rc;
 
-use serde::{Deserialize, Serialize};
-
-use super::{ComponentPtr, Edge, Label};
+use super::{Edge, Label};
 
 /// Generic trait that should be implemented by all types of nodes (useless at the moment)
 pub trait Node {

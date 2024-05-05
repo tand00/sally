@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::time::TimeInterval;
 use crate::models::{CompilationError, CompilationResult, Edge, Label, Model, ModelState, Node};
-use crate::verification::query::Condition;
+use crate::models::expressions::Condition;
 
 use super::PetriPlace;
 

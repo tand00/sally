@@ -9,6 +9,7 @@ pub mod log;
 use std::collections::HashMap;
 
 use models::digraph::Digraph;
+use models::expressions::{var, Condition, Expr};
 use models::lbl;
 use models::petri::{PetriPlace, PetriTransition, PetriStructure};
 use models::time::{TimeInterval, TimeBound::*};
@@ -101,7 +102,7 @@ fn main() {
     let max_estim = SMCMaxSeen::new(50000);
     max_estim.estimate_max(&net, &initial_state, VerificationBound::StepsRunBound(50));
 
-    let q1 = parse_query(String::from("P <> [t <= 100] (P2 | deadlock) & P5")).unwrap();
+    let q1 = parse_query(String::from("P <> [t <= 100] (P2 | deadlock) & P5 ^ 2 % 5")).unwrap();
     println!("-> {:#?}", q1);
     println!("-> {:#?}", serde_json::to_string(&q1).unwrap());
 
@@ -171,7 +172,7 @@ fn sample_digraph() -> Digraph<usize, i32> {
 
 fn sample_query() -> Query {
     let condition = Condition::And(
-        Box::new(Condition::Evaluation(Expr::Name(lbl("p5")))),
+        Box::new(Condition::Evaluation(Expr::Var(var("p5")))),
         Box::new(Condition::Deadlock)
     );
     Query::new(Quantifier::Exists, StateLogic::Finally, condition)

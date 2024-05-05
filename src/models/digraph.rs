@@ -1,11 +1,11 @@
 use std::{cmp::min, collections::HashSet, ops::Add, rc::Rc};
 
-use nalgebra::{DMatrix, DVector, Scalar};
+use nalgebra::{DMatrix, Scalar};
 use num_traits::{Bounded, Zero};
 
 use crate::computation::DBM;
 
-use super::{lbl, new_ptr, node::DataNode, time::{ClockValue, TimeBound}, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node, NONE};
+use super::{lbl, new_ptr, node::DataNode, time::TimeBound, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node, NONE};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
 pub struct Digraph<T : ToString + 'static, U> {
