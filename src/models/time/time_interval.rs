@@ -66,6 +66,12 @@ impl One for TimeInterval {
     }
 }
 
+impl Default for TimeInterval {
+    fn default() -> Self {
+        TimeInterval::full()
+    }
+}
+
 impl fmt::Display for TimeInterval {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let first_bound_type = if let Large(_) = self.0 { "[" } else { "]" };

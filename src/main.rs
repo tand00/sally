@@ -51,7 +51,7 @@ fn main() {
     println!("{}", net.get_model_meta());
     lf();
 
-    /*let mut query = sample_query();
+    let mut query = sample_query();
     query.apply_to_model(&net).unwrap();
     let mut translation = PetriClassGraphTranslation::new();
     let mut solution = ClassGraphReachability::new();
@@ -99,9 +99,9 @@ fn main() {
     println!("{:?}", res);
 
     let max_estim = SMCMaxSeen::new(50000);
-    max_estim.estimate_max(&net, &initial_state, VerificationBound::StepsRunBound(50));*/
+    max_estim.estimate_max(&net, &initial_state, VerificationBound::StepsRunBound(50));
 
-    let q1 = parse_query(String::from("   A <> [# <= 50 ] ((P1 + 2) * 3 > 4 | deadlock) & 'p 2.3' = 3   ")).unwrap();
+    let q1 = parse_query(String::from("P <> [t <= 100] (P2 | deadlock) & P5")).unwrap();
     println!("-> {:#?}", q1);
     println!("-> {:#?}", serde_json::to_string(&q1).unwrap());
 

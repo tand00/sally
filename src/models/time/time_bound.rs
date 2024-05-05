@@ -184,3 +184,9 @@ impl fmt::Display for TimeBound {
         write!(f, "{}", to_print)
     }
 }
+
+impl Default for TimeBound {
+    fn default() -> Self {
+        Infinite
+    }
+}

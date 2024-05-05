@@ -3,7 +3,7 @@ mod node;
 mod edge;
 mod model_state;
 
-use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc};
+use std::{any::Any, cell::RefCell, collections::{HashMap, HashSet}, rc::Rc};
 
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
@@ -18,10 +18,15 @@ pub mod petri;
 pub mod class_graph;
 pub mod model_solving_graph;
 pub mod digraph;
+pub mod model_network;
 //pub mod markov_chain;
 pub mod run;
 
 use self::{model_characteristics::*, time::ClockValue};
+
+#[derive(Debug, Clone)]
+pub struct CompilationError;
+pub type CompilationResult<T> = Result<T, CompilationError>;
 
 pub type ComponentPtr<T> = Rc<RefCell<T>>;
 pub fn new_ptr<T>(x : T) -> ComponentPtr<T> {
@@ -73,6 +78,15 @@ pub struct ModelMeta {
     description : String,
     characteristics : ModelCharacteristics,
 }
+impl ModelMeta {
+    fn is_timed(&self) -> bool where Self : Sized {
+        has_characteristic(self.characteristics, TIMED)
+    }
+
+    fn is_stochastic(&self) -> bool where Self : Sized {
+        has_characteristic(self.characteristics, STOCHASTIC)
+    }
+}
 impl std::fmt::Display for ModelMeta {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, " [.] Model ({})\n | Description : \n | {}\n | Characteristics : {}", self.name, self.description, characteristics_label(self.characteristics))
@@ -93,15 +107,15 @@ pub trait Model : Any {
     }
 
     fn n_vars(&self) -> usize;
-    
-    fn n_clocks(&self) -> usize {
-        0
-    }
 
     fn delay(&self, state : ModelState, dt : ClockValue) -> Option<ModelState> {
         let _ = dt;
         let _ = state;
         None
+    }
+
+    fn init_initial_clocks(&self, state : ModelState) -> ModelState {
+        state
     }
 
     fn get_meta() -> ModelMeta where Self : Sized;
@@ -110,13 +124,9 @@ pub trait Model : Any {
         Self::get_meta()
     }
 
-    fn is_timed(&self) -> bool where Self : Sized {
-        has_characteristic(self.get_model_meta().characteristics, TIMED)
-    }
+    fn is_timed(&self) -> bool;
 
-    fn is_stochastic(&self) -> bool where Self : Sized {
-        has_characteristic(self.get_model_meta().characteristics, STOCHASTIC)
-    }
+    fn is_stochastic(&self) -> bool;
 
     // Default implementation of random_next sampler for SMC. 
     // Should be overrided by stochastic models with a more relevant behaviour !
@@ -140,6 +150,32 @@ pub trait Model : Any {
         (next, delay, Some(action))
     }
 
+    fn get_initial_state(&self, marking : HashMap<Label, i32>) -> ModelState {
+        let mut state = ModelState::new(self.n_vars(), 0);
+        for (k,v) in marking.iter() {
+            let index = self.map_label_to_var(k);
+            if index.is_none() {
+                continue;
+            }
+            let index = index.unwrap();
+            state.discrete[index] = *v;
+        }
+        self.init_initial_clocks(state)
+    }
+
     fn map_label_to_var(&self, var : &Label) -> Option<usize>;
+
+    fn compile(&mut self) -> CompilationResult<()> {
+        Ok(())
+    }
+
+}
+
+pub enum ModelVar {
+    Name(Label),
+    StateIndex(usize)
+}
+
+impl ModelVar {
 
 }

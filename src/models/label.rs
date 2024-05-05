@@ -8,8 +8,28 @@ pub struct Label(String);
 
 /// Wrapper of String to be used in model definitions (transitions and states labels...)
 impl Label {
+
     pub fn new() -> Self {
         Label(String::new())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn get_first_ident(&self) -> (Label, Label) {
+        let split = self.0.split_once(".");
+        match split {
+            None => (self.clone(), Label::new()),
+            Some((prefix, suffix)) => (Label::from(prefix), Label::from(suffix))
+        }
+    }
+
+}
+
+impl Default for Label {
+    fn default() -> Self {
+        Label::new()
     }
 }
 

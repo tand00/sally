@@ -156,6 +156,12 @@ impl SampleUniform for ClockValue {
     type Sampler = UniformClockValue;
 }
 
+impl Default for ClockValue {
+    fn default() -> Self {
+        ClockValue::zero()
+    }
+}
+
 impl From<TimeBound> for ClockValue {
     fn from(value: TimeBound) -> Self {
         match value {

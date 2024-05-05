@@ -339,6 +339,16 @@ impl Condition {
         }
     }
 
+    pub fn is_true(&self, state : &impl Verifiable) -> bool {
+        self.evaluate(state).0.good()
+    }
+
+}
+
+impl Default for Condition {
+    fn default() -> Self {
+        True
+    }
 }
 
 impl Not for Condition {

@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, fmt, rc::{Rc, Weak}};
 
-use super::{lbl, model_characteristics::*, new_ptr, time::ClockValue, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node};
+use super::{lbl, model_characteristics::*, new_ptr, time::ClockValue, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node};
 
 mod petri_place;
 mod petri_transition;
@@ -51,7 +51,7 @@ impl PetriNet {
             places_dic, 
             transitions_dic 
         };
-        petri.make_edges();
+        petri.compile();
         petri
     }
 
@@ -114,12 +114,6 @@ impl PetriNet {
         (state, newen, pers)
     }
 
-    pub fn make_edges(&mut self) {
-        for transition in self.transitions.iter() {
-            self.create_transition_edges(transition);
-        }
-    }
-
     fn create_transition_edges(&self, transition : &ComponentPtr<PetriTransition>) {
         let from_labels = transition.borrow().from.clone();
         let to_labels = transition.borrow().to.clone();
@@ -151,22 +145,6 @@ impl PetriNet {
             transition.borrow_mut().output_edges.push(out_edge);
             place.borrow_mut().add_upstream_transition(transition);
         }
-    }
-
-    pub fn get_initial_state(&self, marking : HashMap<Label, i32>) -> ModelState {
-        let mut state = ModelState::new(self.n_vars(), self.n_clocks());
-        for (k,v) in marking.iter() {
-            let index = self.map_label_to_var(k);
-            if index.is_none() {
-                continue;
-            }
-            let index = index.unwrap();
-            state.discrete[index] = *v;
-        }
-        for clock in self.enabled_transitions(&state) {
-            state.enable_clock(clock, ClockValue::zero());
-        }
-        state
     }
 
     pub fn get_structure(&self) -> impl Serialize {
@@ -221,6 +199,14 @@ impl Model for PetriNet {
         }
     }
 
+    fn init_initial_clocks(&self, mut state : ModelState) -> ModelState {
+        state.create_clocks(self.transitions.len());
+        for clock in self.enabled_transitions(&state) {
+            state.enable_clock(clock, ClockValue::zero());
+        }
+        state
+    }
+
     fn delay(&self, mut state : ModelState, dt : ClockValue) -> Option<ModelState> {
         state.step(dt);
         Some(state)
@@ -238,15 +224,33 @@ impl Model for PetriNet {
         self.places.len()
     }
 
-    fn n_clocks(&self) -> usize {
-        self.transitions.len()
-    }
-
     fn map_label_to_var(&self, var : &Label) -> Option<usize> {
         if !self.places_dic.contains_key(var) {
             return None;
         }
         Some(self.places_dic[var])
+    }
+
+    fn is_timed(&self) -> bool {
+        true
+    }
+
+    fn is_stochastic(&self) -> bool {
+        false
+    }
+
+    fn compile(&mut self) -> CompilationResult<()> {
+        for place in self.places.iter() {
+            let mut place_ref = place.borrow_mut();
+            place_ref.clear_upstream_transitions();
+            place_ref.clear_downstream_transitions();
+        }
+        for transition in self.transitions.iter() {
+            transition.borrow_mut().clear_edges();
+            transition.borrow_mut().compile(self)?;
+            self.create_transition_edges(transition);
+        }
+        Ok(())
     }
 
 }

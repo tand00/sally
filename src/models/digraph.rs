@@ -241,4 +241,12 @@ impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
         return None;
     }
 
+    fn is_timed(&self) -> bool {
+        false
+    }
+
+    fn is_stochastic(&self) -> bool {
+        false
+    }
+
 }

@@ -3,7 +3,8 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::models::time::TimeInterval;
-use crate::models::{Edge, Label, ModelState, Node};
+use crate::models::{CompilationError, CompilationResult, Edge, Label, Model, ModelState, Node};
+use crate::verification::query::Condition;
 
 use super::PetriPlace;
 
@@ -26,6 +27,11 @@ pub struct PetriTransition {
     
     #[serde(skip)]
     pub index : usize,
+
+    pub guard : Condition,
+
+    #[serde(skip)]
+    pub compiled_guard : Condition
 }
 
 impl Node for PetriTransition {
@@ -40,19 +46,37 @@ impl PetriTransition {
 
     pub fn new(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
-            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : true, index : 0
+            label, 
+            from, to, 
+            interval, 
+            input_edges: Vec::new(), output_edges: Vec::new(), 
+            controllable : true, 
+            index : 0, 
+            guard : Condition::True, compiled_guard : Condition::True
         }
     }
 
     pub fn new_untimed(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
         PetriTransition {
-            label, from, to, interval: TimeInterval::full(), input_edges: Vec::new(), output_edges: Vec::new(), controllable : true, index : 0
+            label, 
+            from, to, 
+            interval: TimeInterval::full(), 
+            input_edges: Vec::new(), output_edges: Vec::new(), 
+            controllable : true, 
+            index : 0,
+            guard : Condition::True, compiled_guard : Condition::True
         }
     }
 
     pub fn new_uncontrollable(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
-            label, from, to, interval, input_edges: Vec::new(), output_edges: Vec::new(), controllable : false, index : 0
+            label, 
+            from, to, 
+            interval, 
+            input_edges: Vec::new(), output_edges: Vec::new(), 
+            controllable : false, 
+            index : 0,
+            guard : Condition::True, compiled_guard : Condition::True
         }
     }
 
@@ -73,7 +97,21 @@ impl PetriTransition {
                 return false
             }
         }
-        true
+        self.compiled_guard.is_true(marking)
+    }
+
+    pub fn clear_edges(&mut self) {
+        self.input_edges.clear();
+        self.output_edges.clear();
+    }
+
+    pub fn compile(&mut self, model : &impl Model) -> CompilationResult<()> {
+        let res = self.guard.apply_to_model(model);
+        match res {
+            Ok(c) => self.compiled_guard = c,
+            Err(_) => return Err(CompilationError)
+        };
+        Ok(())
     }
 
 }

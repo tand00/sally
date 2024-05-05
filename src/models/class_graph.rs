@@ -19,8 +19,8 @@ const CLASS_LIMIT : usize = 4096;
 pub struct ClassGraph {
     pub classes: Vec<ComponentPtr<StateClass>>,
     pub edges: Vec<Edge<usize, StateClass, StateClass>>,
-    n_clocks : usize,
     pub places_dic : HashMap<Label, usize>,
+    pub transitions_count : usize
 }
 
 impl ClassGraph {
@@ -29,8 +29,8 @@ impl ClassGraph {
         let mut cg = ClassGraph {
             classes: Vec::new(),
             edges: Vec::new(),
-            n_clocks : p_net.n_clocks(),
-            places_dic : p_net.places_dic.clone()
+            places_dic : p_net.places_dic.clone(),
+            transitions_count : p_net.transitions.len()
         };
         let mut seen : HashMap<u64, usize> = HashMap::new();
         let mut to_see : VecDeque<usize> = VecDeque::new();
@@ -63,7 +63,7 @@ impl ClassGraph {
                 }
             }
         }
-        cg.make_edges();
+        cg.compile();
         cg
     }
 
@@ -132,22 +132,6 @@ impl ClassGraph {
         })
     }
 
-    fn make_edges(&mut self) {
-        for class in self.classes.iter() {
-            for (pred, action) in class.borrow().predecessors.iter() {
-                let edge = Edge {
-                    label : Label::from(action.to_string()),
-                    from : None,
-                    to : None,
-                    weight : *action,
-                    ref_from : Some(Weak::clone(pred)),
-                    ref_to : Some(Rc::downgrade(class))
-                };
-                self.edges.push(edge);
-            }
-        }
-    }
-
 }
 
 impl Model for ClassGraph {
@@ -208,15 +192,50 @@ impl Model for ClassGraph {
         self.classes.first().unwrap().borrow().discrete.nrows() + 1 // Additionnal discrete var to remember current class
     }
 
-    fn n_clocks(&self) -> usize {
-        self.n_clocks
-    }
-
     fn map_label_to_var(&self, var : &Label) -> Option<usize> {
         if !self.places_dic.contains_key(var) { 
             return None;
         }
         Some(self.places_dic[var])
+    }
+
+    fn init_initial_clocks(&self, mut state : ModelState) -> ModelState {
+        if state.discrete.nrows() == 0 {
+            return state;
+        }
+        state.create_clocks(self.transitions_count);
+        let current_class = state.discrete[self.n_vars() - 1] as usize;
+        let class = Rc::clone(&self.classes[current_class]);
+        for t in class.borrow().from_dbm_index.iter().skip(1) {
+            state.enable_clock(*t, ClockValue::zero());
+        }
+        state
+    }
+
+    fn is_timed(&self) -> bool {
+        false
+    }
+
+    fn is_stochastic(&self) -> bool {
+        false
+    }
+
+    fn compile(&mut self) -> super::CompilationResult<()> {
+        self.edges.clear();
+        for class in self.classes.iter() {
+            for (pred, action) in class.borrow().predecessors.iter() {
+                let edge = Edge {
+                    label : Label::from(action.to_string()),
+                    from : None,
+                    to : None,
+                    weight : *action,
+                    ref_from : Some(Weak::clone(pred)),
+                    ref_to : Some(Rc::downgrade(class))
+                };
+                self.edges.push(edge);
+            }
+        }
+        Ok(())
     }
 
 }

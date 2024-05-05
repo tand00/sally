@@ -25,7 +25,7 @@ impl ModelState {
     }
 
     pub fn from(model : &impl Model) -> Self {
-        Self::new(model.n_vars(), model.n_clocks())
+        Self::new(model.n_vars(), 0)
     }
 
     pub fn step(&mut self, delta : ClockValue) {
@@ -86,6 +86,10 @@ impl ModelState {
 
     pub fn unmark(&mut self, var : usize, tokens : i32) {
         self.discrete[var] -= tokens
+    }
+
+    pub fn create_clocks(&mut self, clocks : usize) {
+        self.clocks = DVector::from_element(clocks, ClockValue::disabled())
     }
 
 }
