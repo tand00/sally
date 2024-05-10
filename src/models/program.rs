@@ -1,4 +1,4 @@
-use super::{expressions::{Condition, Expr, ModelVar}, ModelState};
+use super::{expressions::{Condition, Expr}, model_var::ModelVar, ModelState};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

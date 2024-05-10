@@ -2,7 +2,7 @@ use pest_derive::Parser;
 use pest::{iterators::Pairs, pratt_parser::PrattParser, Parser};
 use serde::{Deserialize, Serialize};
 
-use crate::models::expressions::{Condition, Expr, ModelVar, PropositionType};
+use crate::models::{expressions::{Condition, Expr, PropositionType}, model_var::ModelVar};
 
 use super::{query::*, VerificationBound};
 

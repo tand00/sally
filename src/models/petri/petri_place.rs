@@ -2,7 +2,7 @@ use std::{cell::RefCell, fmt, rc::{Rc, Weak}};
 
 use serde::{Serialize, Deserialize};
 
-use crate::models::{ComponentPtr, Label, Node};
+use crate::{computation::virtual_memory::VirtualMemory, models::{model_var::{ModelVar, VarType}, ComponentPtr, Label, Node}};
 
 use super::PetriTransition;
 
@@ -17,7 +17,10 @@ pub struct PetriPlace {
     in_transitions : Vec<Weak<RefCell<PetriTransition>>>,
 
     #[serde(skip)]
-    out_transitions: Vec<Weak<RefCell<PetriTransition>>>
+    out_transitions: Vec<Weak<RefCell<PetriTransition>>>,
+
+    #[serde(skip)]
+    data_variable: Option<ModelVar>
 }
 
 impl PetriPlace {
@@ -27,7 +30,8 @@ impl PetriPlace {
             name: lbl,
             index : 0,
             in_transitions : Vec::new(),
-            out_transitions : Vec::new()
+            out_transitions : Vec::new(),
+            data_variable: None
         }
     }
 
@@ -53,6 +57,12 @@ impl PetriPlace {
 
     pub fn get_downstream_transitions(&self) -> &Vec<Weak<RefCell<PetriTransition>>> {
         &self.out_transitions
+    }
+
+    pub fn define_var(&mut self, memory : &mut VirtualMemory) {
+        let mut data_variable = ModelVar::name(self.get_label());
+        memory.define(&mut data_variable, VarType::VarU8);
+        self.data_variable = Some(data_variable);
     }
 
 }

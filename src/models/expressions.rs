@@ -1,71 +1,10 @@
-use std::{fmt::Display, hash::Hash, ops::Not};
+use std::{cell::RefCell, collections::HashSet, fmt::Display, hash::Hash, ops::Not};
 
 use crate::{models::{Label, Model}, QueryVisitor};
 
 use crate::verification::{Verifiable, VerificationStatus};
 use serde::{Deserialize, Serialize};
 use VerificationStatus::*;
-
-#[derive(Debug, Clone)]
-pub struct MappingError(pub Label);
-impl Display for MappingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Mapping error : label {} not found in context", self.0)
-    }
-}
-
-pub type MappingResult<T> = Result<T, MappingError>;
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
-pub struct ModelVar {
-    pub name : Label,
-    #[serde(skip)]
-    pub index : Option<usize>,
-}
-
-impl ModelVar {
-    pub fn name(name : Label) -> ModelVar {
-        ModelVar { name, index : None }
-    }
-    pub fn index(index : usize) -> ModelVar {
-        ModelVar { name : Label::new(), index : Some(index) }
-    }
-    pub fn is_mapped(&self) -> bool {
-        self.index.is_some()
-    }
-    pub fn get_index(&self) -> usize {
-        self.index.unwrap()
-    }
-    pub fn apply_to_model(self, model : &impl Model) -> MappingResult<ModelVar> {
-        let res = model.map_label_to_var(&self.name);
-        match res {
-            None => Err(MappingError(Label::from("Unable to map var to index !"))),
-            Some(i) => Ok(ModelVar { name : self.name, index : Some(i)})
-        }
-    }
-    pub fn evaluate(&self, state : &impl Verifiable) -> i32 {
-        if self.index.is_none() {
-            panic!("Can't evaluate unmapped var !");
-        }
-        state.evaluate_object(self.get_index())
-    }
-    pub fn set(&self, state : &mut ModelState, value : i32) {
-        if self.index.is_none() {
-            panic!("Can't set unmapped var !");
-        }
-        state.discrete[self.index.unwrap()] = value;
-    }
-}
-
-impl<T : Into<String>> From<T> for ModelVar {
-    fn from(value: T) -> Self {
-        ModelVar::name(Label::from(value))
-    }
-}
-
-pub fn var(name : &str) -> ModelVar {
-    ModelVar::name(Label::from(name))
-}
 
 // TODO: Might be useless to include both L and G
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -186,7 +125,7 @@ pub enum Condition {
 
 use Condition::*;
 
-use super::ModelState;
+use super::{model_var::{MappingResult, ModelVar}, ModelState};
 
 impl Condition {
 
@@ -418,5 +357,24 @@ impl Not for Condition {
     type Output = Self;
     fn not(self) -> Self::Output {
         Not(Box::new(self))
+    }
+}
+
+pub struct VarQueryVisitor(RefCell<HashSet<Label>>);
+impl VarQueryVisitor {
+    pub fn new() -> Self {
+        VarQueryVisitor(RefCell::new(HashSet::new()))
+    }
+    pub fn vars_names(&self) -> HashSet<Label> {
+        self.0.borrow().clone()
+    }
+}
+impl QueryVisitor for VarQueryVisitor {
+    fn visit_query(&self, _query : &crate::Query) { }
+    fn visit_condition(&self, _condition : &Condition) { }
+    fn visit_expression(&self, expr : &Expr) {
+        if let Var(x) = expr {
+            self.0.borrow_mut().insert(x.name.clone());
+        }
     }
 }

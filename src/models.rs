@@ -14,6 +14,8 @@ use num_traits::Zero;
 use rand::{thread_rng, Rng, seq::SliceRandom};
 
 pub mod time;
+pub mod model_var;
+pub mod naming_context;
 pub mod expressions;
 pub mod program;
 pub mod petri;
@@ -23,6 +25,8 @@ pub mod digraph;
 pub mod model_network;
 //pub mod markov_chain;
 pub mod run;
+
+use crate::computation::virtual_memory::VirtualMemory;
 
 use self::{model_characteristics::*, time::ClockValue};
 
@@ -170,5 +174,7 @@ pub trait Model : Any {
     fn compile(&mut self) -> CompilationResult<()> {
         Ok(())
     }
+
+    fn define_vars(&mut self, memory : &mut VirtualMemory) { }
 
 }

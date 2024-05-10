@@ -1,0 +1,115 @@
+use std::{fmt::Display, mem::size_of};
+
+use serde::{Deserialize, Serialize};
+
+use crate::models::{model_var::{ModelVar, VarType}, Model};
+
+use VarType::*;
+
+pub type EvaluationType = i32;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+pub struct VirtualMemory {
+    storage : Vec<u8>,
+}
+
+impl VirtualMemory {
+
+    pub fn new() -> VirtualMemory {
+        VirtualMemory { storage : Vec::new() }
+    }
+
+    pub fn evaluate_at<T : Copy>(&self, address : usize) -> T {
+        if address + size_of::<T>() > self.size() {
+            panic!("Pointer out of bound !")
+        }
+        let storage = self.storage.as_ptr();
+        let value : T;
+        unsafe {
+            let var_ptr = storage.add(address) as *const T;
+            value = *var_ptr;
+        }
+        value
+    }
+
+    pub fn set_at<T : Copy>(&mut self, address : usize, value : T) {
+        let type_size = size_of::<T>();
+        if address + type_size > self.size() {
+            panic!("Pointer out of bound !")
+        }
+        let storage = self.storage.as_mut_ptr();
+        unsafe {
+            let var_ptr = storage.add(address) as *mut T;
+            *var_ptr = value;
+        }
+    }
+
+    pub fn evaluate(&self, var : ModelVar) -> EvaluationType { 
+        if !var.is_mapped() || (var.get_address() + var.size() > self.size()) {
+            panic!("Pointer out of bound !")
+        }
+        let address = var.get_address();
+        match var.get_type() {
+            VarU8 => self.evaluate_at::<u8>(address) as EvaluationType,
+            VarI8 => self.evaluate_at::<i8>(address) as EvaluationType,
+            VarU16 => self.evaluate_at::<u16>(address) as EvaluationType,
+            VarI16 => self.evaluate_at::<i16>(address) as EvaluationType,
+            VarU32 => self.evaluate_at::<u32>(address) as EvaluationType,
+            VarI32 => self.evaluate_at::<i32>(address) as EvaluationType,
+            _ => panic!("Can't evaluate untyped var !")
+        }
+    }
+
+    pub fn set(&mut self, var : ModelVar, value : EvaluationType) {
+        if !var.is_mapped() || (var.get_address() + var.size() > self.size()) {
+            panic!("Pointer out of bound !")
+        }
+        let address = var.get_address();
+        match var.get_type() {
+            VarU8 => self.set_at::<u8>(address, value as u8),
+            VarI8 => self.set_at::<i8>(address, value as i8),
+            VarU16 => self.set_at::<u16>(address, value as u16),
+            VarI16 => self.set_at::<i16>(address, value as i16),
+            VarU32 => self.set_at::<u32>(address, value as u32),
+            VarI32 => self.set_at::<i32>(address, value as i32),
+            _ => panic!("Can't set untypes var !")
+        }
+    }
+
+    pub fn size(&self) -> usize {
+        self.storage.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.storage.is_empty()
+    }
+
+    pub fn define(&mut self, var : &mut ModelVar, var_type : VarType) {
+        if var.is_mapped() {
+            panic!("Can't redefine already mapped var !");
+        }
+        var.set_type(var_type);
+        var.set_address(self.size());
+        self.storage.resize(self.size() + var.size(), 0);
+    }
+
+}
+
+impl Display for VirtualMemory {
+
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_empty() {
+            return write!(f, "VirtualMemory[EMPTY]");
+        }
+        write!(f, "VirtualMemory[")?;
+        for cursor in 0..self.size() {
+            if cursor % 16 == 0 {
+                write!(f, "\n{:x} |\t", cursor)?;
+            }
+            let value = self.storage[cursor];
+            write!(f, "{:x} ", value)?;
+        }
+        write!(f, "\n]")
+    }
+
+}

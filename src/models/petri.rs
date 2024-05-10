@@ -1,5 +1,7 @@
 use std::{collections::{HashMap, HashSet}, fmt, rc::{Rc, Weak}};
 
+use crate::computation::virtual_memory::VirtualMemory;
+
 use super::{lbl, model_characteristics::*, new_ptr, time::ClockValue, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node};
 
 mod petri_place;
@@ -251,6 +253,12 @@ impl Model for PetriNet {
             self.create_transition_edges(transition);
         }
         Ok(())
+    }
+
+    fn define_vars(&mut self, memory : &mut VirtualMemory) {
+        for place in self.places.iter() {
+            place.borrow_mut().define_var(memory)
+        }
     }
 
 }
