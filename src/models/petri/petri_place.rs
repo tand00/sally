@@ -2,9 +2,11 @@ use std::{cell::RefCell, fmt, rc::{Rc, Weak}};
 
 use serde::{Serialize, Deserialize};
 
-use crate::{computation::virtual_memory::VirtualMemory, models::{model_var::{ModelVar, VarType}, ComponentPtr, Label, Node}};
+use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, CompilationResult, ComponentPtr, Label, Node};
 
 use super::PetriTransition;
+
+const PETRI_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PetriPlace {
@@ -59,10 +61,20 @@ impl PetriPlace {
         &self.out_transitions
     }
 
-    pub fn define_var(&mut self, memory : &mut VirtualMemory) {
-        let mut data_variable = ModelVar::name(self.get_label());
-        memory.define(&mut data_variable, VarType::VarU8);
-        self.data_variable = Some(data_variable);
+    pub fn set_var(&mut self, var : ModelVar) {
+        self.data_variable = Some(var);
+    }
+
+    pub fn get_var(&self) -> &ModelVar {
+        match &self.data_variable {
+            None => panic!("Place variable is not set !"),
+            Some(i) => i
+        }
+    }
+
+    pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {
+        self.set_var(ctx.add_var(self.name.clone(), PETRI_PLACE_VAR_TYPE));
+        Ok(())
     }
 
 }

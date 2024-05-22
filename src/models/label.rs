@@ -1,4 +1,6 @@
 use std::fmt;
+use std::ops::Add;
+use std::ops::AddAssign;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -25,6 +27,10 @@ impl Label {
         }
     }
 
+    pub fn add_super_domain(&self, domain : Label) -> Label {
+        return domain + "." + &self.clone()
+    }
+
 }
 
 impl Default for Label {
@@ -33,9 +39,22 @@ impl Default for Label {
     }
 }
 
+impl<T : ToString> Add<T> for Label {
+    type Output = Label;
+    fn add(self, rhs: T) -> Self::Output {
+        Label::from(self.0 + &rhs.to_string())
+    }
+}
+
+impl<T : ToString> AddAssign<T> for Label {    
+    fn add_assign(&mut self, rhs: T) {
+        *self = *self + rhs
+    }
+}
+
 impl fmt::Display for Label {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "'{}'", self.0)
+        write!(f, "{}", self.0)
     }
 }
 

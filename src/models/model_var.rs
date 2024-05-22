@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::verification::Verifiable;
 
-use super::{Label, Model, ModelState};
-use std::fmt::Display;
+use super::{model_context::ModelContext, Label, Model, ModelState};
+use std::{fmt::Display, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub struct MappingError(pub Label);
@@ -49,7 +49,6 @@ pub struct ModelVar {
     var_type : VarType,
     #[serde(skip)]
     address : Option<usize>,
-    
 }
 
 impl ModelVar {
@@ -63,6 +62,13 @@ impl ModelVar {
             panic!("Impossible to define a variable address before setting its type !")
         }
         ModelVar { name : Label::new(), address : Some(index), var_type }
+    }
+
+    pub fn make_defined(name : Label, address : usize, var_type : VarType) -> ModelVar {
+        if var_type.is_unknown() {
+            panic!("Impossible to define a variable address before setting its type !")
+        }
+        ModelVar { name, address : Some(address), var_type }
     }
 
     pub fn size(&self) -> usize {
@@ -92,11 +98,11 @@ impl ModelVar {
         self.var_type = var_type
     }
 
-    pub fn apply_to_model(self, model : &impl Model) -> MappingResult<ModelVar> {
-        let res = model.map_label_to_var(&self.name);
+    pub fn apply_to(self, ctx : &ModelContext) -> MappingResult<ModelVar> {
+        let res = ctx.get_var(&self.name);
         match res {
             None => Err(MappingError(Label::from("Unable to map var to index !"))),
-            Some(i) => Ok(ModelVar { name : self.name, address : Some(i), var_type : VarType::UnknownType })
+            Some(v) => Ok(v)
         }
     }
 
@@ -104,14 +110,14 @@ impl ModelVar {
         if self.address.is_none() {
             panic!("Can't evaluate unmapped var !");
         }
-        state.evaluate_object(self.get_address())
+        state.evaluate_var(&self)
     }
 
     pub fn set(&self, state : &mut ModelState, value : i32) {
         if self.address.is_none() {
             panic!("Can't set unmapped var !");
         }
-        state.discrete[self.address.unwrap()] = value;
+        state.set_marking(&self, value);
     }
     
     pub fn unbind(&mut self) {

@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}, fmt, rc::{Rc, Weak}};
 
 use crate::computation::virtual_memory::VirtualMemory;
 
-use super::{lbl, model_characteristics::*, new_ptr, time::ClockValue, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node};
+use super::{lbl, model_characteristics::*, model_var::VarType, model_context::ModelContext, new_ptr, time::ClockValue, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node};
 
 mod petri_place;
 mod petri_transition;
@@ -24,36 +24,35 @@ pub struct PetriNet {
     pub transitions: Vec<ComponentPtr<PetriTransition>>,
     pub places_dic: HashMap<Label, usize>,
     pub transitions_dic: HashMap<Label, usize>,
+    pub context : ModelContext
 }
 
 impl PetriNet {
 
     pub fn new(places: Vec<PetriPlace>, transitions : Vec<PetriTransition>) -> Self {
+        let mut ctx = ModelContext::new();
         let mut places_dic : HashMap<Label, usize> = HashMap::new();
         let mut transitions_dic : HashMap<Label, usize> = HashMap::new();
-        for (key, place) in places.iter().enumerate() {
-            places_dic.insert(place.get_label(), key);
-        }
-        for (key, transi) in transitions.iter().enumerate() {
-            transitions_dic.insert(transi.get_label(), key);
-        }
         let mut places_ptr : Vec<ComponentPtr<PetriPlace>> = Vec::new();
         let mut transitions_ptr : Vec<ComponentPtr<PetriTransition>> = Vec::new();
         for mut place in places {
             place.index = places_ptr.len();
+            places_dic.insert(place.get_label(), place.index);
             places_ptr.push(new_ptr(place));
         }
         for mut transition in transitions {
             transition.index = transitions_ptr.len();
+            transitions_dic.insert(transition.get_label(), transition.index);
             transitions_ptr.push(new_ptr(transition));
         }
         let mut petri = PetriNet { 
             places : places_ptr, 
             transitions : transitions_ptr, 
             places_dic, 
-            transitions_dic 
+            transitions_dic,
+            context : ctx
         };
-        petri.compile();
+        //petri.compile();
         petri
     }
 
@@ -103,13 +102,17 @@ impl PetriNet {
         let transi = &self.transitions[action].borrow();
         let mut changed_places : HashSet<usize> = HashSet::new();
         for edge in transi.input_edges.iter() {
-            let place_index = edge.ptr_node_from().borrow().index;
-            state.unmark(place_index, edge.weight);
+            let place_ref = edge.ptr_node_from().borrow();
+            let place_var = place_ref.get_var();
+            let place_index = place_ref.index;
+            state.unmark(place_var, edge.weight);
             changed_places.insert(place_index);
         }
         for edge in transi.output_edges.iter() {
-            let place_index = edge.ptr_node_to().borrow().index;
-            state.mark(place_index, edge.weight);
+            let place_ref = edge.ptr_node_to().borrow();
+            let place_var = place_ref.get_var();
+            let place_index = place_ref.index;
+            state.mark(place_var, edge.weight);
             changed_places.insert(place_index);
         }
         let (newen, pers) = self.compute_new_actions(&mut state, &changed_places);
@@ -222,17 +225,6 @@ impl Model for PetriNet {
         }
     }
 
-    fn n_vars(&self) -> usize {
-        self.places.len()
-    }
-
-    fn map_label_to_var(&self, var : &Label) -> Option<usize> {
-        if !self.places_dic.contains_key(var) {
-            return None;
-        }
-        Some(self.places_dic[var])
-    }
-
     fn is_timed(&self) -> bool {
         true
     }
@@ -241,24 +233,19 @@ impl Model for PetriNet {
         false
     }
 
-    fn compile(&mut self) -> CompilationResult<()> {
+    fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
         for place in self.places.iter() {
             let mut place_ref = place.borrow_mut();
             place_ref.clear_upstream_transitions();
             place_ref.clear_downstream_transitions();
+            place_ref.compile(context)?;
         }
         for transition in self.transitions.iter() {
             transition.borrow_mut().clear_edges();
-            transition.borrow_mut().compile(self)?;
+            transition.borrow_mut().compile(context)?;
             self.create_transition_edges(transition);
         }
         Ok(())
-    }
-
-    fn define_vars(&mut self, memory : &mut VirtualMemory) {
-        for place in self.places.iter() {
-            place.borrow_mut().define_var(memory)
-        }
     }
 
 }

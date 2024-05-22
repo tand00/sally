@@ -5,11 +5,11 @@ use nalgebra::DVector;
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::DBM, models::{petri::PetriNet, time::ClockValue, Label, ModelState, Node}, verification::Verifiable};
+use crate::{computation::{virtual_memory::{EvaluationType, VirtualMemory}, DBM}, models::{model_var::ModelVar, petri::PetriNet, time::ClockValue, Label, ModelState, Node}, verification::Verifiable};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StateClass {
-    pub discrete : DVector<i32>,
+    pub discrete : VirtualMemory,
     pub dbm : DBM,
     pub to_dbm_index : Vec<usize>,
     pub from_dbm_index : Vec<usize>,
@@ -81,16 +81,12 @@ impl StateClass {
         s.finish()
     }
 
-    /*pub fn as_verifiable(&self) -> &impl Verifiable {
-        self
-    }*/
-
 }
 
 impl Verifiable for StateClass {
 
-    fn evaluate_object(&self, id : usize) -> i32 {
-        self.discrete[id]
+    fn evaluate_var(&self, var : &ModelVar) -> EvaluationType {
+        self.discrete.evaluate(var)
     }
 
     fn is_deadlocked(&self) -> bool {

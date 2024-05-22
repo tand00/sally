@@ -67,25 +67,25 @@ impl Expr {
     }
 
     // Translate Name(x) to Object(m[x])
-    pub fn apply_to_model(&self, model : &impl Model) -> MappingResult<Expr> {
+    pub fn apply_to(&self, ctx : &ModelContext) -> MappingResult<Expr> {
         match self {
-            Var(x) => Ok(Var(x.clone().apply_to_model(model)?)),
+            Var(x) => Ok(Var(x.clone().apply_to(ctx)?)),
             Plus(e1, e2) => Ok(Plus(
-                Box::new(e1.apply_to_model(model)?), Box::new(e2.apply_to_model(model)?)
+                Box::new(e1.apply_to(ctx)?), Box::new(e2.apply_to(ctx)?)
             )),
             Minus(e1, e2) => Ok(Minus(
-                Box::new(e1.apply_to_model(model)?), Box::new(e2.apply_to_model(model)?)
+                Box::new(e1.apply_to(ctx)?), Box::new(e2.apply_to(ctx)?)
             )),
             Multiply(e1, e2) => Ok(Multiply(
-                Box::new(e1.apply_to_model(model)?), Box::new(e2.apply_to_model(model)?)
+                Box::new(e1.apply_to(ctx)?), Box::new(e2.apply_to(ctx)?)
             )),
             Modulo(e1, e2) => Ok(Modulo(
-                Box::new(e1.apply_to_model(model)?), Box::new(e2.apply_to_model(model)?)
+                Box::new(e1.apply_to(ctx)?), Box::new(e2.apply_to(ctx)?)
             )),
             Pow(e1, e2) => Ok(Pow(
-                Box::new(e1.apply_to_model(model)?), Box::new(e2.apply_to_model(model)?)
+                Box::new(e1.apply_to(ctx)?), Box::new(e2.apply_to(ctx)?)
             )),
-            Negative(e) => Ok(Negative(Box::new(e.apply_to_model(model)?))),
+            Negative(e) => Ok(Negative(Box::new(e.apply_to(ctx)?))),
             _ => Ok(self.clone())
         }
     }
@@ -125,7 +125,7 @@ pub enum Condition {
 
 use Condition::*;
 
-use super::{model_var::{MappingResult, ModelVar}, ModelState};
+use super::{model_context::ModelContext, model_var::{MappingResult, ModelVar}, ModelState};
 
 impl Condition {
 
@@ -168,25 +168,25 @@ impl Condition {
         }
     }
 
-    pub fn apply_to_model(&self, model : &impl Model) -> MappingResult<Condition> {
+    pub fn apply_to(&self, ctx : &ModelContext) -> MappingResult<Condition> {
         match self {
-            Evaluation(e) => Ok(Evaluation(e.apply_to_model(model)?)),
+            Evaluation(e) => Ok(Evaluation(e.apply_to(ctx)?)),
             Proposition(p_type, e1, e2) => Ok(Proposition(
-                *p_type, e1.apply_to_model(model)?, e2.apply_to_model(model)?
+                *p_type, e1.apply_to(ctx)?, e2.apply_to(ctx)?
             )),
             And(c1, c2) => Ok(And(
-                Box::new(c1.apply_to_model(model)?), Box::new(c2.apply_to_model(model)?)
+                Box::new(c1.apply_to(ctx)?), Box::new(c2.apply_to(ctx)?)
             )),
             Or(c1, c2) => Ok(Or(
-                Box::new(c1.apply_to_model(model)?), Box::new(c2.apply_to_model(model)?)
+                Box::new(c1.apply_to(ctx)?), Box::new(c2.apply_to(ctx)?)
             )),
-            Not(c) => Ok(Not(Box::new(c.apply_to_model(model)?))),
+            Not(c) => Ok(Not(Box::new(c.apply_to(ctx)?))),
             Implies(c1, c2) => Ok(Implies(
-                Box::new(c1.apply_to_model(model)?), Box::new(c2.apply_to_model(model)?)
+                Box::new(c1.apply_to(ctx)?), Box::new(c2.apply_to(ctx)?)
             )),
-            Next(c) => Ok(Next(Box::new(c.apply_to_model(model)?))),
+            Next(c) => Ok(Next(Box::new(c.apply_to(ctx)?))),
             Until(c1, c2) => Ok(Until(
-                Box::new(c1.apply_to_model(model)?), Box::new(c2.apply_to_model(model)?)
+                Box::new(c1.apply_to(ctx)?), Box::new(c2.apply_to(ctx)?)
             )),
             _ =>Ok(self.clone())
         }

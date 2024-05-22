@@ -1,4 +1,6 @@
 use std::{hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
+use crate::{computation::virtual_memory::EvaluationType, models::model_var::ModelVar};
+
 use super::query::*;
 use serde::{Deserialize, Serialize};
 
@@ -76,11 +78,11 @@ impl Default for VerificationStatus {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationBound {
     TimeRunBound(u32),
     StepsRunBound(usize),
-    VarRunBound(usize, i32),
+    VarRunBound(ModelVar, i32),
     NoRunBound,
 }
 
@@ -91,7 +93,7 @@ impl Default for VerificationBound {
 }
 
 pub trait Verifiable : Hash {
-    fn evaluate_object(&self, id : usize) -> i32;
+    fn evaluate_var(&self, var : &ModelVar) -> EvaluationType;
     fn evaluate_clock(&self, _ : usize) -> f64 {
         f64::NAN
     }

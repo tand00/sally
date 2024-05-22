@@ -71,7 +71,7 @@ impl<'a> Iterator for RandomRunIterator<'a> {
             self.run_status.maximal = true;
         }
 
-        if !self.run_status.is_under(self.bound) {
+        if !self.run_status.is_under(&self.bound) {
             return None;
         }
 

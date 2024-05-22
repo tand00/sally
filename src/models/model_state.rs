@@ -1,31 +1,27 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, rc::Rc};
 
 use nalgebra::DVector;
 use serde::{Deserialize, Serialize};
 
-use crate::verification::Verifiable;
+use crate::{computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory}, verification::Verifiable};
 
-use super::{time::ClockValue, Model};
+use super::{model_var::ModelVar, time::ClockValue, Model};
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize)]
 pub struct ModelState {
-    pub discrete : DVector<i32>,
+    pub discrete : VirtualMemory,
     pub clocks : DVector<ClockValue>,
     pub deadlocked : bool
 }
 
 impl ModelState {
 
-    pub fn new(discrete_vars : usize, clocks : usize) -> Self {
+    pub fn new(discrete_size : usize, clocks : usize) -> Self {
         ModelState {
-            discrete : DVector::zeros(discrete_vars),
+            discrete : VirtualMemory::from_size(discrete_size),
             clocks :  DVector::from_element(clocks, ClockValue::disabled()),
             deadlocked : false
         }
-    }
-
-    pub fn from(model : &impl Model) -> Self {
-        Self::new(model.n_vars(), 0)
     }
 
     pub fn step(&mut self, delta : ClockValue) {
@@ -52,16 +48,16 @@ impl ModelState {
         self.clocks[clock] = value
     }
 
-    pub fn set_marking(&mut self, id : usize, value : i32) {
-        self.discrete[id] = value
+    pub fn set_marking(&mut self, var : &ModelVar, value : EvaluationType) {
+        self.discrete.set(var, value);
     }
 
-    pub fn get_marking(&self, id : usize) -> i32 {
-        self.discrete[id]
+    pub fn get_marking(&self, var : &ModelVar) -> EvaluationType {
+        self.discrete.evaluate(var)
     }
 
-    pub fn is_marked(&self, id : usize) -> bool {
-        self.discrete[id] > 0
+    pub fn is_marked(&self, var : &ModelVar) -> bool {
+        self.get_marking(var) > 0
     }
 
     pub fn enabled_clocks(&self) -> HashSet<usize> {
@@ -72,20 +68,20 @@ impl ModelState {
         }).collect()
     }
 
-    pub fn covers(&self, marking : DVector<i32>) -> bool {
-        self.discrete >= marking
+    pub fn tokens(&self, var : &ModelVar) -> EvaluationType {
+        self.get_marking(var)
     }
 
-    pub fn tokens(&self, var : usize) -> i32 {
-        self.discrete[var]
+    pub fn marking_sum(&self, vars : Vec<&ModelVar>) -> EvaluationType {
+        vars.iter().map(|x| x.evaluate(self) ).sum()
     }
 
-    pub fn mark(&mut self, var : usize, tokens : i32) {
-        self.discrete[var] += tokens
+    pub fn mark(&mut self, var : &ModelVar, tokens : EvaluationType) {
+        self.discrete.set(var, self.get_marking(var) + tokens)
     }
 
-    pub fn unmark(&mut self, var : usize, tokens : i32) {
-        self.discrete[var] -= tokens
+    pub fn unmark(&mut self, var : &ModelVar, tokens : EvaluationType) {
+        self.discrete.set(var, self.get_marking(var) - tokens)
     }
 
     pub fn create_clocks(&mut self, clocks : usize) {
@@ -96,8 +92,8 @@ impl ModelState {
 
 impl Verifiable for ModelState {
 
-    fn evaluate_object(&self, id : usize) -> i32 {
-        self.discrete[id]
+    fn evaluate_var(&self, var : &ModelVar) -> EvaluationType {
+        self.discrete.evaluate(var)
     }
 
     fn evaluate_clock(&self, id : usize) -> f64 {
@@ -109,3 +105,4 @@ impl Verifiable for ModelState {
     }
 
 }
+

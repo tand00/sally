@@ -1,4 +1,4 @@
-use super::{expressions::{Condition, Expr}, model_var::ModelVar, ModelState};
+use super::{expressions::{Condition, Expr}, model_var::{ModelVar, VarType}, ModelState};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -10,6 +10,7 @@ pub enum Program {
     DoWhile(Condition, Box<Program>),
     For(Box<Program>, Condition, Box<Program>, Box<Program>),
     Block(Vec<Box<Program>>),
+    //Definition(ModelVar, VarType)
 }
 
 use Program::*;

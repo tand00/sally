@@ -15,7 +15,8 @@ use rand::{thread_rng, Rng, seq::SliceRandom};
 
 pub mod time;
 pub mod model_var;
-pub mod naming_context;
+pub mod action;
+pub mod model_context;
 pub mod expressions;
 pub mod program;
 pub mod petri;
@@ -28,7 +29,7 @@ pub mod run;
 
 use crate::computation::virtual_memory::VirtualMemory;
 
-use self::{model_characteristics::*, time::ClockValue};
+use self::{model_characteristics::*, model_context::ModelContext, model_var::ModelVar, time::ClockValue};
 
 #[derive(Debug, Clone)]
 pub struct CompilationError;
@@ -85,6 +86,7 @@ pub struct ModelMeta {
     characteristics : ModelCharacteristics,
 }
 impl ModelMeta {
+
     pub fn is_timed(&self) -> bool where Self : Sized {
         has_characteristic(self.characteristics, TIMED)
     }
@@ -92,11 +94,15 @@ impl ModelMeta {
     pub fn is_stochastic(&self) -> bool where Self : Sized {
         has_characteristic(self.characteristics, STOCHASTIC)
     }
+
 }
+
 impl std::fmt::Display for ModelMeta {
+
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, " [.] Model ({})\n | Description : \n | {}\n | Characteristics : {}", self.name, self.description, characteristics_label(self.characteristics))
     }
+    
 }
 
 /// Generic trait that should be implemented by all Timed Transition Systems
@@ -111,8 +117,6 @@ pub trait Model : Any {
         let _ = state;
         ClockValue::zero()
     }
-
-    fn n_vars(&self) -> usize;
 
     fn delay(&self, state : ModelState, dt : ClockValue) -> Option<ModelState> {
         let _ = dt;
@@ -156,25 +160,14 @@ pub trait Model : Any {
         (next, delay, Some(action))
     }
 
-    fn get_initial_state(&self, marking : HashMap<Label, i32>) -> ModelState {
-        let mut state = ModelState::new(self.n_vars(), 0);
-        for (k,v) in marking.iter() {
-            let index = self.map_label_to_var(k);
-            if index.is_none() {
-                continue;
-            }
-            let index = index.unwrap();
-            state.discrete[index] = *v;
-        }
-        self.init_initial_clocks(state)
-    }
-
-    fn map_label_to_var(&self, var : &Label) -> Option<usize>;
-
-    fn compile(&mut self) -> CompilationResult<()> {
+    fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
         Ok(())
     }
 
-    fn define_vars(&mut self, memory : &mut VirtualMemory) { }
+    fn singleton(&mut self) -> ModelContext {
+        let mut ctx = ModelContext::new();
+        self.compile(&mut ctx);
+        ctx
+    }
 
 }

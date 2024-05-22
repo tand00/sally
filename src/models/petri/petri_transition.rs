@@ -2,6 +2,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::models::model_context::ModelContext;
 use crate::models::time::TimeInterval;
 use crate::models::{CompilationError, CompilationResult, Edge, Label, Model, ModelState, Node};
 use crate::models::expressions::Condition;
@@ -93,7 +94,7 @@ impl PetriTransition {
             if !edge.has_source() {
                 panic!("Every transition edge should have a source");
             }
-            if marking.tokens(edge.ptr_node_from().borrow().index) < edge.weight {
+            if marking.tokens(&edge.ptr_node_from().borrow().get_var()) < edge.weight {
                 return false
             }
         }
@@ -105,8 +106,23 @@ impl PetriTransition {
         self.output_edges.clear();
     }
 
-    pub fn compile(&mut self, model : &impl Model) -> CompilationResult<()> {
-        let res = self.guard.apply_to_model(model);
+    pub fn inertia(&self) -> i32 {
+        let mut res : i32 = 0;
+        for e in self.input_edges.iter() {
+            res -= e.weight;
+        }
+        for e in self.output_edges.iter() {
+            res += e.weight;
+        }
+        res
+    }
+
+    pub fn is_conservative(self) -> bool {
+        return self.inertia() == 0
+    }
+
+    pub fn compile(&mut self, ctx : &ModelContext) -> CompilationResult<()> {
+        let res = self.guard.apply_to(ctx);
         match res {
             Ok(c) => self.compiled_guard = c,
             Err(_) => return Err(CompilationError)

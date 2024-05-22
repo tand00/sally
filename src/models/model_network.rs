@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use super::{lbl, time::ClockValue, Label, Model, ModelMeta, ModelState, NONE};
+use super::{lbl, model_context::ModelContext, time::ClockValue, CompilationResult, Label, Model, ModelMeta, ModelState, NONE};
 
 pub struct ModelNetwork {
     pub models : Vec<Box<dyn Model>>,
@@ -12,7 +12,6 @@ impl ModelNetwork {
 
     pub fn add_model(&mut self, name : Label, model : Box<dyn Model>) {
         self.models_map.insert(name, self.n_models());
-        self.model_vars_begin.push(model.n_vars());
         self.models.push(model);
     }
 
@@ -52,31 +51,21 @@ impl Model for ModelNetwork {
     }
 
     fn is_timed(&self) -> bool {
-        self.models.iter().map(|m| m.is_timed() ).fold(true,|acc, x| acc && x)
+        self.models.iter().map(|m| m.is_timed() ).fold(true,|acc, x| acc || x)
     }
 
     fn is_stochastic(&self) -> bool {
-        self.models.iter().map(|m| m.is_stochastic() ).fold(true,|acc, x| acc && x)
+        self.models.iter().map(|m| m.is_stochastic() ).fold(true,|acc, x| acc || x)
     }
 
-    fn map_label_to_var(&self, var : &Label) -> Option<usize> {
-        let (net_name, model_var) = var.get_first_ident();
-        if model_var.is_empty() || !self.models_map.contains_key(&net_name) {
-            return None;
+    fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
+        for (name, model_index) in self.models_map.iter() {
+            let model : &mut Box<dyn Model> = &mut self.models[*model_index];
+            context.add_domain(name.clone());
+            model.compile(context)?;
+            context.parent();
         }
-        let model_index = self.models_map[&net_name];
-        let model = &self.models[model_index];
-        match model.map_label_to_var(&model_var) {
-            None => None,
-            Some(i) => Some(self.model_vars_begin[model_index] + i)
-        }
-    }
-
-    fn n_vars(&self) -> usize {
-        if self.model_vars_begin.len() == 0 {
-            return 0;
-        }
-        *self.model_vars_begin.last().unwrap()
+        Ok(())
     }
 
 }

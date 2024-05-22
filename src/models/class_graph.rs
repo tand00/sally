@@ -8,7 +8,10 @@ use std::rc::{Rc, Weak};
 use num_traits::Zero;
 
 use crate::computation::DBM;
+use crate::verification::Verifiable;
 
+use super::model_context::ModelContext;
+use super::model_var::{ModelVar, VarType};
 use super::time::ClockValue;
 use super::{lbl, new_ptr, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, CONTROLLABLE, SYMBOLIC, TIMED};
 use super::petri::PetriNet;
@@ -20,7 +23,8 @@ pub struct ClassGraph {
     pub classes: Vec<ComponentPtr<StateClass>>,
     pub edges: Vec<Edge<usize, StateClass, StateClass>>,
     pub places_dic : HashMap<Label, usize>,
-    pub transitions_count : usize
+    pub transitions_count : usize,
+    pub current_class : ModelVar
 }
 
 impl ClassGraph {
@@ -30,8 +34,10 @@ impl ClassGraph {
             classes: Vec::new(),
             edges: Vec::new(),
             places_dic : p_net.places_dic.clone(),
-            transitions_count : p_net.transitions.len()
+            transitions_count : p_net.transitions.len(),
+            current_class : ModelVar::name(lbl("CurrentClass"))
         };
+        cg.current_class.set_type(VarType::VarU16);
         let mut seen : HashMap<u64, usize> = HashMap::new();
         let mut to_see : VecDeque<usize> = VecDeque::new();
         let initial_class = StateClass::compute_class(p_net, initial_state);
@@ -63,7 +69,6 @@ impl ClassGraph {
                 }
             }
         }
-        cg.compile().unwrap(); //TODO! Move compile out of init maybe ?
         cg
     }
 
@@ -147,7 +152,7 @@ impl Model for ClassGraph {
     // Not optimized AT ALL ! Class graph is made for back-propagation
     fn next(&self, state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>) {
         let mut next_index : Option<usize> = None;
-        let class_index = state.discrete[state.discrete.nrows() - 1] as usize;
+        let class_index = state.evaluate_var(&self.current_class) as usize;
         for e in self.edges.iter() {
             if !e.has_source() || !e.has_target() {
                 continue;
@@ -162,7 +167,7 @@ impl Model for ClassGraph {
         let next_index = next_index.unwrap();
         let next_class = &self.classes[next_index].borrow();
         let mut next_state = next_class.generate_image_state();
-        next_state.discrete = next_state.discrete.insert_row(next_class.discrete.nrows(), next_index as i32);
+        next_state.discrete = next_state.discrete.
         let actions = self.available_actions(&next_state);
         (Some(next_state), actions)
     }
@@ -185,26 +190,9 @@ impl Model for ClassGraph {
         ClockValue::zero()
     }
 
-    fn n_vars(&self) -> usize {
-        if self.classes.is_empty() {
-            return 0;
-        }
-        self.classes.first().unwrap().borrow().discrete.nrows() + 1 // Additionnal discrete var to remember current class
-    }
-
-    fn map_label_to_var(&self, var : &Label) -> Option<usize> {
-        if !self.places_dic.contains_key(var) { 
-            return None;
-        }
-        Some(self.places_dic[var])
-    }
-
     fn init_initial_clocks(&self, mut state : ModelState) -> ModelState {
-        if state.discrete.nrows() == 0 {
-            return state;
-        }
         state.create_clocks(self.transitions_count);
-        let current_class = state.discrete[self.n_vars() - 1] as usize;
+        let current_class = state.evaluate_var(&self.current_class) as usize;
         let class = Rc::clone(&self.classes[current_class]);
         for t in class.borrow().from_dbm_index.iter().skip(1) {
             state.enable_clock(*t, ClockValue::zero());
@@ -220,7 +208,7 @@ impl Model for ClassGraph {
         false
     }
 
-    fn compile(&mut self) -> super::CompilationResult<()> {
+    fn compile(&mut self, context : &mut ModelContext) -> super::CompilationResult<()> {
         self.edges.clear();
         for class in self.classes.iter() {
             for (pred, action) in class.borrow().predecessors.iter() {
@@ -235,6 +223,7 @@ impl Model for ClassGraph {
                 self.edges.push(edge);
             }
         }
+        self.current_class = context.add_var(self.current_class.name, self.current_class.get_type());
         Ok(())
     }
 

@@ -228,19 +228,6 @@ impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
         (0..len_actions).collect()
     }
 
-    fn n_vars(&self) -> usize {
-        self.nodes.len()
-    }
-
-    fn map_label_to_var(&self, var : &Label) -> Option<usize> {
-        for (i,n) in self.nodes.iter().enumerate() {
-            if n.borrow().get_label() == *var {
-                return Some(i);
-            }
-        }
-        return None;
-    }
-
     fn is_timed(&self) -> bool {
         false
     }

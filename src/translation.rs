@@ -5,7 +5,7 @@ use std::{any::Any, fmt::Display};
 pub use petri_class_graph::PetriClassGraphTranslation;
 pub use petri_partial_observation::PetriPartialObservation;
 
-use crate::models::{lbl, Label, Model, ModelState};
+use crate::models::{lbl, model_context::ModelContext, Label, Model, ModelState};
 
 #[derive(Debug, Clone)]
 pub struct TranslationError(pub String);
@@ -38,10 +38,10 @@ use TranslationType::*;
 
 pub trait Translation {
 
-    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> TranslationResult;
+    fn translate(&mut self, base : &dyn Any, context : &ModelContext, initial_state : &ModelState) -> TranslationResult;
 
-    fn get_translated(&mut self) -> (&mut dyn Any, &ModelState);
-    fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelState);
+    fn get_translated(&mut self) -> (&mut dyn Any, &ModelContext, &ModelState);
+    fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelContext, &ModelState);
 
     fn get_meta(&self) -> TranslationMeta;
 
@@ -85,24 +85,25 @@ impl Translation for TranslationChain {
         }
     }
 
-    fn translate(&mut self, base : &dyn Any, initial_state : &ModelState) -> TranslationResult {
+    fn translate(&mut self, base : &dyn Any, ctx : &ModelContext, initial_state : &ModelState) -> TranslationResult {
         if self.translations.is_empty() {
             return Err(TranslationError(String::from("Empty translation chain")));
         }
         let mut current_model = base;
         let mut initial_state = initial_state;
+        let mut current_ctx = ctx;
         for translation in self.translations.iter_mut() {
-            translation.translate(current_model, initial_state)?;
-            (current_model, initial_state) = translation.get_translated();
+            translation.translate(current_model, current_ctx, initial_state)?;
+            (current_model, current_ctx, initial_state) = translation.get_translated();
         }
         Ok(())
     }
 
-    fn get_translated(&mut self) -> (&mut dyn Any, &ModelState) {
+    fn get_translated(&mut self) -> (&mut dyn Any, &ModelContext, &ModelState) {
         self.translations.last_mut().unwrap().get_translated()
     }
 
-    fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelState) {
+    fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelContext, &ModelState) {
         self.translations.last_mut().unwrap().get_translated_model()
     }
 

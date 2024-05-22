@@ -8,15 +8,19 @@ use VarType::*;
 
 pub type EvaluationType = i32;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct VirtualMemory {
-    storage : Vec<u8>,
+    storage : Vec<u8>
 }
 
 impl VirtualMemory {
 
     pub fn new() -> VirtualMemory {
         VirtualMemory { storage : Vec::new() }
+    }
+
+    pub fn from_size(size : usize) -> VirtualMemory {
+        VirtualMemory { storage : vec![0 ; size] }
     }
 
     pub fn evaluate_at<T : Copy>(&self, address : usize) -> T {
@@ -44,7 +48,7 @@ impl VirtualMemory {
         }
     }
 
-    pub fn evaluate(&self, var : ModelVar) -> EvaluationType { 
+    pub fn evaluate(&self, var : &ModelVar) -> EvaluationType { 
         if !var.is_mapped() || (var.get_address() + var.size() > self.size()) {
             panic!("Pointer out of bound !")
         }
@@ -60,7 +64,7 @@ impl VirtualMemory {
         }
     }
 
-    pub fn set(&mut self, var : ModelVar, value : EvaluationType) {
+    pub fn set(&mut self, var : &ModelVar, value : EvaluationType) {
         if !var.is_mapped() || (var.get_address() + var.size() > self.size()) {
             panic!("Pointer out of bound !")
         }
@@ -110,6 +114,48 @@ impl Display for VirtualMemory {
             write!(f, "{:x} ", value)?;
         }
         write!(f, "\n]")
+    }
+
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct VariableDefiner {
+    size : usize
+}
+
+impl VariableDefiner {
+
+    pub fn new() -> VariableDefiner {
+        VariableDefiner { size : 0 }
+    }
+
+    pub fn define(&mut self, var : &mut ModelVar, var_type : VarType) {
+        if var.is_mapped() {
+            panic!("Can't redefine already mapped var !");
+        }
+        var.set_type(var_type);
+        var.set_address(self.size);
+        self.size += var.size();
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    pub fn append(&mut self, other : VariableDefiner) {
+        self.size += other.size()
+    }
+
+    pub fn clear(&mut self) {
+        self.size = 0;
+    }
+
+}
+
+impl From<VariableDefiner> for VirtualMemory {
+
+    fn from(definer : VariableDefiner) -> Self {
+        VirtualMemory::from_size(definer.size())
     }
 
 }

@@ -1,6 +1,6 @@
 use std::{collections::{hash_map::DefaultHasher, HashSet}, hash::{Hash, Hasher}, ops::Not};
 
-use crate::{models::{expressions::{Condition, Expr}, model_var::MappingResult, Model}, solution::{get_problem_type, ProblemType}};
+use crate::{models::{expressions::{Condition, Expr}, model_context::ModelContext, model_var::MappingResult, Model}, solution::{get_problem_type, ProblemType}};
 
 use super::{verifier::Verifiable, EvaluationState, VerificationBound, VerificationStatus};
 use serde::{Deserialize, Serialize};
@@ -205,8 +205,8 @@ impl Query {
         get_problem_type(self.quantifier, self.logic)
     }
 
-    pub fn apply_to_model(&mut self, model : &impl Model) -> MappingResult<()> {
-        self.condition = self.condition.apply_to_model(model)?;
+    pub fn apply_to(&mut self, ctx : &ModelContext) -> MappingResult<()> {
+        self.condition = self.condition.apply_to(ctx)?;
         Ok(())
     }
 
