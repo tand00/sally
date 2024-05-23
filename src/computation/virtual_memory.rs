@@ -1,4 +1,4 @@
-use std::{fmt::Display, mem::size_of};
+use std::{cmp::min, fmt::Display, mem::size_of};
 
 use serde::{Deserialize, Serialize};
 
@@ -95,6 +95,19 @@ impl VirtualMemory {
         var.set_type(var_type);
         var.set_address(self.size());
         self.storage.resize(self.size() + var.size(), 0);
+    }
+
+    pub fn copy_from(&mut self, other : &VirtualMemory) {
+        let to_copy = min(other.size(), self.size());
+        self.storage[0..to_copy].copy_from_slice(&other.storage[0..to_copy])
+    }
+
+    pub fn resize(&mut self, size : usize) {
+        self.storage.resize(size, 0)
+    }
+
+    pub fn size_delta(&mut self, delta : usize) {
+        self.storage.resize(self.size() + delta, 0)
     }
 
 }

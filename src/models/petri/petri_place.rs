@@ -73,7 +73,7 @@ impl PetriPlace {
     }
 
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {
-        self.set_var(ctx.add_var(self.name.clone(), PETRI_PLACE_VAR_TYPE));
+        self.set_var(ctx.add_var(self.get_label(), PETRI_PLACE_VAR_TYPE));
         Ok(())
     }
 

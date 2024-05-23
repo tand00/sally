@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use super::{lbl, model_context::ModelContext, time::ClockValue, CompilationResult, Label, Model, ModelMeta, ModelState, NONE};
+use super::{action::Action, lbl, model_context::ModelContext, time::ClockValue, CompilationResult, Label, Model, ModelMeta, ModelState, NONE};
 
 pub struct ModelNetwork {
     pub models : Vec<Box<dyn Model>>,
@@ -31,11 +31,11 @@ impl Model for ModelNetwork {
         }
     }
 
-    fn next(&self, state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>) {
+    fn next(&self, state : ModelState, action : Action) -> (Option<ModelState>, HashSet<Action>) {
         (None, Default::default())
     }
 
-    fn available_actions(&self, state : &ModelState) -> HashSet<usize> {
+    fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
         Default::default()
     }
 
@@ -51,7 +51,7 @@ impl Model for ModelNetwork {
     }
 
     fn is_timed(&self) -> bool {
-        self.models.iter().map(|m| m.is_timed() ).fold(true,|acc, x| acc || x)
+        self.models.iter().map(|m| m.is_timed() ).fold(true,|acc, x| acc && x)
     }
 
     fn is_stochastic(&self) -> bool {

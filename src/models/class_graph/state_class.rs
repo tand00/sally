@@ -5,7 +5,7 @@ use nalgebra::DVector;
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::{virtual_memory::{EvaluationType, VirtualMemory}, DBM}, models::{model_var::ModelVar, petri::PetriNet, time::ClockValue, Label, ModelState, Node}, verification::Verifiable};
+use crate::{computation::{virtual_memory::{EvaluationType, VirtualMemory}, DBM}, models::{action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue, Label, ModelState, Node}, verification::Verifiable};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StateClass {
@@ -16,7 +16,7 @@ pub struct StateClass {
     pub index : usize,
 
     #[serde(skip)]
-    pub predecessors : Vec<(Weak<RefCell<StateClass>>, usize)>,
+    pub predecessors : Vec<(Weak<RefCell<StateClass>>, Action)>,
     
 }
 
@@ -56,7 +56,7 @@ impl StateClass {
         let mut to_dbm = vec![0; petri.transitions.len()];
         let mut from_dbm = vec![0];
         for (i, transi) in petri.transitions.iter().enumerate() {
-            if !state.is_enabled(i) {
+            if !state.is_enabled(transi.borrow().get_clock()) {
                 continue;
             }
             let dbm_index = from_dbm.len();

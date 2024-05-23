@@ -47,7 +47,7 @@ impl Translation for PetriClassGraphTranslation {
         graph.compile(&mut self.context);
         positive("Class graph computed !");
         let mut initial_state = graph.classes[0].borrow().generate_image_state();
-        TODO.
+        initial_state.discrete.size_delta(graph.current_class.size());
         self.initial_state = initial_state;
         self.class_graph = Some(graph);
         Ok(())

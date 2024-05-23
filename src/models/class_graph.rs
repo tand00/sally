@@ -7,35 +7,39 @@ use std::rc::{Rc, Weak};
 
 use num_traits::Zero;
 
+use crate::computation::virtual_memory::EvaluationType;
 use crate::computation::DBM;
 use crate::verification::Verifiable;
 
+use super::action::Action;
 use super::model_context::ModelContext;
 use super::model_var::{ModelVar, VarType};
 use super::time::ClockValue;
 use super::{lbl, new_ptr, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, CONTROLLABLE, SYMBOLIC, TIMED};
-use super::petri::PetriNet;
+use super::petri::{PetriNet, PetriTransition};
 
-const CLASS_LIMIT : usize = 4096;
+const CLASS_LIMIT : usize = u16::MAX as usize;
 
 #[derive(Clone)]
 pub struct ClassGraph {
-    pub classes: Vec<ComponentPtr<StateClass>>,
-    pub edges: Vec<Edge<usize, StateClass, StateClass>>,
+    pub id : usize,
+    pub classes : Vec<ComponentPtr<StateClass>>,
+    pub edges : Vec<Edge<Action, StateClass, StateClass>>,
     pub places_dic : HashMap<Label, usize>,
-    pub transitions_count : usize,
-    pub current_class : ModelVar
+    pub current_class : ModelVar,
+    pub transitions : Vec<ComponentPtr<PetriTransition>>
 }
 
 impl ClassGraph {
 
     pub fn compute(p_net : &PetriNet, initial_state : &ModelState) -> Self {
         let mut cg = ClassGraph {
-            classes: Vec::new(),
-            edges: Vec::new(),
+            id : usize::MAX,
+            classes : Vec::new(),
+            edges : Vec::new(),
             places_dic : p_net.places_dic.clone(),
-            transitions_count : p_net.transitions.len(),
-            current_class : ModelVar::name(lbl("CurrentClass"))
+            current_class : ModelVar::name(lbl("CurrentClass")),
+            transitions : p_net.transitions.clone()
         };
         cg.current_class.set_type(VarType::VarU16);
         let mut seen : HashMap<u64, usize> = HashMap::new();
@@ -48,8 +52,9 @@ impl ClassGraph {
             let class_index = to_see.pop_back().unwrap();
             let class = Rc::clone(&cg.classes[class_index]);
             let clocks = class.borrow().enabled_clocks();
-            for action in clocks {
-                let next_class = ClassGraph::successor(p_net, &class, action);
+            for t_index in clocks {
+                let next_class = ClassGraph::successor(p_net, &class, t_index);
+                let action = cg.transitions[t_index].borrow().action;
                 if next_class.is_none() {
                     continue;
                 }
@@ -72,18 +77,19 @@ impl ClassGraph {
         cg
     }
 
-    pub fn successor(petri : &PetriNet, class : &ComponentPtr<StateClass>, action : usize) -> Option<StateClass> {
+    pub fn successor(petri : &PetriNet, class : &ComponentPtr<StateClass>, t_index : usize) -> Option<StateClass> {
         let image_state = class.borrow().generate_image_state();
-        let (next_state, newen, pers) = petri.fire(image_state, action);
+        let (next_state, newen, pers) = petri.fire(image_state, t_index);
 
         let vars = newen.len() + pers.len();
         let mut next_dbm = DBM::new(vars);
         let mut to_dbm : Vec<usize> = vec![0 ; petri.transitions.len()];
         let mut from_dbm : Vec<usize> = vec![0];
         let prev_to_dbm = &class.borrow().to_dbm_index;
-        let fired_i = prev_to_dbm[action];
+        let fired_i = prev_to_dbm[t_index];
         let discrete = next_state.discrete;
         let dbm = &class.borrow().dbm;
+        let action = petri.get_transition_action(t_index);
 
         for transi in 0..petri.transitions.len() {
             if pers.contains(&transi) {
@@ -150,7 +156,7 @@ impl Model for ClassGraph {
     }
 
     // Not optimized AT ALL ! Class graph is made for back-propagation
-    fn next(&self, state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>) {
+    fn next(&self, state : ModelState, action : Action) -> (Option<ModelState>, HashSet<Action>) {
         let mut next_index : Option<usize> = None;
         let class_index = state.evaluate_var(&self.current_class) as usize;
         for e in self.edges.iter() {
@@ -167,14 +173,15 @@ impl Model for ClassGraph {
         let next_index = next_index.unwrap();
         let next_class = &self.classes[next_index].borrow();
         let mut next_state = next_class.generate_image_state();
-        next_state.discrete = next_state.discrete.
+        next_state.discrete.size_delta(self.current_class.size());
+        next_state.discrete.set(&self.current_class, next_index as EvaluationType);
         let actions = self.available_actions(&next_state);
         (Some(next_state), actions)
     }
 
-    fn available_actions(&self, state : &ModelState) -> HashSet<usize> {
+    fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
         let mut actions = HashSet::new();
-        let class_index = state.discrete[state.discrete.nrows() - 1] as usize;
+        let class_index = state.evaluate_var(&self.current_class) as usize;
         for e in self.edges.iter() {
             if !e.has_source() {
                 continue;
@@ -191,11 +198,11 @@ impl Model for ClassGraph {
     }
 
     fn init_initial_clocks(&self, mut state : ModelState) -> ModelState {
-        state.create_clocks(self.transitions_count);
         let current_class = state.evaluate_var(&self.current_class) as usize;
         let class = Rc::clone(&self.classes[current_class]);
         for t in class.borrow().from_dbm_index.iter().skip(1) {
-            state.enable_clock(*t, ClockValue::zero());
+            let clock = self.transitions[*t].borrow().get_clock();
+            state.enable_clock(clock, ClockValue::zero());
         }
         state
     }
@@ -209,6 +216,7 @@ impl Model for ClassGraph {
     }
 
     fn compile(&mut self, context : &mut ModelContext) -> super::CompilationResult<()> {
+        self.id = context.new_model();
         self.edges.clear();
         for class in self.classes.iter() {
             for (pred, action) in class.borrow().predecessors.iter() {

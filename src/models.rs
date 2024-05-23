@@ -15,6 +15,7 @@ use rand::{thread_rng, Rng, seq::SliceRandom};
 
 pub mod time;
 pub mod model_var;
+pub mod model_clock;
 pub mod action;
 pub mod model_context;
 pub mod expressions;
@@ -29,7 +30,7 @@ pub mod run;
 
 use crate::computation::virtual_memory::VirtualMemory;
 
-use self::{model_characteristics::*, model_context::ModelContext, model_var::ModelVar, time::ClockValue};
+use self::{action::Action, model_characteristics::*, model_context::ModelContext, model_var::ModelVar, time::ClockValue};
 
 #[derive(Debug, Clone)]
 pub struct CompilationError;
@@ -109,9 +110,9 @@ impl std::fmt::Display for ModelMeta {
 pub trait Model : Any {
     
     // Given a state and an action, returns a state and actions available
-    fn next(&self, state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>);
+    fn next(&self, state : ModelState, action : Action) -> (Option<ModelState>, HashSet<Action>);
 
-    fn available_actions(&self, state : &ModelState) -> HashSet<usize>;
+    fn available_actions(&self, state : &ModelState) -> HashSet<Action>;
 
     fn available_delay(&self, state : &ModelState) -> ClockValue {
         let _ = state;
@@ -140,7 +141,7 @@ pub trait Model : Any {
 
     // Default implementation of random_next sampler for SMC. 
     // Should be overrided by stochastic models with a more relevant behaviour !
-    fn random_next(&self, state : ModelState) -> (Option<ModelState>, ClockValue, Option<usize>) {
+    fn random_next(&self, state : ModelState) -> (Option<ModelState>, ClockValue, Option<Action>) {
         let mut rng = thread_rng();
         let max_delay = self.available_delay(&state);
         let mut delayed_state = state;
@@ -150,7 +151,7 @@ pub trait Model : Any {
             delay = rng.gen_range(delay_range);
             delayed_state = self.delay(delayed_state, delay).unwrap();
         }
-        let actions : Vec<usize> = self.available_actions(&delayed_state).into_iter().collect();
+        let actions : Vec<Action> = self.available_actions(&delayed_state).into_iter().collect();
         let action = actions.choose(&mut rng);
         if action.is_none() {
             return (Some(delayed_state), delay, None)

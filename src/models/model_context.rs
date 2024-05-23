@@ -2,12 +2,15 @@ use std::{collections::HashMap, fmt::Display, rc::Rc};
 
 use crate::computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory};
 
-use super::{action::Action, model_var::{ModelVar, VarType}, Label, Model, ModelState};
+use super::{action::Action, model_clock::ModelClock, model_var::{ModelVar, VarType}, Label, Model, ModelState};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelContext {
+    n_models : usize,
     vars : HashMap<Label, ModelVar>,
     actions : HashMap<Label, Action>,
+    clocks : HashMap<Label, ModelClock>,
+    //io_actions : HashMap<Label, usize>,
     definer : VariableDefiner,
     path : Vec<Label>
 }
@@ -16,11 +19,24 @@ impl ModelContext {
 
     pub fn new() -> Self {
         ModelContext {
+            n_models : 0,
             vars : HashMap::new(),
             actions : HashMap::new(),
+            clocks : HashMap::new(),
+            //io_actions : HashMap::new(),
             definer : VariableDefiner::new(),
             path : Vec::new()
         }
+    }
+
+    pub fn n_models(&self) -> usize {
+        self.n_models
+    }
+
+    pub fn new_model(&mut self) -> usize {
+        let id = self.n_models;
+        self.n_models += 1;
+        id
     }
 
     pub fn n_vars(&self) -> usize {
@@ -29,6 +45,10 @@ impl ModelContext {
 
     pub fn n_actions(&self) -> usize {
         self.actions.len()
+    }
+
+    pub fn n_clocks(&self) -> usize {
+        self.clocks.len()
     }
 
     pub fn make_memory(&self) -> VirtualMemory {
@@ -42,7 +62,7 @@ impl ModelContext {
     }
 
     pub fn add_var(&mut self, name : Label, var_type : VarType) -> ModelVar {
-        let var_name = self.get_local_var_name(name);
+        let var_name = self.get_local_name(name);
         let mut var = ModelVar::name(var_name);
         self.definer.define(&mut var, var_type);
         self.vars.insert(var.name.clone(), var.clone());
@@ -50,7 +70,7 @@ impl ModelContext {
     }
 
     pub fn get_var(&self, name : &Label) -> Option<ModelVar> {
-        let var_name = self.get_local_var_name(name.clone());
+        let var_name = self.get_local_name(name.clone());
         if self.vars.contains_key(&var_name) {
             Some(self.vars[&var_name].clone())
         } else {
@@ -59,8 +79,24 @@ impl ModelContext {
     }
 
     pub fn has_var(&self, name : &Label) -> bool {
-        let var_name = self.get_local_var_name(name.clone());
+        let var_name = self.get_local_name(name.clone());
         self.vars.contains_key(&var_name)
+    }
+
+    pub fn add_action(&mut self, name : Label) -> Action {
+        let id = self.n_actions();
+        let action_name = self.get_local_name(name.clone());
+        let action = Action::Internal(id);
+        self.actions.insert(action_name, action);
+        action
+    }
+
+    pub fn add_clock(&mut self, name : Label) -> ModelClock {
+        let clock_name = self.get_local_name(name);
+        let mut clock = ModelClock::name(clock_name);
+        clock.index = self.n_clocks();
+        self.clocks.insert(clock.name.clone(), clock.clone());
+        clock
     }
 
     pub fn origin(&self) {
@@ -91,7 +127,7 @@ impl ModelContext {
         cwd
     }
 
-    pub fn get_local_var_name(&self, name : Label) -> Label {
+    pub fn get_local_name(&self, name : Label) -> Label {
         if self.has_custom_path() {
             self.get_path() + "." + name
         } else {
@@ -100,7 +136,7 @@ impl ModelContext {
     }
 
     fn make_initial_state(&self, model : &impl Model, marking : HashMap<Label, EvaluationType>) -> ModelState {
-        let mut state = ModelState::new(self.n_vars(), 0);
+        let mut state = ModelState::new(self.n_vars(), self.n_clocks());
         for (k,v) in marking.iter() {
             let var = self.get_var(k);
             if var.is_none() {

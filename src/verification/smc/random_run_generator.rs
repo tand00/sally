@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use num_traits::Zero;
 
-use crate::{models::{run::RunStatus, time::ClockValue, Model, ModelState}, verification::VerificationBound};
+use crate::{models::{action::Action, run::RunStatus, time::ClockValue, Model, ModelState}, verification::VerificationBound};
 
 pub struct RandomRunIterator<'a> {
     pub model : &'a dyn Model,
@@ -42,7 +42,7 @@ impl<'a> RandomRunIterator<'a> {
 
 impl<'a> Iterator for RandomRunIterator<'a> {
 
-    type Item = (Rc<ModelState>, ClockValue, Option<usize>);
+    type Item = (Rc<ModelState>, ClockValue, Option<Action>);
 
     fn next(&mut self) -> Option<Self::Item> {
         

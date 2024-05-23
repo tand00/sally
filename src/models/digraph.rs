@@ -5,7 +5,7 @@ use num_traits::{Bounded, Zero};
 
 use crate::computation::DBM;
 
-use super::{lbl, new_ptr, node::DataNode, time::TimeBound, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node, NONE};
+use super::{action::Action, lbl, model_context::ModelContext, new_ptr, node::DataNode, time::TimeBound, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node, NONE};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
 pub struct Digraph<T : ToString + 'static, U> {
@@ -222,7 +222,7 @@ impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
         (Some(state), actions)
     }
 
-    fn available_actions(&self, state : &ModelState) -> HashSet<usize> {
+    fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
         let (index, _) = state.discrete.argmax();
         let len_actions = self.nodes[index].borrow().out_edges.len();
         (0..len_actions).collect()
@@ -234,6 +234,11 @@ impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
 
     fn is_stochastic(&self) -> bool {
         false
+    }
+
+    fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
+        
+        Ok(())
     }
 
 }

@@ -2,9 +2,11 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::models::action::Action;
+use crate::models::model_clock::ModelClock;
 use crate::models::model_context::ModelContext;
 use crate::models::time::TimeInterval;
-use crate::models::{CompilationError, CompilationResult, Edge, Label, Model, ModelState, Node};
+use crate::models::{CompilationError, CompilationResult, Edge, Label, ModelState, Node};
 use crate::models::expressions::Condition;
 
 use super::PetriPlace;
@@ -19,6 +21,7 @@ pub struct PetriTransition {
     pub to: Vec<Label>,
     pub interval: TimeInterval,
     pub controllable : bool,
+    pub guard : Condition,
 
     #[serde(skip)]
     pub input_edges: Vec<InputEdge>,
@@ -29,10 +32,14 @@ pub struct PetriTransition {
     #[serde(skip)]
     pub index : usize,
 
-    pub guard : Condition,
+    #[serde(skip)]
+    pub compiled_guard : Condition,
 
     #[serde(skip)]
-    pub compiled_guard : Condition
+    pub action : Action,
+
+    #[serde(skip)]
+    pub clock : Option<ModelClock>
 }
 
 impl Node for PetriTransition {
@@ -53,7 +60,8 @@ impl PetriTransition {
             input_edges: Vec::new(), output_edges: Vec::new(), 
             controllable : true, 
             index : 0, 
-            guard : Condition::True, compiled_guard : Condition::True
+            guard : Condition::True, compiled_guard : Condition::True,
+            action : Action::Epsilon, clock : None
         }
     }
 
@@ -65,7 +73,8 @@ impl PetriTransition {
             input_edges: Vec::new(), output_edges: Vec::new(), 
             controllable : true, 
             index : 0,
-            guard : Condition::True, compiled_guard : Condition::True
+            guard : Condition::True, compiled_guard : Condition::True,
+            action : Action::Epsilon, clock : None
         }
     }
 
@@ -77,7 +86,8 @@ impl PetriTransition {
             input_edges: Vec::new(), output_edges: Vec::new(), 
             controllable : false, 
             index : 0,
-            guard : Condition::True, compiled_guard : Condition::True
+            guard : Condition::True, compiled_guard : Condition::True,
+            action : Action::Epsilon, clock : None
         }
     }
 
@@ -101,6 +111,10 @@ impl PetriTransition {
         self.compiled_guard.is_true(marking)
     }
 
+    pub fn is_fireable(&self, state : &ModelState) -> bool {
+        false
+    }
+
     pub fn clear_edges(&mut self) {
         self.input_edges.clear();
         self.output_edges.clear();
@@ -121,12 +135,21 @@ impl PetriTransition {
         return self.inertia() == 0
     }
 
+    pub fn get_clock(&self) -> &ModelClock {
+        match &self.clock {
+            None => panic!("Transition clock is not set !"),
+            Some(i) => i
+        }
+    }
+
     pub fn compile(&mut self, ctx : &ModelContext) -> CompilationResult<()> {
         let res = self.guard.apply_to(ctx);
         match res {
             Ok(c) => self.compiled_guard = c,
             Err(_) => return Err(CompilationError)
         };
+        self.action = ctx.add_action(self.get_label());
+        self.clock = Some(ctx.add_clock(self.get_label()));
         Ok(())
     }
 

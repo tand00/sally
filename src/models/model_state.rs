@@ -3,9 +3,9 @@ use std::{collections::HashSet, rc::Rc};
 use nalgebra::DVector;
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory}, verification::Verifiable};
+use crate::{computation::virtual_memory::{EvaluationType, VirtualMemory}, verification::Verifiable};
 
-use super::{model_var::ModelVar, time::ClockValue, Model};
+use super::{model_clock::ModelClock, model_var::ModelVar, time::ClockValue};
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize)]
 pub struct ModelState {
@@ -32,20 +32,20 @@ impl ModelState {
         self.clocks += rates * delta
     }
 
-    pub fn enable_clock(&mut self, clock : usize, value : ClockValue) {
-        self.clocks[clock] = value
+    pub fn enable_clock(&mut self, clock : &ModelClock, value : ClockValue) {
+        self.clocks[clock.get_index()] = value
     }
 
-    pub fn disable_clock(&mut self, clock : usize) {
-        self.clocks[clock] = ClockValue::disabled()
+    pub fn disable_clock(&mut self, clock : &ModelClock) {
+        self.clocks[clock.get_index()] = ClockValue::disabled()
     }
 
-    pub fn is_enabled(&self, clock : usize) -> bool {
-        !self.clocks[clock].is_disabled()
+    pub fn is_enabled(&self, clock : &ModelClock) -> bool {
+        !self.clocks[clock.get_index()].is_disabled()
     }
 
-    pub fn set_clock(&mut self, clock : usize, value : ClockValue) {
-        self.clocks[clock] = value
+    pub fn set_clock(&mut self, clock : &ModelClock, value : ClockValue) {
+        self.clocks[clock.get_index()] = value
     }
 
     pub fn set_marking(&mut self, var : &ModelVar, value : EvaluationType) {
@@ -74,6 +74,19 @@ impl ModelState {
 
     pub fn marking_sum(&self, vars : Vec<&ModelVar>) -> EvaluationType {
         vars.iter().map(|x| x.evaluate(self) ).sum()
+    }
+
+    pub fn argmax(&self, vars : Vec<&ModelVar>) -> usize {
+        let mut max_i = 0;
+        let mut max_value = EvaluationType::MIN;
+        for (i, v) in vars.iter().enumerate() {
+            let value = self.evaluate_var(v);
+            if value > max_value {
+                max_i = i;
+                max_value = value;
+            }
+        }
+        max_i
     }
 
     pub fn mark(&mut self, var : &ModelVar, tokens : EvaluationType) {
