@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display, rc::Rc};
 
 use crate::computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory};
 
-use super::{action::Action, model_clock::ModelClock, model_var::{ModelVar, VarType}, Label, Model, ModelState};
+use super::{action::{self, Action}, model_clock::ModelClock, model_var::{ModelVar, VarType}, Label, Model, ModelState};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelContext {
@@ -99,7 +99,7 @@ impl ModelContext {
         clock
     }
 
-    pub fn origin(&self) {
+    pub fn origin(&mut self) {
         self.path.clear();
     }
 
@@ -135,7 +135,7 @@ impl ModelContext {
         }
     }
 
-    fn make_initial_state(&self, model : &impl Model, marking : HashMap<Label, EvaluationType>) -> ModelState {
+    pub fn make_initial_state(&self, model : &impl Model, marking : HashMap<Label, EvaluationType>) -> ModelState {
         let mut state = ModelState::new(self.n_vars(), self.n_clocks());
         for (k,v) in marking.iter() {
             let var = self.get_var(k);
@@ -160,11 +160,20 @@ impl ModelContext {
 impl Display for ModelContext {
 
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, " [.] ModelContext(\n");
+        write!(f, " [.] ModelContext\n | - Models : {}\n", self.n_models())?;
+        write!(f, " | - Vars :\n")?;
         for (name, var) in self.vars.iter() {
-            write!(f, " | {} [{}]\n", name, var.get_address());
+            write!(f, " | {} [{}]\n", name, var.get_address())?;
         }
-        write!(f, ")")
+        write!(f, " | - Clocks :\n")?;
+        for (name, clock) in self.clocks.iter() {
+            write!(f, " | {} [{}]\n", name, clock.get_index())?;
+        }
+        write!(f, " | - Actions :\n")?;
+        for (name, action) in self.actions.iter() {
+            write!(f, " | {} [{}]\n", name, action)?;
+        }
+        write!(f, "")
     }
 
 }

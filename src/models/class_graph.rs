@@ -201,7 +201,8 @@ impl Model for ClassGraph {
         let current_class = state.evaluate_var(&self.current_class) as usize;
         let class = Rc::clone(&self.classes[current_class]);
         for t in class.borrow().from_dbm_index.iter().skip(1) {
-            let clock = self.transitions[*t].borrow().get_clock();
+            let transi = self.transitions[*t].borrow();
+            let clock = transi.get_clock();
             state.enable_clock(clock, ClockValue::zero());
         }
         state
@@ -231,7 +232,7 @@ impl Model for ClassGraph {
                 self.edges.push(edge);
             }
         }
-        self.current_class = context.add_var(self.current_class.name, self.current_class.get_type());
+        self.current_class = context.add_var(self.current_class.name.clone(), self.current_class.get_type());
         Ok(())
     }
 

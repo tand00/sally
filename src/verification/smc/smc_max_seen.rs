@@ -25,9 +25,9 @@ impl SMCMaxSeen {
         let vars = ctx.get_vars();
         let vars_refs : Vec<&ModelVar> = vars.iter().collect();
         for _ in 0..self.runs_needed {
-            let iterator = RandomRunIterator::generate(model, initial, bound);
+            let iterator = RandomRunIterator::generate(model, initial, bound.clone());
             for (state, _, _) in iterator {
-                let tokens = state.marking_sum(vars_refs);
+                let tokens = state.marking_sum(vars_refs.clone());
                 if tokens > max_seen {
                     max_seen = tokens;
                 }

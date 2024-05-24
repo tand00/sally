@@ -48,7 +48,7 @@ impl<T : ToString> Add<T> for Label {
 
 impl<T : ToString> AddAssign<T> for Label {    
     fn add_assign(&mut self, rhs: T) {
-        *self = *self + rhs
+        self.0 += &rhs.to_string()
     }
 }
 

@@ -71,6 +71,10 @@ impl ModelVar {
         ModelVar { name, address : Some(address), var_type }
     }
 
+    pub fn get_name(&self) -> Label {
+        self.name.clone()
+    }
+
     pub fn size(&self) -> usize {
         self.var_type.size()
     }

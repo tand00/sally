@@ -18,6 +18,7 @@ use solution::ClassGraphReachability;
 
 use crate::computation::virtual_memory::VirtualMemory;
 use crate::models::class_graph::ClassGraph;
+use crate::models::model_context::ModelContext;
 use crate::models::model_solving_graph::ModelSolvingGraph;
 use crate::models::model_var::{ModelVar, VarType::*};
 use crate::models::petri::PetriNet;
@@ -51,11 +52,38 @@ fn main() {
     positive(format!("Solutions : \t[{}]", solver.solutions.len()));
     lf();
 
-    /*let net = sample_petri();
+    let mut net = sample_petri();
+    let ctx = net.singleton();
+    println!("{}", ctx);
     println!("{}", net.get_model_meta());
     lf();
 
+    let mut translation = PetriClassGraphTranslation::new();
+    let initial_state = ctx.make_initial_state(&net, HashMap::from([
+        (lbl("p0"), 1),
+    ]));
+    translation.translate(&net, &ctx, &initial_state).unwrap();
+    let (g, ctx, _) = translation.get_translated();
+    let cg = g.downcast_ref::<ClassGraph>().unwrap();
+    println!("{}", ctx);
+    println!("{}", cg.get_model_meta());
+    lf();
+
+    for c in cg.classes.iter() {
+        println!("{}", c.borrow());
+    }
+
+    let mut solution = ClassGraphReachability::new();
     let mut query = sample_query();
+    query.apply_to(&ctx).unwrap();
+    if solution.is_compatible(cg, &ctx, &query) {
+        positive("Solution compatible, ready to solve !");
+        solution.solve(cg, &ctx, &query);
+    }
+    lf();
+
+
+    /*let mut query = sample_query();
     query.apply_to_model(&net).unwrap();
     let mut translation = PetriClassGraphTranslation::new();
     let mut solution = ClassGraphReachability::new();
@@ -108,13 +136,6 @@ fn main() {
     let q1 = parse_query(String::from("P <> [t <= 100] (P2 | deadlock) & P5 ^ 2 % 5")).unwrap();
     println!("-> {:#?}", q1);
     println!("-> {:#?}", serde_json::to_string(&q1).unwrap());*/
-
-    let mut mem = VirtualMemory::new();
-    let mut var_1 = ModelVar::from("Uint8");
-    let mut var_2 = ModelVar::from("Int32");
-    mem.define(&mut var_1, VarU8);
-    mem.define(&mut var_2, VarI32);
-    println!("{}", mem);
 }
 
 fn build_solver() -> ModelSolvingGraph {

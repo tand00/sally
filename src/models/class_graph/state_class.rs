@@ -122,7 +122,7 @@ impl fmt::Display for StateClass {
         if self.from_dbm_index.len() > 1 {
             transitions = self.from_dbm_index[1..].iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",");
         }
-        write!(f, "Class_{}\n- Marking {}- Transitions\n  [{}]\n\n- {}", self.index, self.discrete, transitions, self.dbm)
+        write!(f, "Class_{}\n- Marking {}\n- Transitions\n  [{}]\n\n- {}", self.index, self.discrete, transitions, self.dbm)
     }
 }
 

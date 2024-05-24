@@ -194,7 +194,7 @@ impl Digraph<usize, TimeBound> {
 
 }
 
-impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
+/*impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
 
     fn get_meta() -> ModelMeta {
         ModelMeta {
@@ -241,4 +241,4 @@ impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
         Ok(())
     }
 
-}
+}*/

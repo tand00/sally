@@ -43,7 +43,7 @@ impl PetriNet {
             transitions_dic.insert(transition.get_label(), transition.index);
             transitions_ptr.push(new_ptr(transition));
         }
-        let mut petri = PetriNet { 
+        let petri = PetriNet { 
             id : usize::MAX,
             places : places_ptr, 
             transitions : transitions_ptr, 
@@ -71,7 +71,7 @@ impl PetriNet {
     }
 
     pub fn enabled_transitions(&self, marking : &ModelState) -> Vec<ComponentPtr<PetriTransition>> {
-        self.transitions.iter().enumerate().filter_map(|(i, transi)| {
+        self.transitions.iter().filter_map(|transi| {
             if transi.borrow().is_enabled(marking) { Some(transi.clone()) }
             else { None }
         }).collect()
@@ -84,11 +84,12 @@ impl PetriNet {
             let place : &ComponentPtr<PetriPlace> = &self.places[*place_index];
             for transi_weak in place.borrow().get_downstream_transitions().iter() {
                 let transition = Weak::upgrade(transi_weak).unwrap();
-                let transi_index = transition.borrow().index;
-                let clock = transition.borrow().get_clock();
+                let transition = transition.borrow();
+                let transi_index = transition.index;
+                let clock = transition.get_clock();
                 new_state.disable_clock(clock);
                 pers.remove(&transi_index);
-                if transition.borrow().is_enabled(new_state) {
+                if transition.is_enabled(new_state) {
                     new_state.enable_clock(clock, ClockValue::zero());
                     newen.insert(transi_index);
                 }
@@ -101,14 +102,16 @@ impl PetriNet {
         let transi = &self.transitions[transi].borrow();
         let mut changed_places : HashSet<usize> = HashSet::new();
         for edge in transi.input_edges.iter() {
-            let place_ref = edge.ptr_node_from().borrow();
+            let place_ptr = edge.ptr_node_from();
+            let place_ref = place_ptr.borrow();
             let place_var = place_ref.get_var();
             let place_index = place_ref.index;
             state.unmark(place_var, edge.weight);
             changed_places.insert(place_index);
         }
         for edge in transi.output_edges.iter() {
-            let place_ref = edge.ptr_node_to().borrow();
+            let place_ptr = edge.ptr_node_to();
+            let place_ref = place_ptr.borrow();
             let place_var = place_ref.get_var();
             let place_index = place_ref.index;
             state.mark(place_var, edge.weight);

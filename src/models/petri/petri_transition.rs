@@ -142,7 +142,7 @@ impl PetriTransition {
         }
     }
 
-    pub fn compile(&mut self, ctx : &ModelContext) -> CompilationResult<()> {
+    pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {
         let res = self.guard.apply_to(ctx);
         match res {
             Ok(c) => self.compiled_guard = c,

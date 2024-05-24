@@ -1,4 +1,4 @@
-use crate::{models::{class_graph::ClassGraph, lbl}, verification::{VerificationStatus, Verifiable}};
+use crate::{models::{class_graph::ClassGraph, lbl, model_context::ModelContext}, verification::{Verifiable, VerificationStatus}};
 
 use super::{Solution, SolutionMeta, SolverResult, REACHABILITY};
 
@@ -26,11 +26,11 @@ impl Solution for ClassGraphReachability {
         }
     }
 
-    fn is_compatible(&self, _model : &dyn std::any::Any, query : &crate::verification::query::Query) -> bool {
+    fn is_compatible(&self, _model : &dyn std::any::Any, ctx : &ModelContext, query : &crate::verification::query::Query) -> bool {
         (!query.condition.contains_clock_proposition()) && (query.condition.is_pure())
     }
 
-    fn solve(&mut self, model : &dyn std::any::Any, query : &crate::verification::query::Query) -> SolverResult {
+    fn solve(&mut self, model : &dyn std::any::Any, ctx : &ModelContext, query : &crate::verification::query::Query) -> SolverResult {
         pending("Solving reachability problem on Class graph...");
         let cg : Option<&ClassGraph> = model.downcast_ref();
         if cg.is_none() {

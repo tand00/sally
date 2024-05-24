@@ -44,7 +44,11 @@ impl Translation for PetriClassGraphTranslation {
         }
         let petri = petri.unwrap();
         let mut graph = ClassGraph::compute(petri, initial_state);
-        graph.compile(&mut self.context);
+        let compilation_res = graph.compile(&mut self.context);
+        if compilation_res.is_err() {
+            error("Unable to compile Class graph !");
+            return Err(TranslationError(String::from("Cannot compile Petri net class graph")));
+        }
         positive("Class graph computed !");
         let mut initial_state = graph.classes[0].borrow().generate_image_state();
         initial_state.discrete.size_delta(graph.current_class.size());
