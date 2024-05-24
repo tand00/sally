@@ -172,3 +172,9 @@ pub trait Model : Any {
     }
 
 }
+
+pub trait ModelMaker {
+
+    fn make(&self) -> (Box<dyn Model>, ModelContext);
+
+}

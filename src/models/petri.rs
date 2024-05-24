@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}, fmt, rc::{Rc, Weak}};
 
-use super::{action::Action, lbl, model_characteristics::*, model_context::ModelContext, new_ptr, time::ClockValue, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node};
+use super::{action::Action, lbl, model_characteristics::*, model_context::ModelContext, new_ptr, time::ClockValue, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node};
 
 mod petri_place;
 mod petri_transition;
@@ -154,7 +154,7 @@ impl PetriNet {
         }
     }
 
-    pub fn get_structure(&self) -> impl Serialize {
+    pub fn get_structure(&self) -> PetriStructure {
         let mut places : Vec<PetriPlace> = Vec::new();
         let mut transitions : Vec<PetriTransition> = Vec::new();
         for place_ptr in self.places.iter() {
@@ -269,4 +269,39 @@ impl From<PetriStructure> for PetriNet {
     fn from(value: PetriStructure) -> Self {
         PetriNet::new(value.places, value.transitions)
     }
+}
+
+pub struct PetriMaker {
+    pub serialized : String
+}
+
+impl ModelMaker for PetriMaker {
+
+    fn make(&self) -> (Box<dyn Model>, ModelContext) {
+        let new_net : PetriStructure = serde_json::from_str(&self.serialized).unwrap();
+        let mut new_net = PetriNet::from(new_net);
+        let ctx = new_net.singleton();
+        (Box::new(new_net), ctx)
+    }
+
+}
+
+impl From<PetriStructure> for PetriMaker {
+
+    fn from(value : PetriStructure) -> Self {
+        PetriMaker {
+            serialized : serde_json::to_string(&value).unwrap()
+        }
+    }
+
+}
+
+impl From<PetriNet> for PetriMaker {
+
+    fn from(value: PetriNet) -> Self {
+        PetriMaker {
+            serialized : serde_json::to_string(&value.get_structure()).unwrap()
+        }
+    }
+
 }

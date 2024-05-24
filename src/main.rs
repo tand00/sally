@@ -21,7 +21,7 @@ use crate::models::class_graph::ClassGraph;
 use crate::models::model_context::ModelContext;
 use crate::models::model_solving_graph::ModelSolvingGraph;
 use crate::models::model_var::{ModelVar, VarType::*};
-use crate::models::petri::PetriNet;
+use crate::models::petri::{PetriMaker, PetriNet};
 use crate::translation::{PetriClassGraphTranslation, Translation};
 use crate::models::Model;
 use crate::solution::{ClassGraphReachabilitySynthesis, Solution};
@@ -82,6 +82,19 @@ fn main() {
     }
     lf();
 
+    let mut estim  = ProbabilityEstimation::new(0.95, 0.05);
+    let res = estim.verify(&net, &initial_state, &query);
+    println!("{:?}", res);
+
+    let mut estim  = ProbabilityEstimation::fixed_runs(50000, 0.95);
+    let res = estim.verify(&net, &initial_state, &query);
+    println!("{:?}", res);
+
+    let maker : PetriMaker = net.get_structure().into();
+
+    let mut estim  = ProbabilityEstimation::fixed_runs(50000, 0.95);
+    let res = estim.parallel_verify(Box::new(maker), &initial_state, &query, 16);
+    println!("{:?}", res);
 
     /*let mut query = sample_query();
     query.apply_to_model(&net).unwrap();
