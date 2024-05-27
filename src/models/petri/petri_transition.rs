@@ -112,7 +112,11 @@ impl PetriTransition {
     }
 
     pub fn is_fireable(&self, state : &ModelState) -> bool {
-        false
+        let clockvalue = state.get_clock_value(self.get_clock());
+        if clockvalue.is_disabled() {
+            return false;
+        }
+        self.interval.contains(clockvalue)
     }
 
     pub fn clear_edges(&mut self) {
@@ -140,6 +144,10 @@ impl PetriTransition {
             None => panic!("Transition clock is not set !"),
             Some(i) => i
         }
+    }
+
+    pub fn get_action(&self) -> Action {
+        self.action
     }
 
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {

@@ -1,15 +1,19 @@
 use std::{cell::RefCell, rc::{Rc, Weak}};
 
+use serde::{Deserialize, Serialize};
+
 use super::{ComponentPtr, Label};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Edge<T, U, V> {
     pub label : Label,
     pub from : Option<Label>,
     pub to : Option<Label>,
     pub weight : T,
+    #[serde(skip)]
     pub ref_from : Option<Weak<RefCell<U>>>,
-    pub ref_to : Option<Weak<RefCell<V>>>
+    #[serde(skip)]
+    pub ref_to : Option<Weak<RefCell<V>>>,
 }
 
 impl<T, U, V> Edge<T, U, V> {
@@ -21,7 +25,18 @@ impl<T, U, V> Edge<T, U, V> {
             to: Some(to),
             weight,
             ref_from : None,
-            ref_to : None
+            ref_to : None,
+        }
+    }
+
+    pub fn data_edge(from : &ComponentPtr<U>, to : &ComponentPtr<V>, weight : T) -> Self {
+        Edge {
+            label: Label::new(),
+            from: None, 
+            to: None,
+            weight,
+            ref_from : Some(Rc::downgrade(from)),
+            ref_to : Some(Rc::downgrade(to)),
         }
     }
 

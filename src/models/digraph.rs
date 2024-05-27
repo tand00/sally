@@ -1,11 +1,11 @@
-use std::{cmp::min, collections::HashSet, ops::Add, rc::Rc};
+use std::{cell::Ref, cmp::min, collections::{HashMap, HashSet}, ops::Add, rc::Rc};
 
 use nalgebra::{DMatrix, Scalar};
 use num_traits::{Bounded, Zero};
 
 use crate::computation::DBM;
 
-use super::{action::Action, lbl, model_context::ModelContext, new_ptr, node::DataNode, time::TimeBound, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node, NONE};
+use super::{action::Action, lbl, model_context::ModelContext, model_var::VarType, new_ptr, node::DataNode, time::TimeBound, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node, NONE};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
 pub struct Digraph<T : ToString + 'static, U> {
@@ -109,7 +109,7 @@ impl<T : ToString + 'static, U> Digraph<T,U> {
     {
         let distances = self.shortest_paths();
         let mut res = Digraph {
-            nodes : self.nodes.clone(),
+            nodes : self.nodes.clone()
         };
         res.create_relations(distances);
         res
@@ -204,18 +204,19 @@ impl Digraph<usize, TimeBound> {
         }
     }
 
-    fn next(&self, mut state : ModelState, action : usize) -> (Option<ModelState>, HashSet<usize>) {
-        let (index, _) = state.discrete.argmax();
-        let node = &self.nodes[index];
-        let edge = Rc::clone(&node.borrow().out_edges[action]);
+    fn next(&self, mut state : ModelState, action : Action) -> (Option<ModelState>, HashSet<Action>) {
+        let vars_refs : Vec<Ref<DataNode<T,U>>> = self.nodes.iter().map(|n| n.borrow() ).collect();
+        let vars = vars_refs.iter().map(|r| r.get_var() );
+        let index = state.argmax(vars);
+        let node = Rc::clone(&self.nodes[index]);
+        let edge = Rc::clone(&node.borrow().out_edges[0]);
         if edge.node_to().is_none() {
             return (None, HashSet::new())
         }
-        let next_index = edge.ptr_node_to().borrow().index;
-        state.discrete[index] = 0;
-        state.discrete[next_index] = 1;
-        let len_actions = edge.ptr_node_to().borrow().out_edges.len();
-        let actions : HashSet<usize> = (0..len_actions).collect();
+        let next_node = edge.ptr_node_to();
+        state.unmark(node.borrow().get_var(), 1);
+        state.mark(next_node.borrow().get_var(), 1);
+        let actions : HashSet<Action> = self.available_actions(&state);
         if actions.is_empty() {
             state.deadlocked = true;
         }
@@ -223,9 +224,22 @@ impl Digraph<usize, TimeBound> {
     }
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
-        let (index, _) = state.discrete.argmax();
-        let len_actions = self.nodes[index].borrow().out_edges.len();
-        (0..len_actions).collect()
+        let mut available : HashSet<Action> = HashSet::new();
+        let vars_refs : Vec<Ref<DataNode<T,U>>> = self.nodes.iter().map(|n| n.borrow() ).collect();
+        let vars = vars_refs.iter().map(|r| r.get_var() );
+        let index = state.argmax(vars);
+        let node = Rc::clone(&self.nodes[index]);
+        let this_index = node.borrow().index;
+        for edge in node.borrow().out_edges.iter() {
+            if !edge.has_target() {
+                continue;
+            }
+            let target = edge.ptr_node_to();
+            let target_index = target.borrow().index;
+            let action = self.actions[&(this_index, target_index)];
+            available.insert(action);
+        }
+        available
     }
 
     fn is_timed(&self) -> bool {
@@ -237,7 +251,22 @@ impl Digraph<usize, TimeBound> {
     }
 
     fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
-        
+        for node in self.nodes.iter() {
+            node.borrow_mut().make_var(context, VarType::VarI8);
+            let this_label = node.borrow().get_label();
+            let this_index = node.borrow().index;
+            for edge in node.borrow().out_edges.iter() { 
+                let target_label = if !edge.has_target() {
+                    Label::new()
+                } else {
+                    let target = edge.ptr_node_to();
+                    target.borrow().get_label()
+                };
+                let action_label = this_label.clone() + "_" + target_label;
+                let action = context.add_action(action_label);
+                edge
+            }
+        }
         Ok(())
     }
 

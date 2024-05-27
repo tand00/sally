@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::verification::Verifiable;
 
-use super::{model_context::ModelContext, Label, Model, ModelState};
-use std::{fmt::Display, rc::Rc};
+use super::{model_context::ModelContext, Label, ModelState};
+use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub struct MappingError(pub Label);

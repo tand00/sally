@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, fmt, rc::{Rc, Weak}};
+use std::{collections::{HashMap, HashSet}, fmt, rc::Weak};
 
 use super::{action::Action, lbl, model_characteristics::*, model_context::ModelContext, new_ptr, time::ClockValue, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node};
 
@@ -127,28 +127,14 @@ impl PetriNet {
         for place_label in from_labels.iter() {
             let place_index = self.places_dic[place_label];
             let place = &self.places[place_index];
-            let in_edge = Edge {
-                label: lbl(""),
-                from: Some(transition.borrow().get_label()), 
-                to: Some(place.borrow().get_label()),
-                weight : 1,
-                ref_from : Some(Rc::downgrade(place)),
-                ref_to : Some(Rc::downgrade(transition))
-            };
+            let in_edge = Edge::data_edge(place, transition, 1);
             transition.borrow_mut().input_edges.push(in_edge);
             place.borrow_mut().add_downstream_transition(transition);
         }
         for place_label in to_labels.iter() {
             let place_index = self.places_dic[place_label];
             let place = &self.places[place_index];
-            let out_edge = Edge {
-                label: lbl(""),
-                from: Some(transition.borrow().get_label()), 
-                to: Some(place.borrow().get_label()),
-                weight : 1,
-                ref_from : Some(Rc::downgrade(transition)),
-                ref_to : Some(Rc::downgrade(place))
-            };
+            let out_edge = Edge::data_edge(transition, place, 1);
             transition.borrow_mut().output_edges.push(out_edge);
             place.borrow_mut().add_upstream_transition(transition);
         }
@@ -187,13 +173,13 @@ impl Model for PetriNet {
     }
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
-        state.clocks.iter().enumerate().filter_map(|(i,c)| {
-            if c.is_enabled() && self.transitions[i].borrow().interval.contains(*c) {
-                Some(self.transitions[i].borrow().action)
-            } else {
-                None
+        let mut res = HashSet::new();
+        for transition in self.transitions.iter() {
+            if transition.borrow().is_fireable(state) {
+                res.insert(transition.borrow().get_action());
             }
-        }).collect()
+        }
+        res
     }
 
     fn available_delay(&self, state : &ModelState) -> ClockValue {
@@ -250,7 +236,7 @@ impl Model for PetriNet {
         for transition in self.transitions.iter() {
             transition.borrow_mut().clear_edges();
             transition.borrow_mut().compile(context)?;
-            self.actions_dic.insert(transition.borrow().action, transition.borrow().index);
+            self.actions_dic.insert(transition.borrow().get_action(), transition.borrow().index);
             self.create_transition_edges(transition);
         }
         Ok(())
@@ -271,6 +257,7 @@ impl From<PetriStructure> for PetriNet {
     }
 }
 
+// Storing a PetriStructure would make more sense, but wouldn't implement Send/Sync due to the Rc/Weak in places and transitions.
 pub struct PetriMaker {
     pub serialized : String
 }

@@ -3,7 +3,7 @@ mod probability_estimation;
 mod probability_float_comparison;
 mod smc_max_seen;
 
-use std::{sync::{mpsc, Arc, Mutex}, thread::{self, Thread}, time::Instant};
+use std::{sync::{mpsc, Arc, Mutex}, thread, time::Instant};
 
 pub use random_run_generator::RandomRunIterator;
 pub use probability_estimation::ProbabilityEstimation;
@@ -18,12 +18,16 @@ use crate::log::*;
 
 pub trait SMCQueryVerification {
 
+    // Required implementations
     fn must_do_another_run(&self) -> bool;
     fn handle_run_result(&mut self, result : VerificationStatus);
     fn get_result(&self) -> SolverResult;
+
+    // Optional implementations
     fn prepare(&self) { }
     fn finish(&self) { }
 
+    // Default implementations
     fn verify(&mut self, model : &impl Model, initial_state : &ModelState, query : &Query) -> SolverResult {
         info("SMC verification");
         self.prepare();
@@ -55,7 +59,7 @@ pub trait SMCQueryVerification {
         result
     }
 
-    fn parallel_verify(&mut self, model_maker : Box<dyn ModelMaker + Send + Sync>, initial_state : &ModelState, query : &Query, threads : usize) -> SolverResult {
+    fn parallel_verify(&mut self, model_maker : Box<dyn ModelMaker>, initial_state : &ModelState, query : &Query, threads : usize) -> SolverResult {
         info("SMC verification");
         continue_info(format!("Parallel mode [Threads : {}]", threads));
         self.prepare();
@@ -98,9 +102,10 @@ pub trait SMCQueryVerification {
         for received in rx {
             self.handle_run_result(received);
             if !self.must_do_another_run() {
-                let mut threads_guard = must_continue.lock().unwrap();
-                *threads_guard = false;
-                drop(threads_guard);
+                {
+                    let mut threads_guard = must_continue.lock().unwrap();
+                    *threads_guard = false;
+                }
                 for handle in handles {
                     handle.join().unwrap();
                 }

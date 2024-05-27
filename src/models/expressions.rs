@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::HashSet, fmt::Display, hash::Hash, ops::Not};
+use std::{cell::RefCell, collections::HashSet, hash::Hash, ops::Not};
 
-use crate::{models::{Label, Model}, QueryVisitor};
+use crate::{models::Label, QueryVisitor};
 
 use crate::verification::{Verifiable, VerificationStatus};
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ use PropositionType::*;
 pub enum Expr {
     Var(ModelVar),
     Constant(i32),
-    ClockComparison(PropositionType, usize, i32),
+    ClockComparison(PropositionType, ModelClock, i32),
     Plus(Box<Expr>, Box<Expr>),
     Minus(Box<Expr>, Box<Expr>),
     Multiply(Box<Expr>, Box<Expr>),
@@ -36,12 +36,12 @@ impl Expr {
             Constant(i) => *i,
             Var(x) => x.evaluate(state),
             ClockComparison(prop_type, clock, value) => match prop_type {
-                EQ => (state.evaluate_clock(*clock) == (*value as f64)) as i32,
-                NE => (state.evaluate_clock(*clock) != (*value as f64)) as i32,
-                LE => (state.evaluate_clock(*clock) <= (*value as f64)) as i32,
-                GE => (state.evaluate_clock(*clock) >= (*value as f64)) as i32,
-                LS => (state.evaluate_clock(*clock) < (*value as f64)) as i32,
-                GS => (state.evaluate_clock(*clock) > (*value as f64)) as i32,
+                EQ => (state.evaluate_clock(clock) == (*value as f64)) as i32,
+                NE => (state.evaluate_clock(clock) != (*value as f64)) as i32,
+                LE => (state.evaluate_clock(clock) <= (*value as f64)) as i32,
+                GE => (state.evaluate_clock(clock) >= (*value as f64)) as i32,
+                LS => (state.evaluate_clock(clock) < (*value as f64)) as i32,
+                GS => (state.evaluate_clock(clock) > (*value as f64)) as i32,
             }
             Plus(e1, e2) => e1.evaluate(state) + e2.evaluate(state),
             Minus(e1, e2) => e1.evaluate(state) - e2.evaluate(state),
@@ -125,7 +125,7 @@ pub enum Condition {
 
 use Condition::*;
 
-use super::{model_context::ModelContext, model_var::{MappingResult, ModelVar}, ModelState};
+use super::{model_clock::ModelClock, model_context::ModelContext, model_var::{MappingResult, ModelVar}};
 
 impl Condition {
 

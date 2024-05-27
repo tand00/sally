@@ -1,8 +1,8 @@
-use std::{collections::HashMap, fmt::Display, rc::Rc};
+use std::{collections::HashMap, fmt::Display};
 
 use crate::computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory};
 
-use super::{action::{self, Action}, model_clock::ModelClock, model_var::{ModelVar, VarType}, Label, Model, ModelState};
+use super::{action::Action, model_clock::ModelClock, model_var::{ModelVar, VarType}, Label, Model, ModelState};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelContext {
@@ -56,7 +56,7 @@ impl ModelContext {
     }
 
     pub fn get_vars(&self) -> Vec<ModelVar> {
-        self.vars.iter().map(|(n,l)| {
+        self.vars.iter().map(|(_,l)| {
             l.clone()
         }).collect()
     }

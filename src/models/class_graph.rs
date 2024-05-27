@@ -54,7 +54,7 @@ impl ClassGraph {
             let clocks = class.borrow().enabled_clocks();
             for t_index in clocks {
                 let next_class = ClassGraph::successor(p_net, &class, t_index);
-                let action = cg.transitions[t_index].borrow().action;
+                let action = cg.transitions[t_index].borrow().get_action();
                 if next_class.is_none() {
                     continue;
                 }
@@ -227,7 +227,7 @@ impl Model for ClassGraph {
                     to : None,
                     weight : *action,
                     ref_from : Some(Weak::clone(pred)),
-                    ref_to : Some(Rc::downgrade(class))
+                    ref_to : Some(Rc::downgrade(class)),
                 };
                 self.edges.push(edge);
             }

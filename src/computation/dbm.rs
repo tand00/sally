@@ -156,7 +156,9 @@ impl DBM {
     pub fn time_closure(&self) -> DBM { 
         let mut res = self.clone();
         let max_delta = self.constraints.column(0).iter().min().unwrap().clone();
-        //TODO!
+        for i in 1..(self.vars_count() + 1) {
+            res.constraints[(0,i)] = min(TimeBound::zero(), self.constraints[(0,i)] + max_delta);
+        }
         res
     }
 

@@ -1,5 +1,5 @@
 use std::{hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
-use crate::{computation::virtual_memory::EvaluationType, models::model_var::ModelVar};
+use crate::{computation::virtual_memory::EvaluationType, models::{model_clock::ModelClock, model_var::ModelVar}};
 
 use super::query::*;
 use serde::{Deserialize, Serialize};
@@ -80,9 +80,13 @@ impl Default for VerificationStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationBound {
+    #[serde(rename = "time_bound")]
     TimeRunBound(u32),
+    #[serde(rename = "steps_bound")]
     StepsRunBound(usize),
+    #[serde(rename = "var_bound")]
     VarRunBound(ModelVar, i32),
+    #[serde(rename = "no_bound")]
     NoRunBound,
 }
 
@@ -94,7 +98,7 @@ impl Default for VerificationBound {
 
 pub trait Verifiable : Hash {
     fn evaluate_var(&self, var : &ModelVar) -> EvaluationType;
-    fn evaluate_clock(&self, _ : usize) -> f64 {
+    fn evaluate_clock(&self, _ : &ModelClock) -> f64 {
         f64::NAN
     }
     fn is_deadlocked(&self) -> bool;
@@ -122,7 +126,7 @@ impl Verification {
         }
     }
 
-    pub fn verify(&mut self, query : &mut Query, state : &impl Verifiable) {
+    pub fn verify(&mut self, _ : &mut Query, _ : &impl Verifiable) {
         
     }
 

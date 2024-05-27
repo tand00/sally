@@ -3,7 +3,7 @@ mod node;
 mod edge;
 mod model_state;
 
-use std::{any::Any, cell::RefCell, collections::{HashMap, HashSet}, rc::Rc};
+use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc};
 
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
@@ -28,9 +28,7 @@ pub mod model_network;
 //pub mod markov_chain;
 pub mod run;
 
-use crate::computation::virtual_memory::VirtualMemory;
-
-use self::{action::Action, model_characteristics::*, model_context::ModelContext, model_var::ModelVar, time::ClockValue};
+use self::{action::Action, model_characteristics::*, model_context::ModelContext, time::ClockValue};
 
 #[derive(Debug, Clone)]
 pub struct CompilationError;
@@ -162,18 +160,20 @@ pub trait Model : Any {
     }
 
     fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
+        let _ = context;
         Ok(())
     }
 
     fn singleton(&mut self) -> ModelContext {
         let mut ctx = ModelContext::new();
-        self.compile(&mut ctx);
+        self.compile(&mut ctx).unwrap();
         ctx
     }
 
 }
 
-pub trait ModelMaker {
+// Trait that should implement Send and Sync, to be shared amongst threads and do parallel verification by creating local models
+pub trait ModelMaker : Send + Sync {
 
     fn make(&self) -> (Box<dyn Model>, ModelContext);
 

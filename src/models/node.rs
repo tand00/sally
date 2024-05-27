@@ -28,16 +28,18 @@ impl<T, U> DataNode<T, U> {
             element,
             out_edges : Vec::new(),
             in_edges : Vec::new(),
-            index : 0
+            index : 0,
         }
     }
 
 }
 
 impl<T : ToString + 'static, U> Node for DataNode<T, U> {
+
     fn get_label(&self) -> Label {
         Label::from(self.element.to_string())
     }
+
 }
 
 impl<T : Clone, U> Clone for DataNode<T, U> {

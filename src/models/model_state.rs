@@ -1,4 +1,4 @@
-use std::{collections::HashSet, rc::Rc};
+use std::collections::HashSet;
 
 use nalgebra::DVector;
 use serde::{Deserialize, Serialize};
@@ -48,6 +48,10 @@ impl ModelState {
         self.clocks[clock.get_index()] = value
     }
 
+    pub fn get_clock_value(&self, clock : &ModelClock) -> ClockValue {
+        self.clocks[clock.get_index()]
+    }
+
     pub fn set_marking(&mut self, var : &ModelVar, value : EvaluationType) {
         self.discrete.set(var, value);
     }
@@ -72,14 +76,14 @@ impl ModelState {
         self.get_marking(var)
     }
 
-    pub fn marking_sum(&self, vars : Vec<&ModelVar>) -> EvaluationType {
-        vars.iter().map(|x| x.evaluate(self) ).sum()
+    pub fn marking_sum<'a>(&self, vars : impl Iterator<Item = &'a ModelVar>) -> EvaluationType {
+        vars.map(|x| x.evaluate(self) ).sum()
     }
 
-    pub fn argmax(&self, vars : Vec<&ModelVar>) -> usize {
+    pub fn argmax<'a>(&self, vars : impl Iterator<Item = &'a ModelVar>) -> usize {
         let mut max_i = 0;
         let mut max_value = EvaluationType::MIN;
-        for (i, v) in vars.iter().enumerate() {
+        for (i, v) in vars.enumerate() {
             let value = self.evaluate_var(v);
             if value > max_value {
                 max_i = i;
@@ -109,8 +113,8 @@ impl Verifiable for ModelState {
         self.discrete.evaluate(var)
     }
 
-    fn evaluate_clock(&self, id : usize) -> f64 {
-        self.clocks[id].0
+    fn evaluate_clock(&self, clock : &ModelClock) -> f64 {
+        self.get_clock_value(clock).0
     }
 
     fn is_deadlocked(&self) -> bool {

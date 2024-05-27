@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::Label;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ModelClock {
     pub name : Label,
     pub index : usize

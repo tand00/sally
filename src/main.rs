@@ -8,7 +8,6 @@ pub mod log;
 
 use std::collections::HashMap;
 
-use models::digraph::Digraph;
 use models::expressions::{Condition, Expr};
 use models::lbl;
 use models::model_var::var;
@@ -16,18 +15,15 @@ use models::petri::{PetriPlace, PetriTransition, PetriStructure};
 use models::time::{TimeInterval, TimeBound::*};
 use solution::ClassGraphReachability;
 
-use crate::computation::virtual_memory::VirtualMemory;
 use crate::models::class_graph::ClassGraph;
-use crate::models::model_context::ModelContext;
 use crate::models::model_solving_graph::ModelSolvingGraph;
-use crate::models::model_var::{ModelVar, VarType::*};
 use crate::models::petri::{PetriMaker, PetriNet};
 use crate::translation::{PetriClassGraphTranslation, Translation};
 use crate::models::Model;
 use crate::solution::{ClassGraphReachabilitySynthesis, Solution};
 use crate::verification::text_query_parser::parse_query;
 use crate::verification::{query::*, VerificationBound};
-use crate::verification::smc::{ProbabilityEstimation, ProbabilityFloatComparison, SMCMaxSeen, SMCQueryVerification};
+use crate::verification::smc::{ProbabilityEstimation, SMCMaxSeen, SMCQueryVerification};
 
 use log::*;
 
@@ -63,9 +59,9 @@ fn main() {
         (lbl("p0"), 1),
     ]));
     translation.translate(&net, &ctx, &initial_state).unwrap();
-    let (g, ctx, _) = translation.get_translated();
+    let (g, n_ctx, _) = translation.get_translated();
     let cg = g.downcast_ref::<ClassGraph>().unwrap();
-    println!("{}", ctx);
+    println!("{}", n_ctx);
     println!("{}", cg.get_model_meta());
     lf();
 
@@ -86,69 +82,32 @@ fn main() {
     let res = estim.verify(&net, &initial_state, &query);
     println!("{:?}", res);
 
-    let mut estim  = ProbabilityEstimation::fixed_runs(50000, 0.95);
-    let res = estim.verify(&net, &initial_state, &query);
-    println!("{:?}", res);
-
     let maker : PetriMaker = net.get_structure().into();
-
-    let mut estim  = ProbabilityEstimation::fixed_runs(50000, 0.95);
+    let mut estim  = ProbabilityEstimation::new(0.95, 0.05);
     let res = estim.parallel_verify(Box::new(maker), &initial_state, &query, 16);
     println!("{:?}", res);
 
-    /*let mut query = sample_query();
-    query.apply_to_model(&net).unwrap();
-    let mut translation = PetriClassGraphTranslation::new();
-    let mut solution = ClassGraphReachability::new();
-    let initial_state = net.get_initial_state(HashMap::from([
-        (lbl("p0"), 1),
-    ]));
-    translation.translate(&net, &initial_state).unwrap();
-    let cg = translation.get_translated().0.downcast_ref::<ClassGraph>().unwrap();
-    println!("{}", cg.get_model_meta());
-    lf();
-    
-    if solution.is_compatible(cg, &query) {
-        positive("Solution compatible, ready to solve !");
-        solution.solve(cg, &query);
-    }
-    lf();
+    let estim  = SMCMaxSeen::new(100000);
+    let res = estim.estimate_max(&ctx, &net, &initial_state, VerificationBound::StepsRunBound(1000));
+    println!("{:?}", res);
 
-    for c in cg.classes.iter() {
-        println!("{}", c.borrow());
-    }
+    let maker : PetriMaker = net.get_structure().into();
+    let res = estim.parallel_estimate_max(Box::new(maker), &initial_state, VerificationBound::StepsRunBound(1000), 16);
+    println!("{:?}", res);
+
     let json_net = serde_json::to_string(&net.get_structure()).unwrap();
     println!("{}", json_net);
-
     let new_net : PetriStructure = serde_json::from_str(&json_net).unwrap();
-    let new_net = PetriNet::from(new_net);
-    println!("{}", new_net);
+    let mut new_net = PetriNet::from(new_net);
+    println!("{}", new_net.singleton());
 
     let json_q = serde_json::to_string(&query).unwrap();
     println!("{}", json_q);
 
-    let dg = sample_digraph();
-    println!("{}", dg.get_model_meta());
-    lf();
-
-    let mut estim  = ProbabilityEstimation::new(0.95, 0.05);
-    let res = estim.verify(&net, &initial_state, &query);
-    println!("{:?}", res);
-
-    let mut comp  = ProbabilityFloatComparison::new(0.5, 0.01, 0.01, 0.01, 0.01);
-    let res = comp.verify(&net, &initial_state, &query);
-    println!("{:?}", res);
-
-    let mut estim  = ProbabilityEstimation::fixed_runs(50000, 0.95);
-    let res = estim.verify(&net, &initial_state, &query);
-    println!("{:?}", res);
-
-    let max_estim = SMCMaxSeen::new(50000);
-    max_estim.estimate_max(&net, &initial_state, VerificationBound::StepsRunBound(50));
-
     let q1 = parse_query(String::from("P <> [t <= 100] (P2 | deadlock) & P5 ^ 2 % 5")).unwrap();
     println!("-> {:#?}", q1);
-    println!("-> {:#?}", serde_json::to_string(&q1).unwrap());*/
+    println!("-> {:#?}", serde_json::to_string(&q1).unwrap());
+
 }
 
 fn build_solver() -> ModelSolvingGraph {
@@ -200,7 +159,7 @@ fn sample_petri() -> PetriNet {
     net
 }
 
-fn sample_digraph() -> Digraph<usize, i32> {
+/*fn sample_digraph() -> Digraph<usize, i32> {
     let mut g : Digraph<usize, i32> = Digraph::new();
     g.make_node(3);
     g.make_node(4);
@@ -211,7 +170,7 @@ fn sample_digraph() -> Digraph<usize, i32> {
     g.make_edge(2, 1, 5);
     g.make_edge(4, 1, 1);
     g
-}
+}*/
 
 fn sample_query() -> Query {
     let condition = Condition::And(
