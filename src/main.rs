@@ -27,11 +27,8 @@ use crate::verification::smc::{ProbabilityEstimation, SMCMaxSeen, SMCQueryVerifi
 
 use log::*;
 
-extern crate nalgebra as na;
-extern crate num_traits;
-extern crate rand;
-
 fn main() {
+
     println!(" [#] Sally Model Checker - v.1.0");
     lf();
     println!(" [.] Features :");
@@ -66,7 +63,7 @@ fn main() {
     lf();
 
     for c in cg.classes.iter() {
-        println!("{}", c.borrow());
+        println!("{}", c);
     }
 
     let mut solution = ClassGraphReachability::new();
@@ -82,17 +79,15 @@ fn main() {
     let res = estim.verify(&net, &initial_state, &query);
     println!("{:?}", res);
 
-    let maker : PetriMaker = net.get_structure().into();
     let mut estim  = ProbabilityEstimation::new(0.95, 0.05);
-    let res = estim.parallel_verify(Box::new(maker), &initial_state, &query, 16);
+    let res = estim.parallel_verify(&net, &initial_state, &query, 16);
     println!("{:?}", res);
 
-    let estim  = SMCMaxSeen::new(100000);
-    let res = estim.estimate_max(&ctx, &net, &initial_state, VerificationBound::StepsRunBound(1000));
+    let estim  = SMCMaxSeen::new(200000);
+    let res = estim.estimate_max(&net, &ctx, &initial_state, VerificationBound::StepsRunBound(1000));
     println!("{:?}", res);
 
-    let maker : PetriMaker = net.get_structure().into();
-    let res = estim.parallel_estimate_max(Box::new(maker), &initial_state, VerificationBound::StepsRunBound(1000), 16);
+    let res = estim.parallel_estimate_max(&net, &ctx, &initial_state, VerificationBound::StepsRunBound(1000), 16);
     println!("{:?}", res);
 
     let json_net = serde_json::to_string(&net.get_structure()).unwrap();

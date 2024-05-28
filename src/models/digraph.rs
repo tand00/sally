@@ -160,8 +160,8 @@ impl<T : ToString + 'static, U> Digraph<T,U> {
             let from = &self.nodes[i];
             let to = &self.nodes[j];
             let mut e = Edge::new_weighted(
-                from.borrow().get_label(), 
-                to.borrow().get_label(), 
+                from.get_label(), 
+                to.get_label(), 
                 w.clone());
             e.set_node_from(from);
             e.set_node_to(to);

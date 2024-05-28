@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{cell::RefCell, collections::HashSet, hash::{DefaultHasher, Hash, Hasher}, rc::Weak};
+use std::{collections::HashSet, hash::{DefaultHasher, Hash, Hasher}, sync::{RwLock, Weak}};
 
 use nalgebra::DVector;
 use num_traits::Zero;
@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{computation::{virtual_memory::{EvaluationType, VirtualMemory}, DBM}, models::{action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue, Label, ModelState, Node}, verification::Verifiable};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StateClass {
+    
     pub discrete : VirtualMemory,
     pub dbm : DBM,
     pub to_dbm_index : Vec<usize>,
@@ -16,7 +17,7 @@ pub struct StateClass {
     pub index : usize,
 
     #[serde(skip)]
-    pub predecessors : Vec<(Weak<RefCell<StateClass>>, Action)>,
+    pub predecessors : RwLock<Vec<(Weak<StateClass>, Action)>>,
     
 }
 
@@ -56,21 +57,21 @@ impl StateClass {
         let mut to_dbm = vec![0; petri.transitions.len()];
         let mut from_dbm = vec![0];
         for (i, transi) in petri.transitions.iter().enumerate() {
-            if !state.is_enabled(transi.borrow().get_clock()) {
+            if !state.is_enabled(transi.get_clock()) {
                 continue;
             }
             let dbm_index = from_dbm.len();
             to_dbm[i] = dbm_index;
             from_dbm.push(i);
-            dbm.add(dbm_index, 0, transi.borrow().interval.1);
-            dbm.add(0, dbm_index, -transi.borrow().interval.0);
+            dbm.add(dbm_index, 0, transi.interval.1);
+            dbm.add(0, dbm_index, -transi.interval.0);
         }
         StateClass {
             discrete,
             dbm,
             to_dbm_index : to_dbm,
             from_dbm_index : from_dbm,
-            predecessors : Vec::new(),
+            predecessors : Default::default(),
             index : 0,
         }
     }
@@ -129,5 +130,18 @@ impl fmt::Display for StateClass {
 impl Node for StateClass {
     fn get_label(&self) -> Label {
         Label::from("Class_:".to_owned() + &self.index.to_string())
+    }
+}
+
+impl Clone for StateClass {
+    fn clone(&self) -> Self {
+        StateClass {
+            discrete : self.discrete.clone(),
+            dbm : self.dbm.clone(),
+            to_dbm_index : self.to_dbm_index.clone(),
+            from_dbm_index : self.from_dbm_index.clone(),
+            index : self.index,
+            predecessors : Default::default(),
+        }
     }
 }

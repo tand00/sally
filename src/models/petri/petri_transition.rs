@@ -1,4 +1,5 @@
 use std::fmt;
+use std::sync::{Arc, RwLock};
 
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +15,7 @@ use super::PetriPlace;
 pub type InputEdge = Edge<i32, PetriPlace, PetriTransition>;
 pub type OutputEdge = Edge<i32, PetriTransition, PetriPlace>;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PetriTransition {
     pub label: Label,
     pub from: Vec<Label>,
@@ -24,13 +25,13 @@ pub struct PetriTransition {
     pub guard : Condition,
 
     #[serde(skip)]
-    pub input_edges: Vec<InputEdge>,
+    pub index : usize,
 
     #[serde(skip)]
-    pub output_edges: Vec<OutputEdge>,
-    
+    pub input_edges: RwLock<Vec<Arc<InputEdge>>>,
+
     #[serde(skip)]
-    pub index : usize,
+    pub output_edges: RwLock<Vec<Arc<OutputEdge>>>,
 
     #[serde(skip)]
     pub compiled_guard : Condition,
@@ -39,7 +40,7 @@ pub struct PetriTransition {
     pub action : Action,
 
     #[serde(skip)]
-    pub clock : Option<ModelClock>
+    pub clock : ModelClock
 }
 
 impl Node for PetriTransition {
@@ -57,11 +58,12 @@ impl PetriTransition {
             label, 
             from, to, 
             interval, 
-            input_edges: Vec::new(), output_edges: Vec::new(), 
+            input_edges: Default::default(), output_edges: Default::default(), 
             controllable : true, 
             index : 0, 
-            guard : Condition::True, compiled_guard : Condition::True,
-            action : Action::Epsilon, clock : None
+            guard : Condition::True, compiled_guard : Default::default(),
+            action : Default::default(), 
+            clock : Default::default()
         }
     }
 
@@ -70,11 +72,12 @@ impl PetriTransition {
             label, 
             from, to, 
             interval: TimeInterval::full(), 
-            input_edges: Vec::new(), output_edges: Vec::new(), 
+            input_edges: Default::default(), output_edges: Default::default(), 
             controllable : true, 
             index : 0,
-            guard : Condition::True, compiled_guard : Condition::True,
-            action : Action::Epsilon, clock : None
+            guard : Condition::True, compiled_guard : Default::default(),
+            action : Default::default(),
+            clock : Default::default()
         }
     }
 
@@ -83,28 +86,41 @@ impl PetriTransition {
             label, 
             from, to, 
             interval, 
-            input_edges: Vec::new(), output_edges: Vec::new(), 
+            input_edges: Default::default(), output_edges: Default::default(), 
             controllable : false, 
             index : 0,
-            guard : Condition::True, compiled_guard : Condition::True,
-            action : Action::Epsilon, clock : None
+            guard : Condition::True, compiled_guard : Default::default(),
+            action : Default::default(),
+            clock : Default::default()
         }
     }
 
-    pub fn get_inputs(&self) -> Vec<&InputEdge> {
-        self.input_edges.iter().collect()
+    pub fn get_inputs(&self) -> Vec<Arc<InputEdge>> {
+        self.input_edges.read().unwrap().iter().map(|e| {
+            Arc::clone(e)
+        }).collect()
     }
 
-    pub fn get_outputs(&self) -> Vec<&OutputEdge> {
-        self.output_edges.iter().collect()
+    pub fn get_outputs(&self) -> Vec<Arc<OutputEdge>> {
+        self.output_edges.read().unwrap().iter().map(|e| {
+            Arc::clone(e)
+        }).collect()
+    }
+
+    pub fn add_input_edge(&self, edge : Edge<i32, PetriPlace, PetriTransition>) {
+        self.input_edges.write().unwrap().push(Arc::new(edge))
+    }
+
+    pub fn add_output_edge(&self, edge : Edge<i32, PetriTransition, PetriPlace>) {
+        self.output_edges.write().unwrap().push(Arc::new(edge))
     }
 
     pub fn is_enabled(&self, marking : &ModelState) -> bool {
-        for edge in self.input_edges.iter() {
+        for edge in self.input_edges.read().unwrap().iter() {
             if !edge.has_source() {
                 panic!("Every transition edge should have a source");
             }
-            if marking.tokens(&edge.ptr_node_from().borrow().get_var()) < edge.weight {
+            if marking.tokens(edge.ptr_node_from().get_var()) < edge.weight {
                 return false
             }
         }
@@ -119,17 +135,17 @@ impl PetriTransition {
         self.interval.contains(clockvalue)
     }
 
-    pub fn clear_edges(&mut self) {
-        self.input_edges.clear();
-        self.output_edges.clear();
+    pub fn clear_edges(&self) {
+        self.input_edges.write().unwrap().clear();
+        self.output_edges.write().unwrap().clear();
     }
 
     pub fn inertia(&self) -> i32 {
         let mut res : i32 = 0;
-        for e in self.input_edges.iter() {
+        for e in self.input_edges.read().unwrap().iter() {
             res -= e.weight;
         }
-        for e in self.output_edges.iter() {
+        for e in self.output_edges.read().unwrap().iter() {
             res += e.weight;
         }
         res
@@ -139,11 +155,16 @@ impl PetriTransition {
         return self.inertia() == 0
     }
 
+    pub fn set_clock(&mut self, clock : ModelClock) {
+        self.clock = clock;
+    }
+
     pub fn get_clock(&self) -> &ModelClock {
-        match &self.clock {
-            None => panic!("Transition clock is not set !"),
-            Some(i) => i
-        }
+        &self.clock
+    }
+
+    pub fn set_action(&mut self, action : Action) {
+        self.action = action
     }
 
     pub fn get_action(&self) -> Action {
@@ -153,11 +174,13 @@ impl PetriTransition {
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {
         let res = self.guard.apply_to(ctx);
         match res {
-            Ok(c) => self.compiled_guard = c,
+            Ok(c) => {
+                self.compiled_guard = c
+            },
             Err(_) => return Err(CompilationError)
         };
-        self.action = ctx.add_action(self.get_label());
-        self.clock = Some(ctx.add_clock(self.get_label()));
+        self.set_action(ctx.add_action(self.get_label()));
+        self.set_clock(ctx.add_clock(self.get_label()));
         Ok(())
     }
 
@@ -175,4 +198,25 @@ impl fmt::Display for PetriTransition {
         write!(f, "{}", to_print)
     }
     
+}
+
+impl Clone for PetriTransition {
+
+    fn clone(&self) -> Self {
+        PetriTransition {
+            label: self.label.clone(),
+            from: self.from.clone(),
+            to: self.to.clone(),
+            interval: self.interval.clone(),
+            controllable : self.controllable.clone(),
+            guard : self.guard.clone(),
+            input_edges: Default::default(),
+            output_edges: Default::default(),
+            index : self.index,
+            compiled_guard : Default::default(),
+            action : Default::default(),
+            clock : Default::default(),
+        }
+    }
+
 }

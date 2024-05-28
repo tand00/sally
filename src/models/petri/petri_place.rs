@@ -1,14 +1,14 @@
-use std::{cell::RefCell, fmt, rc::{Rc, Weak}};
+use std::{fmt, sync::{Arc, RwLock, Weak}};
 
 use serde::{Serialize, Deserialize};
 
-use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, CompilationResult, ComponentPtr, Label, Node};
+use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, CompilationResult, Label, Node};
 
 use super::PetriTransition;
 
 const PETRI_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PetriPlace {
     pub name: Label,
     
@@ -16,13 +16,13 @@ pub struct PetriPlace {
     pub index : usize,
 
     #[serde(skip)]
-    in_transitions : Vec<Weak<RefCell<PetriTransition>>>,
+    in_transitions : RwLock<Vec<Weak<PetriTransition>>>,
 
     #[serde(skip)]
-    out_transitions: Vec<Weak<RefCell<PetriTransition>>>,
+    out_transitions : RwLock<Vec<Weak<PetriTransition>>>,
 
     #[serde(skip)]
-    data_variable: Option<ModelVar>
+    data_variable : ModelVar
 }
 
 impl PetriPlace {
@@ -31,45 +31,46 @@ impl PetriPlace {
         PetriPlace {
             name: lbl,
             index : 0,
-            in_transitions : Vec::new(),
-            out_transitions : Vec::new(),
-            data_variable: None
+            in_transitions : RwLock::new(Vec::new()),
+            out_transitions : RwLock::new(Vec::new()),
+            data_variable: Default::default()
         }
     }
 
-    pub fn add_upstream_transition(&mut self, transi : &ComponentPtr<PetriTransition>) {
-        self.in_transitions.push(Rc::downgrade(transi))
+    pub fn add_upstream_transition(&self, transi : &Arc<PetriTransition>) {
+        self.in_transitions.write().unwrap().push(Arc::downgrade(transi))
     }
 
-    pub fn clear_upstream_transitions(&mut self) {
-        self.in_transitions.clear()
+    pub fn clear_upstream_transitions(&self) {
+        self.in_transitions.write().unwrap().clear()
     }
 
-    pub fn get_upstream_transitions(&self) -> &Vec<Weak<RefCell<PetriTransition>>> {
-        &self.in_transitions
+    pub fn get_upstream_transitions(&self) -> Vec<Arc<PetriTransition>> {
+        self.in_transitions.read().unwrap().iter().map(|pt| {
+            Weak::upgrade(pt).unwrap()
+        }).collect()
     }
 
-    pub fn add_downstream_transition(&mut self, transi : &ComponentPtr<PetriTransition>) {
-        self.out_transitions.push(Rc::downgrade(transi))
+    pub fn add_downstream_transition(&self, transi : &Arc<PetriTransition>) {
+        self.out_transitions.write().unwrap().push(Arc::downgrade(transi))
     }
 
-    pub fn clear_downstream_transitions(&mut self) {
-        self.out_transitions.clear()
+    pub fn clear_downstream_transitions(&self) {
+        self.out_transitions.write().unwrap().clear()
     }
 
-    pub fn get_downstream_transitions(&self) -> &Vec<Weak<RefCell<PetriTransition>>> {
-        &self.out_transitions
+    pub fn get_downstream_transitions(&self) -> Vec<Arc<PetriTransition>> {
+        self.out_transitions.read().unwrap().iter().map(|pt| {
+            Weak::upgrade(pt).unwrap()
+        }).collect()
     }
 
     pub fn set_var(&mut self, var : ModelVar) {
-        self.data_variable = Some(var);
+        self.data_variable = var;
     }
 
     pub fn get_var(&self) -> &ModelVar {
-        match &self.data_variable {
-            None => panic!("Place variable is not set !"),
-            Some(i) => i
-        }
+        &self.data_variable
     }
 
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {
@@ -91,6 +92,20 @@ impl fmt::Display for PetriPlace {
 
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Place_{}", self.name)
+    }
+
+}
+
+impl Clone for PetriPlace {
+
+    fn clone(&self) -> Self {
+        PetriPlace {
+            name: self.name.clone(),
+            index : self.index,
+            in_transitions : Default::default(),
+            out_transitions: Default::default(),
+            data_variable : Default::default()
+        }
     }
 
 }

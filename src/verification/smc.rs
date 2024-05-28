@@ -59,7 +59,7 @@ pub trait SMCQueryVerification {
         result
     }
 
-    fn parallel_verify(&mut self, model_maker : Box<dyn ModelMaker>, initial_state : &ModelState, query : &Query, threads : usize) -> SolverResult {
+    fn parallel_verify(&mut self, model : &(impl Model + Send + Sync), initial_state : &ModelState, query : &Query, threads : usize) -> SolverResult {
         info("SMC verification");
         continue_info(format!("Parallel mode [Threads : {}]", threads));
         self.prepare();
@@ -67,51 +67,47 @@ pub trait SMCQueryVerification {
         let now = Instant::now();
 
         let (tx,rx) = mpsc::channel::<VerificationStatus>();
-        let maker = Arc::new(model_maker);
         let must_continue = Arc::new(Mutex::new(true));
-        let mut handles = Vec::new();
 
-        for _ in 0..threads {
-            let mut thread_query = query.clone();
-            let thread_continue = Arc::clone(&must_continue);
-            let thread_maker = Arc::clone(&maker);
-            let thread_tx = tx.clone();
-            let thread_state = initial_state.clone();
-            let handle = thread::spawn(move || {
-                let (local_model, _) = thread_maker.make();
-                let mut must_do_another = *thread_continue.lock().unwrap();
-                while must_do_another {
-                    let run_gen = RandomRunIterator::generate(&(*local_model), &thread_state, thread_query.run_bound.clone());
-                    for (state, _, _) in run_gen {
-                        thread_query.verify_state(state.as_verifiable());
-                        if thread_query.is_run_decided() {
-                            break;
+        thread::scope(|s| {
+            let mut handles = Vec::new();
+            for _ in 0..threads {
+                let handle = s.spawn(|| {
+                    let mut thread_query = query.clone();
+                    let mut must_do_another = *must_continue.lock().unwrap();
+                    while must_do_another {
+                        let run_gen = RandomRunIterator::generate(model, initial_state, thread_query.run_bound.clone());
+                        for (state, _, _) in run_gen {
+                            thread_query.verify_state(state.as_verifiable());
+                            if thread_query.is_run_decided() {
+                                break;
+                            }
                         }
+                        thread_query.end_run();
+                        if tx.send(thread_query.run_status).is_err() {
+                            panic!("Unable to send result !");
+                        }
+                        thread_query.reset_run();
+                        must_do_another = *must_continue.lock().unwrap();
                     }
-                    thread_query.end_run();
-                    if thread_tx.send(thread_query.run_status).is_err() {
-                        panic!("Unable to send result !");
-                    }
-                    thread_query.reset_run();
-                    must_do_another = *thread_continue.lock().unwrap();
-                }
-            });
-            handles.push(handle);
-        }
-
-        for received in rx {
-            self.handle_run_result(received);
-            if !self.must_do_another_run() {
-                {
-                    let mut threads_guard = must_continue.lock().unwrap();
-                    *threads_guard = false;
-                }
-                for handle in handles {
-                    handle.join().unwrap();
-                }
-                break;
+                });
+                handles.push(handle);
             }
-        }
+
+            for received in rx {
+                self.handle_run_result(received);
+                if !self.must_do_another_run() {
+                    {
+                        let mut threads_guard = must_continue.lock().unwrap();
+                        *threads_guard = false;
+                    }
+                    for handle in handles {
+                        handle.join().unwrap();
+                    }
+                    break;
+                }
+            }
+        });
 
         self.finish();
         let elapsed = now.elapsed().as_secs_f64();

@@ -26,4 +26,16 @@ impl ModelClock {
         self.index
     }
 
+    pub fn is_mapped(&self) -> bool {
+        self.index != usize::MAX
+    }
+
+}
+
+impl Default for ModelClock {
+
+    fn default() -> Self {
+        ModelClock::new()
+    }
+
 }

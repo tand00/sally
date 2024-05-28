@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, fmt, rc::Weak};
+use std::{collections::{HashMap, HashSet}, fmt, sync::{Arc, Weak}};
 
 use super::{action::Action, lbl, model_characteristics::*, model_context::ModelContext, new_ptr, time::ClockValue, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node};
 
@@ -16,11 +16,11 @@ pub struct PetriStructure {
     pub transitions : Vec<PetriTransition>
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct PetriNet {
     pub id : usize,
-    pub places: Vec<ComponentPtr<PetriPlace>>,
-    pub transitions: Vec<ComponentPtr<PetriTransition>>,
+    pub places: Vec<Arc<PetriPlace>>,
+    pub transitions: Vec<Arc<PetriTransition>>,
     pub places_dic: HashMap<Label, usize>,
     pub transitions_dic: HashMap<Label, usize>,
     pub actions_dic : HashMap<Action, usize>,
@@ -31,17 +31,17 @@ impl PetriNet {
     pub fn new(places: Vec<PetriPlace>, transitions : Vec<PetriTransition>) -> Self {
         let mut places_dic : HashMap<Label, usize> = HashMap::new();
         let mut transitions_dic : HashMap<Label, usize> = HashMap::new();
-        let mut places_ptr : Vec<ComponentPtr<PetriPlace>> = Vec::new();
-        let mut transitions_ptr : Vec<ComponentPtr<PetriTransition>> = Vec::new();
+        let mut places_ptr : Vec<Arc<PetriPlace>> = Vec::new();
+        let mut transitions_ptr : Vec<Arc<PetriTransition>> = Vec::new();
         for mut place in places {
             place.index = places_ptr.len();
             places_dic.insert(place.get_label(), place.index);
-            places_ptr.push(new_ptr(place));
+            places_ptr.push(Arc::new(place));
         }
         for mut transition in transitions {
             transition.index = transitions_ptr.len();
             transitions_dic.insert(transition.get_label(), transition.index);
-            transitions_ptr.push(new_ptr(transition));
+            transitions_ptr.push(Arc::new(transition));
         }
         let petri = PetriNet { 
             id : usize::MAX,
@@ -63,16 +63,16 @@ impl PetriNet {
     }
 
     pub fn get_place_label(&self, place : usize) -> Label {
-        self.places[place].borrow().get_label()
+        self.places[place].get_label()
     }
 
     pub fn get_transition_label(&self, transition : usize) -> Label {
-        self.transitions[transition].borrow().get_label()
+        self.transitions[transition].get_label()
     }
 
-    pub fn enabled_transitions(&self, marking : &ModelState) -> Vec<ComponentPtr<PetriTransition>> {
+    pub fn enabled_transitions(&self, marking : &ModelState) -> Vec<Arc<PetriTransition>> {
         self.transitions.iter().filter_map(|transi| {
-            if transi.borrow().is_enabled(marking) { Some(transi.clone()) }
+            if transi.is_enabled(marking) { Some(transi.clone()) }
             else { None }
         }).collect()
     }
@@ -81,10 +81,8 @@ impl PetriNet {
         let mut pers = new_state.enabled_clocks();
         let mut newen : HashSet<usize> = HashSet::new();
         for place_index in changed_places {
-            let place : &ComponentPtr<PetriPlace> = &self.places[*place_index];
-            for transi_weak in place.borrow().get_downstream_transitions().iter() {
-                let transition = Weak::upgrade(transi_weak).unwrap();
-                let transition = transition.borrow();
+            let place : &Arc<PetriPlace> = &self.places[*place_index];
+            for transition in place.get_downstream_transitions().iter() {
                 let transi_index = transition.index;
                 let clock = transition.get_clock();
                 new_state.disable_clock(clock);
@@ -99,21 +97,19 @@ impl PetriNet {
     }
 
     pub fn fire(&self, mut state : ModelState, transi : usize) -> (ModelState, HashSet<usize>, HashSet<usize>) {
-        let transi = &self.transitions[transi].borrow();
+        let transi = &self.transitions[transi];
         let mut changed_places : HashSet<usize> = HashSet::new();
-        for edge in transi.input_edges.iter() {
+        for edge in transi.input_edges.read().unwrap().iter() {
             let place_ptr = edge.ptr_node_from();
-            let place_ref = place_ptr.borrow();
-            let place_var = place_ref.get_var();
-            let place_index = place_ref.index;
+            let place_var = place_ptr.get_var();
+            let place_index = place_ptr.index;
             state.unmark(place_var, edge.weight);
             changed_places.insert(place_index);
         }
-        for edge in transi.output_edges.iter() {
+        for edge in transi.output_edges.read().unwrap().iter() {
             let place_ptr = edge.ptr_node_to();
-            let place_ref = place_ptr.borrow();
-            let place_var = place_ref.get_var();
-            let place_index = place_ref.index;
+            let place_var = place_ptr.get_var();
+            let place_index = place_ptr.index;
             state.mark(place_var, edge.weight);
             changed_places.insert(place_index);
         }
@@ -121,22 +117,22 @@ impl PetriNet {
         (state, newen, pers)
     }
 
-    fn create_transition_edges(&self, transition : &ComponentPtr<PetriTransition>) {
-        let from_labels = transition.borrow().from.clone();
-        let to_labels = transition.borrow().to.clone();
+    fn create_transition_edges(&self, transition : &Arc<PetriTransition>) {
+        let from_labels = transition.from.clone();
+        let to_labels = transition.to.clone();
         for place_label in from_labels.iter() {
             let place_index = self.places_dic[place_label];
             let place = &self.places[place_index];
             let in_edge = Edge::data_edge(place, transition, 1);
-            transition.borrow_mut().input_edges.push(in_edge);
-            place.borrow_mut().add_downstream_transition(transition);
+            transition.add_input_edge(in_edge);
+            place.add_downstream_transition(transition);
         }
         for place_label in to_labels.iter() {
             let place_index = self.places_dic[place_label];
             let place = &self.places[place_index];
             let out_edge = Edge::data_edge(transition, place, 1);
-            transition.borrow_mut().output_edges.push(out_edge);
-            place.borrow_mut().add_upstream_transition(transition);
+            transition.add_output_edge(out_edge);
+            place.add_upstream_transition(transition);
         }
     }
 
@@ -144,18 +140,18 @@ impl PetriNet {
         let mut places : Vec<PetriPlace> = Vec::new();
         let mut transitions : Vec<PetriTransition> = Vec::new();
         for place_ptr in self.places.iter() {
-            let place = place_ptr.borrow().clone();
+            let place = PetriPlace::clone(place_ptr);
             places.push(place);
         }
         for transi_ptr in self.transitions.iter() {
-            let transi = transi_ptr.borrow().clone();
+            let transi = PetriTransition::clone(transi_ptr);
             transitions.push(transi);
         }
         PetriStructure { places, transitions }
     }
 
     pub fn get_transition_action(&self, transi_index : usize) -> Action {
-        self.transitions[transi_index].borrow().action
+        self.transitions[transi_index].get_action()
     }
 
 }
@@ -175,8 +171,8 @@ impl Model for PetriNet {
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
         let mut res = HashSet::new();
         for transition in self.transitions.iter() {
-            if transition.borrow().is_fireable(state) {
-                res.insert(transition.borrow().get_action());
+            if transition.is_fireable(state) {
+                res.insert(transition.get_action());
             }
         }
         res
@@ -185,7 +181,7 @@ impl Model for PetriNet {
     fn available_delay(&self, state : &ModelState) -> ClockValue {
         let m = state.clocks.iter().enumerate().filter_map(|(i,c)| {
             if c.is_enabled() {
-                Some((ClockValue::from(self.transitions[i].borrow().interval.1) - *c).0)
+                Some((ClockValue::from(self.transitions[i].interval.1) - *c).0)
             } else {
                 None
             }
@@ -199,7 +195,7 @@ impl Model for PetriNet {
 
     fn init_initial_clocks(&self, mut state : ModelState) -> ModelState {
         for transition in self.enabled_transitions(&state) {
-            state.enable_clock(transition.borrow().get_clock(), ClockValue::zero());
+            state.enable_clock(transition.get_clock(), ClockValue::zero());
         }
         state
     }
@@ -227,18 +223,23 @@ impl Model for PetriNet {
 
     fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
         self.id = context.new_model();
+        let mut compiled_places = Vec::new();
+        let mut compiled_transitions = Vec::new();
         for place in self.places.iter() {
-            let mut place_ref = place.borrow_mut();
-            place_ref.clear_upstream_transitions();
-            place_ref.clear_downstream_transitions();
-            place_ref.compile(context)?;
+            let mut compiled_place = PetriPlace::clone(place);
+            compiled_place.compile(context)?;
+            compiled_places.push(Arc::new(compiled_place));
         }
+        self.places = compiled_places;
         for transition in self.transitions.iter() {
-            transition.borrow_mut().clear_edges();
-            transition.borrow_mut().compile(context)?;
-            self.actions_dic.insert(transition.borrow().get_action(), transition.borrow().index);
-            self.create_transition_edges(transition);
+            let mut compiled_transition = PetriTransition::clone(transition);
+            compiled_transition.compile(context)?;
+            self.actions_dic.insert(compiled_transition.get_action(), compiled_transition.index);
+            let compiled_transition = Arc::new(compiled_transition);
+            self.create_transition_edges(&compiled_transition);
+            compiled_transitions.push(compiled_transition);
         }
+        self.transitions = compiled_transitions;
         Ok(())
     }
 

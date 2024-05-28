@@ -50,7 +50,7 @@ impl Translation for PetriClassGraphTranslation {
             return Err(TranslationError(String::from("Cannot compile Petri net class graph")));
         }
         positive("Class graph computed !");
-        let mut initial_state = graph.classes[0].borrow().generate_image_state();
+        let mut initial_state = graph.classes[0].generate_image_state();
         initial_state.discrete.size_delta(graph.current_class.size());
         self.initial_state = initial_state;
         self.class_graph = Some(graph);

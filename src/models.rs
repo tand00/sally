@@ -3,7 +3,7 @@ mod node;
 mod edge;
 mod model_state;
 
-use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc};
+use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc, sync::{Arc, RwLock}};
 
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
@@ -23,7 +23,7 @@ pub mod program;
 pub mod petri;
 pub mod class_graph;
 pub mod model_solving_graph;
-pub mod digraph;
+//pub mod digraph;
 pub mod model_network;
 //pub mod markov_chain;
 pub mod run;
@@ -34,9 +34,9 @@ use self::{action::Action, model_characteristics::*, model_context::ModelContext
 pub struct CompilationError;
 pub type CompilationResult<T> = Result<T, CompilationError>;
 
-pub type ComponentPtr<T> = Rc<RefCell<T>>;
+pub type ComponentPtr<T> = Arc<RwLock<T>>;
 pub fn new_ptr<T>(x : T) -> ComponentPtr<T> {
-    Rc::new(RefCell::new(x))
+    Arc::new(RwLock::new(x))
 }
 
 pub mod model_characteristics {

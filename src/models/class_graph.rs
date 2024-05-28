@@ -3,7 +3,7 @@ pub use state_class::StateClass;
 
 use core::panic;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::rc::{Rc, Weak};
+use std::sync::{Arc, RwLock, Weak};
 
 use num_traits::Zero;
 
@@ -15,7 +15,7 @@ use super::action::Action;
 use super::model_context::ModelContext;
 use super::model_var::{ModelVar, VarType};
 use super::time::ClockValue;
-use super::{lbl, new_ptr, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, CONTROLLABLE, SYMBOLIC, TIMED};
+use super::{lbl, Edge, Label, Model, ModelMeta, ModelState, CONTROLLABLE, SYMBOLIC, TIMED};
 use super::petri::{PetriNet, PetriTransition};
 
 const CLASS_LIMIT : usize = u16::MAX as usize;
@@ -23,11 +23,11 @@ const CLASS_LIMIT : usize = u16::MAX as usize;
 #[derive(Clone)]
 pub struct ClassGraph {
     pub id : usize,
-    pub classes : Vec<ComponentPtr<StateClass>>,
+    pub classes : Vec<Arc<StateClass>>,
     pub edges : Vec<Edge<Action, StateClass, StateClass>>,
     pub places_dic : HashMap<Label, usize>,
     pub current_class : ModelVar,
-    pub transitions : Vec<ComponentPtr<PetriTransition>>
+    pub transitions : Vec<Arc<PetriTransition>>
 }
 
 impl ClassGraph {
@@ -46,28 +46,28 @@ impl ClassGraph {
         let mut to_see : VecDeque<usize> = VecDeque::new();
         let initial_class = StateClass::compute_class(p_net, initial_state);
         seen.insert(initial_class.get_hash(), 0);
-        cg.classes.push(new_ptr(initial_class));
+        cg.classes.push(Arc::new(initial_class));
         to_see.push_back(0);
         while !to_see.is_empty() {
             let class_index = to_see.pop_back().unwrap();
-            let class = Rc::clone(&cg.classes[class_index]);
-            let clocks = class.borrow().enabled_clocks();
+            let class = Arc::clone(&cg.classes[class_index]);
+            let clocks = class.enabled_clocks();
             for t_index in clocks {
                 let next_class = ClassGraph::successor(p_net, &class, t_index);
-                let action = cg.transitions[t_index].borrow().get_action();
+                let action = cg.transitions[t_index].get_action();
                 if next_class.is_none() {
                     continue;
                 }
                 let mut next_class = next_class.unwrap();
                 let new_hash = next_class.get_hash();
                 if seen.contains_key(&new_hash) {
-                    cg.classes[seen[&new_hash]].borrow_mut().predecessors.push((Rc::downgrade(&class), action));
+                    cg.classes[seen[&new_hash]].predecessors.write().unwrap().push((Arc::downgrade(&class), action));
                     continue;
                 }
                 let new_index = cg.classes.len();
                 next_class.index = new_index;
                 seen.insert(new_hash, new_index);
-                cg.classes.push(new_ptr(next_class));
+                cg.classes.push(Arc::new(next_class));
                 to_see.push_back(new_index);
                 if cg.classes.len() > CLASS_LIMIT {
                     panic!("Class limit overflow ! Petri net may not be bounded !");
@@ -77,18 +77,18 @@ impl ClassGraph {
         cg
     }
 
-    pub fn successor(petri : &PetriNet, class : &ComponentPtr<StateClass>, t_index : usize) -> Option<StateClass> {
-        let image_state = class.borrow().generate_image_state();
+    pub fn successor(petri : &PetriNet, class : &Arc<StateClass>, t_index : usize) -> Option<StateClass> {
+        let image_state = class.generate_image_state();
         let (next_state, newen, pers) = petri.fire(image_state, t_index);
 
         let vars = newen.len() + pers.len();
         let mut next_dbm = DBM::new(vars);
         let mut to_dbm : Vec<usize> = vec![0 ; petri.transitions.len()];
         let mut from_dbm : Vec<usize> = vec![0];
-        let prev_to_dbm = &class.borrow().to_dbm_index;
+        let prev_to_dbm = &class.to_dbm_index;
         let fired_i = prev_to_dbm[t_index];
         let discrete = next_state.discrete;
-        let dbm = &class.borrow().dbm;
+        let dbm = &class.dbm;
         let action = petri.get_transition_action(t_index);
 
         for transi in 0..petri.transitions.len() {
@@ -106,8 +106,8 @@ impl ClassGraph {
                 let dbm_index = from_dbm.len();
                 to_dbm[transi] = dbm_index;
                 from_dbm.push(transi);
-                next_dbm[(dbm_index, 0)] = petri.transitions[transi].borrow().interval.1;
-                next_dbm[(0, dbm_index)] = -petri.transitions[transi].borrow().interval.0;
+                next_dbm[(dbm_index, 0)] = petri.transitions[transi].interval.1;
+                next_dbm[(0, dbm_index)] = -petri.transitions[transi].interval.0;
             } else {
                 continue;
             }
@@ -138,7 +138,7 @@ impl ClassGraph {
             dbm : next_dbm,
             to_dbm_index : to_dbm,
             from_dbm_index : from_dbm,
-            predecessors : vec![(Rc::downgrade(&class), action)],
+            predecessors : RwLock::new(vec![(Arc::downgrade(&class), action)]),
             index : 0
         })
     }
@@ -163,15 +163,15 @@ impl Model for ClassGraph {
             if !e.has_source() || !e.has_target() {
                 continue;
             }
-            if e.ptr_node_from().borrow().index == class_index && e.weight == action {
-                next_index = Some(e.ptr_node_to().borrow().index);
+            if e.ptr_node_from().index == class_index && e.weight == action {
+                next_index = Some(e.ptr_node_to().index);
             }
         }
         if next_index.is_none() {
             return (None, HashSet::new());
         }
         let next_index = next_index.unwrap();
-        let next_class = &self.classes[next_index].borrow();
+        let next_class = &self.classes[next_index];
         let mut next_state = next_class.generate_image_state();
         next_state.discrete.size_delta(self.current_class.size());
         next_state.discrete.set(&self.current_class, next_index as EvaluationType);
@@ -186,7 +186,7 @@ impl Model for ClassGraph {
             if !e.has_source() {
                 continue;
             }
-            if e.ptr_node_from().borrow().index == class_index {
+            if e.ptr_node_from().index == class_index {
                 actions.insert(e.weight);
             }
         }
@@ -199,9 +199,9 @@ impl Model for ClassGraph {
 
     fn init_initial_clocks(&self, mut state : ModelState) -> ModelState {
         let current_class = state.evaluate_var(&self.current_class) as usize;
-        let class = Rc::clone(&self.classes[current_class]);
-        for t in class.borrow().from_dbm_index.iter().skip(1) {
-            let transi = self.transitions[*t].borrow();
+        let class = &self.classes[current_class];
+        for t in class.from_dbm_index.iter().skip(1) {
+            let transi = &self.transitions[*t];
             let clock = transi.get_clock();
             state.enable_clock(clock, ClockValue::zero());
         }
@@ -220,14 +220,14 @@ impl Model for ClassGraph {
         self.id = context.new_model();
         self.edges.clear();
         for class in self.classes.iter() {
-            for (pred, action) in class.borrow().predecessors.iter() {
+            for (pred, action) in class.predecessors.read().unwrap().iter() {
                 let edge = Edge {
                     label : Label::from(action.to_string()),
                     from : None,
                     to : None,
                     weight : *action,
                     ref_from : Some(Weak::clone(pred)),
-                    ref_to : Some(Rc::downgrade(class)),
+                    ref_to : Some(Arc::downgrade(class)),
                 };
                 self.edges.push(edge);
             }

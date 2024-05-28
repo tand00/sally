@@ -53,6 +53,14 @@ pub struct ModelVar {
 
 impl ModelVar {
 
+    pub fn new() -> ModelVar {
+        ModelVar { 
+            name: Label::new(), 
+            var_type: VarType::UnknownType, 
+            address: None 
+        }
+    }
+
     pub fn name(name : Label) -> ModelVar {
         ModelVar { name, address : None, var_type : VarType::UnknownType }
     }
@@ -139,4 +147,12 @@ impl<T : Into<String>> From<T> for ModelVar {
 
 pub fn var(name : &str) -> ModelVar {
     ModelVar::name(Label::from(name))
+}
+
+impl Default for ModelVar {
+
+    fn default() -> Self {
+        ModelVar::new()
+    }
+
 }

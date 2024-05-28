@@ -1,19 +1,19 @@
-use std::{cell::RefCell, rc::{Rc, Weak}};
+use std::{sync::{Arc, Weak}};
 
 use serde::{Deserialize, Serialize};
 
 use super::{ComponentPtr, Label};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge<T, U, V> {
     pub label : Label,
     pub from : Option<Label>,
     pub to : Option<Label>,
     pub weight : T,
     #[serde(skip)]
-    pub ref_from : Option<Weak<RefCell<U>>>,
+    pub ref_from : Option<Weak<U>>,
     #[serde(skip)]
-    pub ref_to : Option<Weak<RefCell<V>>>,
+    pub ref_to : Option<Weak<V>>,
 }
 
 impl<T, U, V> Edge<T, U, V> {
@@ -29,45 +29,45 @@ impl<T, U, V> Edge<T, U, V> {
         }
     }
 
-    pub fn data_edge(from : &ComponentPtr<U>, to : &ComponentPtr<V>, weight : T) -> Self {
+    pub fn data_edge(from : &Arc<U>, to : &Arc<V>, weight : T) -> Self {
         Edge {
             label: Label::new(),
             from: None, 
             to: None,
             weight,
-            ref_from : Some(Rc::downgrade(from)),
-            ref_to : Some(Rc::downgrade(to)),
+            ref_from : Some(Arc::downgrade(from)),
+            ref_to : Some(Arc::downgrade(to)),
         }
     }
 
-    pub fn node_from(&self) -> Option<ComponentPtr<U>> {
+    pub fn node_from(&self) -> Option<Arc<U>> {
         match &self.ref_from {
             None => None,
             Some(n) => Weak::upgrade(n)
         }
     }
 
-    pub fn node_to(&self) -> Option<ComponentPtr<V>> {
+    pub fn node_to(&self) -> Option<Arc<V>> {
         match &self.ref_to {
             None => None,
             Some(n) => Weak::upgrade(n)
         }
     }
 
-    pub fn ptr_node_from(&self) -> ComponentPtr<U> {
+    pub fn ptr_node_from(&self) -> Arc<U> {
         self.node_from().unwrap()
     }
 
-    pub fn ptr_node_to(&self) -> ComponentPtr<V> {
+    pub fn ptr_node_to(&self) -> Arc<V> {
         self.node_to().unwrap()
     }
 
-    pub fn set_node_from(&mut self, node : &ComponentPtr<U>) {
-        self.ref_from = Some(Rc::downgrade(node))
+    pub fn set_node_from(&mut self, node : &Arc<U>) {
+        self.ref_from = Some(Arc::downgrade(node))
     }
 
-    pub fn set_node_to(&mut self, node : &ComponentPtr<V>) {
-        self.ref_to = Some(Rc::downgrade(node))
+    pub fn set_node_to(&mut self, node : &Arc<V>) {
+        self.ref_to = Some(Arc::downgrade(node))
     }
 
     pub fn has_source(&self) -> bool {

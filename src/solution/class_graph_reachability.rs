@@ -40,7 +40,7 @@ impl Solution for ClassGraphReachability {
         }
         let cg = cg.unwrap();
         for class in cg.classes.iter() {
-            let (status, _) = query.condition.evaluate(class.borrow().as_verifiable());
+            let (status, _) = query.condition.evaluate(class.as_verifiable());
             if status == VerificationStatus::Verified {
                 positive("Valid class found !");
                 return SolverResult::BoolResult(true);
