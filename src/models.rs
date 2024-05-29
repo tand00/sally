@@ -23,9 +23,9 @@ pub mod program;
 pub mod petri;
 pub mod class_graph;
 pub mod model_solving_graph;
-//pub mod digraph;
+pub mod digraph;
 pub mod model_network;
-//pub mod markov_chain;
+pub mod markov;
 pub mod run;
 
 use self::{action::Action, model_characteristics::*, model_context::ModelContext, time::ClockValue};
@@ -33,11 +33,6 @@ use self::{action::Action, model_characteristics::*, model_context::ModelContext
 #[derive(Debug, Clone)]
 pub struct CompilationError;
 pub type CompilationResult<T> = Result<T, CompilationError>;
-
-pub type ComponentPtr<T> = Arc<RwLock<T>>;
-pub fn new_ptr<T>(x : T) -> ComponentPtr<T> {
-    Arc::new(RwLock::new(x))
-}
 
 pub mod model_characteristics {
     use crate::flag;
@@ -155,7 +150,7 @@ pub trait Model : Any {
             return (Some(delayed_state), delay, None)
         }
         let action = *action.unwrap();
-        let (next, _) = self.next(delayed_state, action);
+        let (next, next_actions) = self.next(delayed_state, action);
         (next, delay, Some(action))
     }
 

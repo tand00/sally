@@ -1,6 +1,6 @@
-use std::{collections::{HashMap, HashSet}, fmt, sync::{Arc, Weak}};
+use std::{collections::{HashMap, HashSet}, fmt, sync::Arc};
 
-use super::{action::Action, lbl, model_characteristics::*, model_context::ModelContext, new_ptr, time::ClockValue, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node};
+use super::{action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node};
 
 mod petri_place;
 mod petri_transition;
@@ -100,14 +100,14 @@ impl PetriNet {
         let transi = &self.transitions[transi];
         let mut changed_places : HashSet<usize> = HashSet::new();
         for edge in transi.input_edges.read().unwrap().iter() {
-            let place_ptr = edge.ptr_node_from();
+            let place_ptr = edge.get_node_from();
             let place_var = place_ptr.get_var();
             let place_index = place_ptr.index;
             state.unmark(place_var, edge.weight);
             changed_places.insert(place_index);
         }
         for edge in transi.output_edges.read().unwrap().iter() {
-            let place_ptr = edge.ptr_node_to();
+            let place_ptr = edge.get_node_to();
             let place_var = place_ptr.get_var();
             let place_index = place_ptr.index;
             state.mark(place_var, edge.weight);
@@ -258,16 +258,14 @@ impl From<PetriStructure> for PetriNet {
     }
 }
 
-// Storing a PetriStructure would make more sense, but wouldn't implement Send/Sync due to the Rc/Weak in places and transitions.
 pub struct PetriMaker {
-    pub serialized : String
+    pub structure : PetriStructure
 }
 
 impl ModelMaker for PetriMaker {
 
     fn make(&self) -> (Box<dyn Model>, ModelContext) {
-        let new_net : PetriStructure = serde_json::from_str(&self.serialized).unwrap();
-        let mut new_net = PetriNet::from(new_net);
+        let mut new_net = PetriNet::from(self.structure.clone());
         let ctx = new_net.singleton();
         (Box::new(new_net), ctx)
     }
@@ -278,7 +276,7 @@ impl From<PetriStructure> for PetriMaker {
 
     fn from(value : PetriStructure) -> Self {
         PetriMaker {
-            serialized : serde_json::to_string(&value).unwrap()
+            structure : value
         }
     }
 
@@ -288,7 +286,7 @@ impl From<PetriNet> for PetriMaker {
 
     fn from(value: PetriNet) -> Self {
         PetriMaker {
-            serialized : serde_json::to_string(&value.get_structure()).unwrap()
+            structure : value.get_structure()
         }
     }
 

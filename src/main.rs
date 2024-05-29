@@ -8,8 +8,11 @@ pub mod log;
 
 use std::collections::HashMap;
 
+use models::digraph::Digraph;
 use models::expressions::{Condition, Expr};
 use models::lbl;
+use models::markov::markov_chain::MarkovChain;
+use models::markov::markov_node::MarkovNode;
 use models::model_var::var;
 use models::petri::{PetriPlace, PetriTransition, PetriStructure};
 use models::time::{TimeInterval, TimeBound::*};
@@ -80,14 +83,14 @@ fn main() {
     println!("{:?}", res);
 
     let mut estim  = ProbabilityEstimation::new(0.95, 0.05);
-    let res = estim.parallel_verify(&net, &initial_state, &query, 16);
+    let res = estim.parallel_verify(&net, &initial_state, &query);
     println!("{:?}", res);
 
-    let estim  = SMCMaxSeen::new(200000);
+    let estim  = SMCMaxSeen::new(100000);
     let res = estim.estimate_max(&net, &ctx, &initial_state, VerificationBound::StepsRunBound(1000));
     println!("{:?}", res);
 
-    let res = estim.parallel_estimate_max(&net, &ctx, &initial_state, VerificationBound::StepsRunBound(1000), 16);
+    let res = estim.parallel_estimate_max(&net, &ctx, &initial_state, VerificationBound::StepsRunBound(1000));
     println!("{:?}", res);
 
     let json_net = serde_json::to_string(&net.get_structure()).unwrap();
@@ -102,6 +105,17 @@ fn main() {
     let q1 = parse_query(String::from("P <> [t <= 100] (P2 | deadlock) & P5 ^ 2 % 5")).unwrap();
     println!("-> {:#?}", q1);
     println!("-> {:#?}", serde_json::to_string(&q1).unwrap());
+
+    let mut chain = sample_markov();
+    let markov_ctx = chain.singleton();
+    let state = markov_ctx.make_initial_state(&chain, HashMap::from([
+        (lbl("m1"), 1),
+    ]));
+    let mut query = parse_query(String::from("P <> [# <= 10] m3")).unwrap();
+    query.apply_to(&markov_ctx).unwrap();
+    let mut estim  = ProbabilityEstimation::fixed_runs(100000, 0.95);
+    let res = estim.parallel_verify(&chain, &state, &query);
+    println!("{:?}", res);
 
 }
 
@@ -154,7 +168,7 @@ fn sample_petri() -> PetriNet {
     net
 }
 
-/*fn sample_digraph() -> Digraph<usize, i32> {
+fn sample_digraph() -> Digraph<usize, i32> {
     let mut g : Digraph<usize, i32> = Digraph::new();
     g.make_node(3);
     g.make_node(4);
@@ -163,9 +177,22 @@ fn sample_petri() -> PetriNet {
     g.make_edge(3, 2, 1);
     g.make_edge(3, 4, 3);
     g.make_edge(2, 1, 5);
-    g.make_edge(4, 1, 1);
+    g.make_edge(4, 1, -1);
     g
-}*/
+}
+
+fn sample_markov() -> MarkovChain {
+    let m1 = MarkovNode::probabilistic(lbl("m1"), vec![
+        (lbl("m2"), 0.8), (lbl("m3"), 0.2)
+    ]);
+    let m2 = MarkovNode::probabilistic(lbl("m2"), vec![
+        (lbl("m2"), 1.0)
+    ]);
+    let m3 = MarkovNode::probabilistic(lbl("m3"), vec![
+        (lbl("m3"), 1.0)
+    ]);
+    MarkovChain::new(vec![m1,m2,m3])
+}
 
 fn sample_query() -> Query {
     let condition = Condition::And(

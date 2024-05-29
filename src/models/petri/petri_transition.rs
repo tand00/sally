@@ -15,7 +15,7 @@ use super::PetriPlace;
 pub type InputEdge = Edge<i32, PetriPlace, PetriTransition>;
 pub type OutputEdge = Edge<i32, PetriTransition, PetriPlace>;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct PetriTransition {
     pub label: Label,
     pub from: Vec<Label>,
@@ -58,12 +58,9 @@ impl PetriTransition {
             label, 
             from, to, 
             interval, 
-            input_edges: Default::default(), output_edges: Default::default(), 
             controllable : true, 
-            index : 0, 
-            guard : Condition::True, compiled_guard : Default::default(),
-            action : Default::default(), 
-            clock : Default::default()
+            guard : Condition::True, 
+            ..Default::default()
         }
     }
 
@@ -71,13 +68,10 @@ impl PetriTransition {
         PetriTransition {
             label, 
             from, to, 
-            interval: TimeInterval::full(), 
-            input_edges: Default::default(), output_edges: Default::default(), 
             controllable : true, 
-            index : 0,
-            guard : Condition::True, compiled_guard : Default::default(),
-            action : Default::default(),
-            clock : Default::default()
+            interval : TimeInterval::full(),
+            guard : Condition::True, 
+            ..Default::default()
         }
     }
 
@@ -86,12 +80,9 @@ impl PetriTransition {
             label, 
             from, to, 
             interval, 
-            input_edges: Default::default(), output_edges: Default::default(), 
             controllable : false, 
-            index : 0,
-            guard : Condition::True, compiled_guard : Default::default(),
-            action : Default::default(),
-            clock : Default::default()
+            guard : Condition::True,
+            ..Default::default()
         }
     }
 
@@ -120,7 +111,7 @@ impl PetriTransition {
             if !edge.has_source() {
                 panic!("Every transition edge should have a source");
             }
-            if marking.tokens(edge.ptr_node_from().get_var()) < edge.weight {
+            if marking.tokens(edge.get_node_from().get_var()) < edge.weight {
                 return false
             }
         }
@@ -210,12 +201,8 @@ impl Clone for PetriTransition {
             interval: self.interval.clone(),
             controllable : self.controllable.clone(),
             guard : self.guard.clone(),
-            input_edges: Default::default(),
-            output_edges: Default::default(),
             index : self.index,
-            compiled_guard : Default::default(),
-            action : Default::default(),
-            clock : Default::default(),
+            ..Default::default()
         }
     }
 

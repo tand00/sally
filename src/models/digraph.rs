@@ -1,75 +1,82 @@
-use std::{cell::Ref, cmp::min, collections::{HashMap, HashSet}, ops::Add, rc::Rc};
+use std::{cmp::min, ops::Add, sync::Arc};
 
 use nalgebra::{DMatrix, Scalar};
 use num_traits::{Bounded, Zero};
 
 use crate::computation::DBM;
 
-use super::{action::Action, lbl, model_context::ModelContext, model_var::VarType, new_ptr, node::DataNode, time::TimeBound, CompilationResult, ComponentPtr, Edge, Label, Model, ModelMeta, ModelState, Node, NONE};
+use super::{node::DataNode, time::TimeBound, Edge, Label, Node};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
 pub struct Digraph<T : ToString + 'static, U> {
-    pub nodes : Vec<ComponentPtr<DataNode<T, U>>>
+    pub nodes : Vec<Arc<DataNode<T, U>>>,
+    pub edges : Vec<Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>>,
 }
 
-impl<T : ToString + 'static, U> Digraph<T,U> {
+impl<T : ToString, U> Digraph<T,U> {
 
     pub fn new() -> Self {
-        Digraph {
-            nodes : Vec::new()
+        Self {
+            nodes : Vec::new(),
+            edges : Vec::new(),
         }
     }
 
     pub fn make_node(&mut self, value : T) {
-        let node = new_ptr(DataNode::from(value));
-        node.borrow_mut().index = self.nodes.len();
-        self.nodes.push(node);
+        let mut node = DataNode::from(value);
+        node.index = self.nodes.len();
+        self.nodes.push(Arc::new(node));
     }
 
     pub fn from(data : Vec<T>) -> Self 
-    where T : Clone 
+    where 
+        T : Clone 
     {
-        let nodes : Vec<ComponentPtr<DataNode<T, U>>> = data.iter().enumerate().map(|(i,x)| {
-            let node = new_ptr(DataNode::from(x.clone()));
-            node.borrow_mut().index = i;
-            node
+        let nodes : Vec<Arc<DataNode<T, U>>> = data.iter().enumerate().map(|(i,x)| {
+            let mut node = DataNode::from(x.clone());
+            node.index = i;
+            Arc::new(node)
         }).collect();
-        Digraph { nodes }
+        Digraph { nodes, ..Default::default() }
     }
 
     pub fn make_edge(&mut self, from : T, to : T, weight : U) 
-    where T : PartialEq
+    where 
+        T : PartialEq
     {
         let mut e = Edge::new_weighted(
             Label::new(), 
             Label::new(), 
             weight);
-        let mut node_from : Option<ComponentPtr<DataNode<T,U>>> = None;
-        let mut node_to : Option<ComponentPtr<DataNode<T,U>>> = None;
+        let mut node_from : Option<Arc<DataNode<T,U>>> = None;
+        let mut node_to : Option<Arc<DataNode<T,U>>> = None;
         for node in self.nodes.iter() {
-            if node.borrow().element == from {
+            if node.element == from {
                 e.set_node_from(node);
-                e.from = Some(node.borrow().get_label());
-                node_from = Some(Rc::clone(node));
+                e.from = Some(node.get_label());
+                node_from = Some(Arc::clone(node));
             }
-            if node.borrow().element == to {
+            if node.element == to {
                 e.set_node_to(node);
-                e.from = Some(node.borrow().get_label());
-                node_to = Some(Rc::clone(node));
+                e.from = Some(node.get_label());
+                node_to = Some(Arc::clone(node));
             }
         }
-        let e = Rc::new(e);
+        e.label = e.from.clone().unwrap_or_default() + "->" + e.to.clone().unwrap_or_default();
+        let e = Arc::new(e);
         if node_from.is_some() {
-            node_from.unwrap().borrow_mut().out_edges.push(Rc::clone(&e));
+            node_from.unwrap().out_edges.write().unwrap().push(Arc::clone(&e));
         }
         if node_to.is_some() {
-            node_to.unwrap().borrow_mut().in_edges.push(Rc::clone(&e));
+            node_to.unwrap().out_edges.write().unwrap().push(Arc::clone(&e));
         }
+        self.edges.push(e);
     }
 
     // Implementation of the Floyd-Warshall algorithm
     pub fn shortest_paths(&self) -> DMatrix<U> 
-    where U : Add<Output = U> + Ord + Zero + Bounded + Scalar
+    where 
+        U : Add<Output = U> + Ord + Zero + Bounded + Scalar
     {
         let n_nodes = self.nodes.len();
         let mut distances = 
@@ -78,11 +85,11 @@ impl<T : ToString + 'static, U> Digraph<T,U> {
                 else { U::max_value() }
             });
         for (i,node) in self.nodes.iter().enumerate() {
-            for edge in node.borrow().out_edges.iter() {
+            for edge in node.out_edges.read().unwrap().iter() {
                 if !edge.has_target() {
                     continue;
                 }
-                let j = edge.ptr_node_to().borrow().index;
+                let j = edge.get_node_to().index;
                 distances[(i,j)] = edge.weight.clone();
             }
         }
@@ -109,7 +116,8 @@ impl<T : ToString + 'static, U> Digraph<T,U> {
     {
         let distances = self.shortest_paths();
         let mut res = Digraph {
-            nodes : self.nodes.clone()
+            nodes : self.nodes.clone(),
+            ..Default::default()
         };
         res.create_relations(distances);
         res
@@ -126,7 +134,8 @@ impl<T : ToString + 'static, U> Digraph<T,U> {
     }
 
     pub fn to_matrix(&self) -> DMatrix<U> 
-    where U : Scalar + Zero + Bounded + PartialOrd
+    where 
+        U : Scalar + Zero + Bounded + PartialOrd
     {
         let n_nodes = self.nodes.len();
         let mut res = DMatrix::from_fn(n_nodes, n_nodes, |i,j| {
@@ -134,11 +143,11 @@ impl<T : ToString + 'static, U> Digraph<T,U> {
             else { U::max_value() }
         });
         for (i, node) in self.nodes.iter().enumerate() {
-            for edge in node.borrow().out_edges.iter() {
+            for edge in node.out_edges.read().unwrap().iter() {
                 if !edge.has_target() {
                     continue;
                 }
-                let j = edge.ptr_node_to().borrow().index;
+                let j = edge.get_node_to().index;
                 res[(i,j)] = edge.weight.clone();
             }
         }
@@ -165,12 +174,18 @@ impl<T : ToString + 'static, U> Digraph<T,U> {
                 w.clone());
             e.set_node_from(from);
             e.set_node_to(to);
-            let e = Rc::new(e);
-            from.borrow_mut().out_edges.push(Rc::clone(&e));
-            from.borrow_mut().in_edges.push(Rc::clone(&e));
+            let e = Arc::new(e);
+            from.out_edges.write().unwrap().push(Arc::clone(&e));
+            from.in_edges.write().unwrap().push(Arc::clone(&e));
         }
     }
 
+}
+
+impl<T : ToString, U> Default for Digraph<T,U> {
+    fn default() -> Self {
+        Digraph::new()
+    }
 }
 
 impl Digraph<usize, TimeBound> {
@@ -194,7 +209,8 @@ impl Digraph<usize, TimeBound> {
 
 }
 
-/*impl<T : 'static + ToString, U : 'static> Model for Digraph<T,U> {
+// I don't think that Digraph must implement Model, it's better to use it as a data structure in a model wrapper (ex : markov chain)
+/*impl<T : ToString, U> Model for Digraph<T,U> {
 
     fn get_meta() -> ModelMeta {
         ModelMeta {

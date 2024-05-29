@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Action {
+    #[serde(rename = "_")]
     Epsilon,
     Internal(usize),
 }
@@ -20,7 +21,7 @@ impl Default for Action {
 impl Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Epsilon => write!(f, "epsilon"),
+            Self::Epsilon => write!(f, "_"),
             Self::Internal(i) => write!(f, "{}", i),
         }
     }

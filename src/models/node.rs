@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::{Arc, RwLock}};
 
 use super::{Edge, Label};
 
@@ -16,8 +16,8 @@ impl Node for usize {
 // T is the data type carried by the node, U is the data type carried by the edges
 pub struct DataNode<T, U> {
     pub element : T,
-    pub out_edges : Vec<Rc<Edge<U, Self, Self>>>, // I must admit that this is not very pretty
-    pub in_edges : Vec<Rc<Edge<U, Self, Self>>>,
+    pub out_edges : RwLock<Vec<Arc<Edge<U, Self, Self>>>>, 
+    pub in_edges : RwLock<Vec<Arc<Edge<U, Self, Self>>>>,
     pub index : usize,
 }
 
@@ -26,8 +26,8 @@ impl<T, U> DataNode<T, U> {
     pub fn from(element : T) -> Self {
         DataNode {
             element,
-            out_edges : Vec::new(),
-            in_edges : Vec::new(),
+            out_edges : Default::default(),
+            in_edges : Default::default(),
             index : 0,
         }
     }

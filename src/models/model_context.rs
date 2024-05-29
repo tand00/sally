@@ -91,12 +91,64 @@ impl ModelContext {
         action
     }
 
+    pub fn get_action(&self, name : &Label) -> Option<Action> {
+        let action_name = self.get_local_name(name.clone());
+        if self.actions.contains_key(&action_name) {
+            Some(self.actions[&action_name].clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn has_action(&self, name : &Label) -> bool {
+        let local_name = self.get_local_name(name.clone());
+        self.actions.contains_key(&local_name)
+    }
+
     pub fn add_clock(&mut self, name : Label) -> ModelClock {
         let clock_name = self.get_local_name(name);
         let mut clock = ModelClock::name(clock_name);
         clock.index = self.n_clocks();
         self.clocks.insert(clock.name.clone(), clock.clone());
         clock
+    }
+
+    pub fn get_clock(&self, name : &Label) -> Option<ModelClock> {
+        let local_name = self.get_local_name(name.clone());
+        if self.clocks.contains_key(&local_name) {
+            Some(self.clocks[&local_name].clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn has_clock(&self, name : &Label) -> bool {
+        let local_name = self.get_local_name(name.clone());
+        self.clocks.contains_key(&local_name)
+    }
+
+    pub fn get_or_add_var(&mut self, name : Label, var_type : VarType)  -> ModelVar {
+        let var = self.get_var(&name);
+        match var {
+            Some(v) => v,
+            None => self.add_var(name, var_type)
+        }
+    }
+
+    pub fn get_or_add_action(&mut self, name : Label)  -> Action {
+        let var = self.get_action(&name);
+        match var {
+            Some(v) => v,
+            None => self.add_action(name)
+        }
+    }
+
+    pub fn get_or_add_clock(&mut self, name : Label)  -> ModelClock {
+        let var = self.get_clock(&name);
+        match var {
+            Some(v) => v,
+            None => self.add_clock(name)
+        }
     }
 
     pub fn origin(&mut self) {

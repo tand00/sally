@@ -40,8 +40,9 @@ impl SMCMaxSeen {
         SolverResult::IntResult(max_seen)
     }
 
-    pub fn parallel_estimate_max(&self, model : &(impl Model + Send + Sync), ctx : &ModelContext, initial : &ModelState, bound : VerificationBound, threads : usize) -> SolverResult {
+    pub fn parallel_estimate_max(&self, model : &(impl Model + Send + Sync), ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
         info("Estimating max tokens using SMC...");
+        let threads = thread::available_parallelism().unwrap().get();
         continue_info(format!("Parallel mode [Threads : {}]", threads));
         continue_info(format!("Runs to be executed : {}", self.runs_needed));
         pending("Starting...");

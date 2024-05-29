@@ -8,7 +8,7 @@ use super::PetriTransition;
 
 const PETRI_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct PetriPlace {
     pub name: Label,
     
@@ -102,9 +102,7 @@ impl Clone for PetriPlace {
         PetriPlace {
             name: self.name.clone(),
             index : self.index,
-            in_transitions : Default::default(),
-            out_transitions: Default::default(),
-            data_variable : Default::default()
+            ..Default::default()
         }
     }
 

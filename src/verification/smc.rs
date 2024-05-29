@@ -10,7 +10,7 @@ pub use probability_estimation::ProbabilityEstimation;
 pub use probability_float_comparison::ProbabilityFloatComparison;
 pub use smc_max_seen::SMCMaxSeen;
 
-use crate::{models::{Model, ModelMaker, ModelState}, solution::SolverResult, Query};
+use crate::{models::{Model, ModelState}, solution::SolverResult, Query};
 
 use super::{VerificationStatus, Verifiable};
 
@@ -35,7 +35,7 @@ pub trait SMCQueryVerification {
         let now = Instant::now();
         let mut query = query.clone();
         while self.must_do_another_run() {
-            let result = self.execute_run(model, initial_state, &mut query);
+            let result = Self::execute_run(model, initial_state, &mut query);
             self.handle_run_result(result);
         }
         self.finish();
@@ -45,7 +45,7 @@ pub trait SMCQueryVerification {
         self.get_result()
     }
 
-    fn execute_run(&self, model : &impl Model, initial_state : &ModelState, query : &mut Query) -> VerificationStatus {
+    fn execute_run(model : &impl Model, initial_state : &ModelState, query : &mut Query) -> VerificationStatus {
         let run_gen = RandomRunIterator::generate(model, initial_state, query.run_bound.clone());
         for (state, _, _) in run_gen {
             query.verify_state(state.as_verifiable());
@@ -59,8 +59,9 @@ pub trait SMCQueryVerification {
         result
     }
 
-    fn parallel_verify(&mut self, model : &(impl Model + Send + Sync), initial_state : &ModelState, query : &Query, threads : usize) -> SolverResult {
+    fn parallel_verify(&mut self, model : &(impl Model + Send + Sync), initial_state : &ModelState, query : &Query) -> SolverResult {
         info("SMC verification");
+        let threads = thread::available_parallelism().unwrap().get();
         continue_info(format!("Parallel mode [Threads : {}]", threads));
         self.prepare();
         pending("Starting...");
@@ -76,18 +77,10 @@ pub trait SMCQueryVerification {
                     let mut thread_query = query.clone();
                     let mut must_do_another = *must_continue.lock().unwrap();
                     while must_do_another {
-                        let run_gen = RandomRunIterator::generate(model, initial_state, thread_query.run_bound.clone());
-                        for (state, _, _) in run_gen {
-                            thread_query.verify_state(state.as_verifiable());
-                            if thread_query.is_run_decided() {
-                                break;
-                            }
-                        }
-                        thread_query.end_run();
-                        if tx.send(thread_query.run_status).is_err() {
+                        let result = Self::execute_run(model, initial_state, &mut thread_query);
+                        if tx.send(result).is_err() {
                             panic!("Unable to send result !");
                         }
-                        thread_query.reset_run();
                         must_do_another = *must_continue.lock().unwrap();
                     }
                 });

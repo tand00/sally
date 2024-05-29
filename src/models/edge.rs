@@ -1,8 +1,8 @@
-use std::{sync::{Arc, Weak}};
+use std::sync::{Arc, Weak};
 
 use serde::{Deserialize, Serialize};
 
-use super::{ComponentPtr, Label};
+use super::Label;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge<T, U, V> {
@@ -54,11 +54,11 @@ impl<T, U, V> Edge<T, U, V> {
         }
     }
 
-    pub fn ptr_node_from(&self) -> Arc<U> {
+    pub fn get_node_from(&self) -> Arc<U> {
         self.node_from().unwrap()
     }
 
-    pub fn ptr_node_to(&self) -> Arc<V> {
+    pub fn get_node_to(&self) -> Arc<V> {
         self.node_to().unwrap()
     }
 

@@ -163,8 +163,8 @@ impl Model for ClassGraph {
             if !e.has_source() || !e.has_target() {
                 continue;
             }
-            if e.ptr_node_from().index == class_index && e.weight == action {
-                next_index = Some(e.ptr_node_to().index);
+            if e.get_node_from().index == class_index && e.weight == action {
+                next_index = Some(e.get_node_to().index);
             }
         }
         if next_index.is_none() {
@@ -186,7 +186,7 @@ impl Model for ClassGraph {
             if !e.has_source() {
                 continue;
             }
-            if e.ptr_node_from().index == class_index {
+            if e.get_node_from().index == class_index {
                 actions.insert(e.weight);
             }
         }
