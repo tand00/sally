@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::models::{action::Action, model_context::ModelContext, model_var::{ModelVar, VarType}, CompilationResult, Label, Node};
 use super::ProbabilisticChoice;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct MarkovNode {
     pub label : Label,
     pub outputs : HashMap<Label, Vec<(Label, f64)>>,
@@ -89,6 +89,18 @@ impl Node for MarkovNode {
 
     fn get_label(&self) -> Label {
         self.label.clone()
+    }
+
+}
+
+impl Clone for MarkovNode {
+
+    fn clone(&self) -> Self {
+        MarkovNode {
+            label : self.label.clone(),
+            outputs : self.outputs.clone(),
+            ..Default::default()
+        }
     }
 
 }

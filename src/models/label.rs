@@ -27,8 +27,13 @@ impl Label {
         }
     }
 
-    pub fn add_super_domain(&self, domain : Label) -> Label {
+    pub fn set_domain(&self, domain : Label) -> Label {
         return domain + "." + &self.clone()
+    }
+
+    pub fn has_domain(&self, domain : &Label) -> bool {
+        let prefix = domain.clone() + ".";
+        return self.0.starts_with(&prefix.0)
     }
 
 }

@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::models::{action::Action, lbl, model_context::ModelContext, model_var::ModelVar, CompilationResult, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC};
+use crate::models::{action::Action, lbl, model_context::ModelContext, model_var::ModelVar, CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC};
 
 use super::{markov_node::MarkovNode, ProbabilisticChoice};
 
@@ -10,7 +10,9 @@ use super::{markov_node::MarkovNode, ProbabilisticChoice};
 pub struct MarkovChain {
     pub nodes : Vec<MarkovNode>,
     #[serde(skip)]
-    pub nodes_dic : HashMap<Label, usize>
+    pub nodes_dic : HashMap<Label, usize>,
+    #[serde(skip)]
+    pub id : usize
 }
 
 impl MarkovChain {
@@ -18,7 +20,8 @@ impl MarkovChain {
     pub fn new(nodes : Vec<MarkovNode>) -> MarkovChain {
         MarkovChain {
             nodes,
-            nodes_dic : HashMap::new()
+            nodes_dic : HashMap::new(),
+            id : usize::MAX
         }
     }
 
@@ -55,17 +58,22 @@ impl MarkovChain {
         } else {
             node.actions = HashMap::new();
         }
+
+    }
+
+    pub fn get_structure(&self) -> Vec<MarkovNode> {
+        self.nodes.clone()
     }
     
 }
 
 impl Model for MarkovChain {
 
-    fn next(&self,mut state : ModelState, action : Action) -> (Option<ModelState>, HashSet<Action>) {
+    fn next(&self,mut state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)> {
         let node = self.get_current_node(&state);
         let next_index = node.act(action);
         if next_index == None {
-            return (None, HashSet::new())
+            return None;
         }
         let next_index = next_index.unwrap();
         let next_node = &self.nodes[next_index];
@@ -73,7 +81,7 @@ impl Model for MarkovChain {
         state.unmark(node.get_var(), 1);
         state.mark(next_node.get_var(), 1);
         state.deadlocked = actions.len() == 0;
-        (Some(state), actions)
+        Some((state, actions))
     }
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
@@ -97,6 +105,7 @@ impl Model for MarkovChain {
     }
 
     fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
+        self.id = context.new_model();
         // Not iter_mut in place else we wouldn't be able to borrow self as immut.
         let mut nodes = self.nodes.clone();
         self.nodes_dic = HashMap::new();
@@ -110,6 +119,30 @@ impl Model for MarkovChain {
         }
         self.nodes = nodes;
         Ok(())
+    }
+
+    fn get_id(&self) -> usize {
+        self.id
+    }
+
+}
+
+pub struct MarkovChainMaker {
+    pub structure : Vec<MarkovNode>
+}
+
+impl ModelMaker<MarkovChain> for MarkovChainMaker {
+
+    fn create_maker(model : MarkovChain) -> Self {
+        MarkovChainMaker {
+            structure : model.get_structure()
+        }
+    }
+
+    fn make(&self) -> (MarkovChain, ModelContext) {
+        let mut chain = MarkovChain::new(self.structure.clone());
+        let ctx = chain.singleton();
+        (chain, ctx)
     }
 
 }

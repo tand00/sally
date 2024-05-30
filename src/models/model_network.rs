@@ -1,11 +1,16 @@
 use std::collections::{HashMap, HashSet};
 
+use num_traits::Zero;
+
 use super::{action::Action, lbl, model_context::ModelContext, time::ClockValue, CompilationResult, Label, Model, ModelMeta, ModelState, NONE};
 
 pub struct ModelNetwork {
+    pub id : usize,
     pub models : Vec<Box<dyn Model>>,
     pub models_map : HashMap<Label, usize>,
-    pub model_vars_begin : Vec<usize>,
+    pub actions_map : HashMap<Action, usize>,
+    pub shared_actions : HashSet<Action>,
+    pub sync_actions : HashMap<Action, HashSet<Action>>, // { Input : Output } s.t. (a => b) to fire
 }
 
 impl ModelNetwork {
@@ -31,27 +36,56 @@ impl Model for ModelNetwork {
         }
     }
 
-    fn next(&self, state : ModelState, action : Action) -> (Option<ModelState>, HashSet<Action>) {
-        (None, Default::default())
+    fn next(&self, state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)> {
+        if !self.actions_map.contains_key(&action) {
+            return None;
+        }
+        let model_index = self.actions_map[&action];
+        let model = &self.models[model_index];
+        let next = model.next(state, action);
+        if next.is_none() {
+            return None;
+        }
+        let (next_state, mut next_actions) = next.unwrap();
+        for (i, m) in self.models.iter().enumerate() {
+            if i == model_index {
+                continue;
+            }
+            next_actions.extend(&m.available_actions(&next_state));
+        }
+        Some((next_state, next_actions))
     }
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
-        Default::default()
+        let mut actions = HashSet::new();
+        for m in self.models.iter() {
+            actions.extend(&m.available_actions(state));
+        }
+        actions
     }
 
     fn available_delay(&self, state : &ModelState) -> ClockValue {
         let mut min_delay = ClockValue::infinity();
+        let mut is_timed = false;
         for model in self.models.iter() {
+            if !model.is_timed() {
+                continue
+            }
+            is_timed = true;
             let model_delay = model.available_delay(state);
             if model_delay < min_delay {
                 min_delay = model_delay;
             }
         }
-        min_delay
+        if is_timed { 
+            min_delay
+        } else {
+            ClockValue::zero()
+        }
     }
 
     fn is_timed(&self) -> bool {
-        self.models.iter().map(|m| m.is_timed() ).fold(true,|acc, x| acc && x)
+        self.models.iter().map(|m| m.is_timed() ).fold(true,|acc, x| acc || x)
     }
 
     fn is_stochastic(&self) -> bool {
@@ -63,9 +97,17 @@ impl Model for ModelNetwork {
             let model : &mut Box<dyn Model> = &mut self.models[*model_index];
             context.add_domain(name.clone());
             model.compile(context)?;
+            let model_actions = context.get_local_actions();
+            for action in model_actions {
+                self.actions_map.insert(action, *model_index);
+            }
             context.parent();
         }
         Ok(())
+    }
+
+    fn get_id(&self) -> usize {
+        self.id
     }
 
 }

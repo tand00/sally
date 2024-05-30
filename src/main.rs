@@ -86,6 +86,10 @@ fn main() {
     let res = estim.parallel_verify(&net, &initial_state, &query);
     println!("{:?}", res);
 
+    let mut estim  = ProbabilityEstimation::fixed_runs(100000, 0.95);
+    let res = estim.parallel_verify(&net, &initial_state, &query);
+    println!("{:?}", res);
+
     let estim  = SMCMaxSeen::new(100000);
     let res = estim.estimate_max(&net, &ctx, &initial_state, VerificationBound::StepsRunBound(1000));
     println!("{:?}", res);
@@ -116,6 +120,7 @@ fn main() {
     let mut estim  = ProbabilityEstimation::fixed_runs(100000, 0.95);
     let res = estim.parallel_verify(&chain, &state, &query);
     println!("{:?}", res);
+    println!("{:?}", serde_json::to_string(&chain));
 
 }
 
@@ -123,6 +128,7 @@ fn build_solver() -> ModelSolvingGraph {
     let mut solver = ModelSolvingGraph::new();
     solver.register_model(PetriNet::get_meta());
     solver.register_model(ClassGraph::get_meta());
+    solver.register_model(MarkovChain::get_meta());
     solver.register_translation(Box::new(PetriClassGraphTranslation::new()));
     solver.register_solution(Box::new(ClassGraphReachability::new()));
     solver.register_solution(Box::new(ClassGraphReachabilitySynthesis::new()));

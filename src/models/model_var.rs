@@ -110,7 +110,7 @@ impl ModelVar {
         self.var_type = var_type
     }
 
-    pub fn apply_to(self, ctx : &ModelContext) -> MappingResult<ModelVar> {
+    pub fn apply_to(&self, ctx : &ModelContext) -> MappingResult<ModelVar> {
         let res = ctx.get_var(&self.name);
         match res {
             None => Err(MappingError(Label::from("Unable to map var to index !"))),

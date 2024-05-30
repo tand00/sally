@@ -158,14 +158,14 @@ impl PetriNet {
 
 impl Model for PetriNet {
 
-    fn next(&self, state : ModelState, action : Action) -> (Option<ModelState>, HashSet<Action>) {
+    fn next(&self, state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)> {
         let transi = self.actions_dic[&action];
         let (mut new_state, _, _) = self.fire(state, transi);
         let actions: HashSet<Action> = self.available_actions(&new_state);
         if actions.is_empty() && self.available_delay(&new_state).is_zero() {
             new_state.deadlocked = true;
         }
-        (Some(new_state), actions)
+        Some((new_state, actions))
     }
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
@@ -201,7 +201,8 @@ impl Model for PetriNet {
     }
 
     fn delay(&self, mut state : ModelState, dt : ClockValue) -> Option<ModelState> {
-        state.step(dt);
+        let clocks = self.transitions.iter().map(|t| t.get_clock());
+        state.step_clocks(clocks, dt);
         Some(state)
     }
 
@@ -243,6 +244,10 @@ impl Model for PetriNet {
         Ok(())
     }
 
+    fn get_id(&self) -> usize {
+        self.id
+    }
+
 }
 
 // Display implementations ---
@@ -262,12 +267,16 @@ pub struct PetriMaker {
     pub structure : PetriStructure
 }
 
-impl ModelMaker for PetriMaker {
+impl ModelMaker<PetriNet> for PetriMaker {
 
-    fn make(&self) -> (Box<dyn Model>, ModelContext) {
+    fn create_maker(model : PetriNet) -> Self {
+        Self::from(model)
+    }
+
+    fn make(&self) -> (PetriNet, ModelContext) {
         let mut new_net = PetriNet::from(self.structure.clone());
         let ctx = new_net.singleton();
-        (Box::new(new_net), ctx)
+        (new_net, ctx)
     }
 
 }

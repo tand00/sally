@@ -69,7 +69,7 @@ impl Expr {
     // Translate Name(x) to Object(m[x])
     pub fn apply_to(&self, ctx : &ModelContext) -> MappingResult<Expr> {
         match self {
-            Var(x) => Ok(Var(x.clone().apply_to(ctx)?)),
+            Var(x) => Ok(Var(x.apply_to(ctx)?)),
             Plus(e1, e2) => Ok(Plus(
                 Box::new(e1.apply_to(ctx)?), Box::new(e2.apply_to(ctx)?)
             )),

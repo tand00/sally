@@ -12,6 +12,7 @@ pub use edge::Edge;
 //pub use digraph::Digraph;
 use num_traits::Zero;
 use rand::{thread_rng, Rng, seq::SliceRandom};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 pub mod time;
 pub mod model_var;
@@ -103,7 +104,7 @@ impl std::fmt::Display for ModelMeta {
 pub trait Model : Any {
     
     // Given a state and an action, returns a state and actions available
-    fn next(&self, state : ModelState, action : Action) -> (Option<ModelState>, HashSet<Action>);
+    fn next(&self, state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)>;
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action>;
 
@@ -139,7 +140,7 @@ pub trait Model : Any {
         let max_delay = self.available_delay(&state);
         let mut delayed_state = state;
         let mut delay = ClockValue::zero();
-        if !max_delay.is_zero() {
+        if !max_delay.is_zero() && self.is_timed() {
             let delay_range = (ClockValue::zero())..(max_delay);
             delay = rng.gen_range(delay_range);
             delayed_state = self.delay(delayed_state, delay).unwrap();
@@ -150,14 +151,14 @@ pub trait Model : Any {
             return (Some(delayed_state), delay, None)
         }
         let action = *action.unwrap();
-        let (next, next_actions) = self.next(delayed_state, action);
-        (next, delay, Some(action))
+        let next = self.next(delayed_state, action);
+        if next.is_none() {
+            return (None, delay, Some(action));
+        }
+        (Some(next.unwrap().0), delay, Some(action))
     }
 
-    fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
-        let _ = context;
-        Ok(())
-    }
+    fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()>;
 
     fn singleton(&mut self) -> ModelContext {
         let mut ctx = ModelContext::new();
@@ -165,11 +166,15 @@ pub trait Model : Any {
         ctx
     }
 
+    fn get_id(&self) -> usize;
+
 }
 
 // Trait that should implement Send and Sync, to be shared amongst threads and do parallel verification by creating local models
-pub trait ModelMaker : Send + Sync {
+pub trait ModelMaker<T : Model> : Send + Sync {
 
-    fn make(&self) -> (Box<dyn Model>, ModelContext);
+    fn create_maker(model : T) -> Self;
+
+    fn make(&self) -> (T, ModelContext);
 
 }

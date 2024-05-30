@@ -151,6 +151,40 @@ impl ModelContext {
         }
     }
 
+    
+    pub fn get_local_vars(&self) -> Vec<ModelVar> {
+        let domain = self.get_path();
+        self.vars.iter().filter_map(|(l,x)| {
+            if l.has_domain(&domain) {
+                Some(x.clone())
+            } else {
+                None
+            }
+        }).collect()
+    }
+
+    pub fn get_local_actions(&self) -> Vec<Action> {
+        let domain = self.get_path();
+        self.actions.iter().filter_map(|(l,x)| {
+            if l.has_domain(&domain) {
+                Some(x.clone())
+            } else {
+                None
+            }
+        }).collect()
+    }
+
+    pub fn get_local_clocks(&self) -> Vec<ModelClock> {
+        let domain = self.get_path();
+        self.clocks.iter().filter_map(|(l,x)| {
+            if l.has_domain(&domain) {
+                Some(x.clone())
+            } else {
+                None
+            }
+        }).collect()
+    }
+
     pub fn origin(&mut self) {
         self.path.clear();
     }

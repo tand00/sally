@@ -11,7 +11,7 @@ use super::{model_clock::ModelClock, model_var::ModelVar, time::ClockValue};
 pub struct ModelState {
     pub discrete : VirtualMemory,
     pub clocks : DVector<ClockValue>,
-    pub deadlocked : bool
+    pub deadlocked : bool,
 }
 
 impl ModelState {
@@ -46,6 +46,16 @@ impl ModelState {
 
     pub fn set_clock(&mut self, clock : &ModelClock, value : ClockValue) {
         self.clocks[clock.get_index()] = value
+    }
+
+    pub fn step_clock(&mut self, clock : &ModelClock, delta : ClockValue) {
+        self.clocks[clock.get_index()] += delta;
+    }
+
+    pub fn step_clocks<'a>(&mut self, clocks : impl Iterator<Item = &'a ModelClock>, delta : ClockValue) {
+        for clock in clocks {
+            self.step_clock(clock, delta)
+        }
     }
 
     pub fn get_clock_value(&self, clock : &ModelClock) -> ClockValue {

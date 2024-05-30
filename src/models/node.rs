@@ -1,4 +1,4 @@
-use std::{rc::Rc, sync::{Arc, RwLock}};
+use std::sync::{Arc, RwLock};
 
 use super::{Edge, Label};
 
