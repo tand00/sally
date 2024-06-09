@@ -18,7 +18,7 @@ impl RunStatus {
 
     pub fn is_under(&self, bound : &VerificationBound) -> bool {
         match bound {
-            TimeRunBound(t) => self.time < ClockValue(*t as f64),
+            TimeRunBound(t) => self.time < ClockValue::from(*t as f64),
             StepsRunBound(s) => self.steps < *s,
             VarRunBound(v, x) => self.current_state.evaluate_var(v) < *x,
             NoRunBound => true

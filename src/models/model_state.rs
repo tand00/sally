@@ -1,16 +1,17 @@
-use std::collections::HashSet;
+use std::{any::Any, collections::{HashMap, HashSet}};
 
 use nalgebra::DVector;
 use serde::{Deserialize, Serialize};
 
 use crate::{computation::virtual_memory::{EvaluationType, VirtualMemory}, verification::Verifiable};
 
-use super::{model_clock::ModelClock, model_var::ModelVar, time::ClockValue};
+use super::{model_clock::ModelClock, model_storage::ModelStorage, model_var::ModelVar, time::ClockValue};
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize)]
 pub struct ModelState {
     pub discrete : VirtualMemory,
     pub clocks : DVector<ClockValue>,
+    pub storages : Vec<ModelStorage>,
     pub deadlocked : bool,
 }
 
@@ -20,6 +21,7 @@ impl ModelState {
         ModelState {
             discrete : VirtualMemory::from_size(discrete_size),
             clocks :  DVector::from_element(clocks, ClockValue::disabled()),
+            storages : Vec::new(),
             deadlocked : false
         }
     }
@@ -115,6 +117,14 @@ impl ModelState {
         self.clocks = DVector::from_element(clocks, ClockValue::disabled())
     }
 
+    pub fn storage(&self, index : &usize) -> &ModelStorage {
+        &self.storages[*index]
+    }
+
+    pub fn mut_storage(&mut self, index : &usize) -> &mut ModelStorage {
+        &mut self.storages[*index]
+    }
+
 }
 
 impl Verifiable for ModelState {
@@ -124,7 +134,7 @@ impl Verifiable for ModelState {
     }
 
     fn evaluate_clock(&self, clock : &ModelClock) -> f64 {
-        self.get_clock_value(clock).0
+        self.get_clock_value(clock).float()
     }
 
     fn is_deadlocked(&self) -> bool {

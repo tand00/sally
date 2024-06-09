@@ -3,20 +3,19 @@ mod node;
 mod edge;
 mod model_state;
 
-use std::{any::Any, cell::RefCell, collections::HashSet, rc::Rc, sync::{Arc, RwLock}};
+use std::{any::Any, collections::HashSet};
 
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
 pub use node::Node;
 pub use edge::Edge;
-//pub use digraph::Digraph;
 use num_traits::Zero;
 use rand::{thread_rng, Rng, seq::SliceRandom};
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 pub mod time;
 pub mod model_var;
 pub mod model_clock;
+pub mod model_storage;
 pub mod action;
 pub mod model_context;
 pub mod expressions;
@@ -25,6 +24,7 @@ pub mod petri;
 pub mod class_graph;
 pub mod model_solving_graph;
 pub mod digraph;
+pub mod tapn;
 pub mod model_network;
 pub mod markov;
 pub mod run;
@@ -120,6 +120,10 @@ pub trait Model : Any {
     }
 
     fn init_initial_clocks(&self, state : ModelState) -> ModelState {
+        state
+    }
+
+    fn init_initial_storage(&self, state : ModelState) -> ModelState {
         state
     }
 

@@ -1,5 +1,5 @@
 use std::{hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
-use crate::{computation::virtual_memory::EvaluationType, models::{model_clock::ModelClock, model_var::ModelVar}};
+use crate::{computation::virtual_memory::EvaluationType, models::{model_clock::ModelClock, model_context::ModelContext, model_var::{MappingResult, ModelVar}}};
 
 use super::query::*;
 use serde::{Deserialize, Serialize};
@@ -88,6 +88,17 @@ pub enum VerificationBound {
     VarRunBound(ModelVar, i32),
     #[serde(rename = "no_bound")]
     NoRunBound,
+}
+
+impl VerificationBound {
+
+    pub fn apply_to(&self, ctx : &ModelContext) -> MappingResult<VerificationBound> {
+        match self {
+            Self::VarRunBound(x, i) => Ok(Self::VarRunBound(x.apply_to(ctx)?, *i)),
+            _ => Ok(self.clone())
+        }
+    }
+
 }
 
 impl Default for VerificationBound {

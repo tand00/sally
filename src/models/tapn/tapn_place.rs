@@ -2,42 +2,56 @@ use std::{fmt, sync::{Arc, RwLock, Weak}};
 
 use serde::{Serialize, Deserialize};
 
-use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, CompilationResult, Label, ModelState, Node};
+use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, time::TimeBound, CompilationResult, Label, ModelState, Node};
 
-use super::PetriTransition;
+use super::{tapn_transition::TAPNTransition, TAPNTokenListAccessor};
 
-const PETRI_PLACE_VAR_TYPE : VarType = VarType::VarU8;
+const TAPN_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct PetriPlace {
-    pub name: Label,
+pub struct TAPNPlace {
+    pub name : Label,
+
+    pub invariant : TimeBound,
     
     #[serde(skip)]
     pub index : usize,
 
     #[serde(skip)]
-    in_transitions : RwLock<Vec<Weak<PetriTransition>>>,
+    in_transitions : RwLock<Vec<Weak<TAPNTransition>>>,
 
     #[serde(skip)]
-    out_transitions : RwLock<Vec<Weak<PetriTransition>>>,
+    out_transitions : RwLock<Vec<Weak<TAPNTransition>>>,
 
     #[serde(skip)]
     data_variable : ModelVar
 }
 
-impl PetriPlace {
+impl TAPNPlace {
 
     pub fn new(lbl : Label) -> Self {
-        PetriPlace {
-            name: lbl,
+        TAPNPlace {
+            name : lbl,
+            invariant : TimeBound::Infinite,
             index : 0,
             in_transitions : RwLock::new(Vec::new()),
             out_transitions : RwLock::new(Vec::new()),
-            data_variable: Default::default()
+            data_variable : Default::default()
         }
     }
 
-    pub fn add_upstream_transition(&self, transi : &Arc<PetriTransition>) {
+    pub fn new_with_invariant(lbl : Label, inv : TimeBound) -> Self {
+        TAPNPlace {
+            name : lbl,
+            invariant : inv,
+            index : 0,
+            in_transitions : RwLock::new(Vec::new()),
+            out_transitions : RwLock::new(Vec::new()),
+            data_variable : Default::default()
+        }
+    }
+
+    pub fn add_upstream_transition(&self, transi : &Arc<TAPNTransition>) {
         self.in_transitions.write().unwrap().push(Arc::downgrade(transi))
     }
 
@@ -45,13 +59,13 @@ impl PetriPlace {
         self.in_transitions.write().unwrap().clear()
     }
 
-    pub fn get_upstream_transitions(&self) -> Vec<Arc<PetriTransition>> {
+    pub fn get_upstream_transitions(&self) -> Vec<Arc<TAPNTransition>> {
         self.in_transitions.read().unwrap().iter().map(|pt| {
             Weak::upgrade(pt).unwrap()
         }).collect()
     }
 
-    pub fn add_downstream_transition(&self, transi : &Arc<PetriTransition>) {
+    pub fn add_downstream_transition(&self, transi : &Arc<TAPNTransition>) {
         self.out_transitions.write().unwrap().push(Arc::downgrade(transi))
     }
 
@@ -59,7 +73,7 @@ impl PetriPlace {
         self.out_transitions.write().unwrap().clear()
     }
 
-    pub fn get_downstream_transitions(&self) -> Vec<Arc<PetriTransition>> {
+    pub fn get_downstream_transitions(&self) -> Vec<Arc<TAPNTransition>> {
         self.out_transitions.read().unwrap().iter().map(|pt| {
             Weak::upgrade(pt).unwrap()
         }).collect()
@@ -73,18 +87,18 @@ impl PetriPlace {
         &self.data_variable
     }
 
-    pub fn tokens(&self, state : &ModelState) -> i32 {
+    pub fn n_tokens(&self, state : &ModelState) -> i32 {
         state.tokens(self.get_var())
     }
 
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {
-        self.set_var(ctx.add_var(self.get_label(), PETRI_PLACE_VAR_TYPE));
+        self.set_var(ctx.add_var(self.get_label(), TAPN_PLACE_VAR_TYPE));
         Ok(())
     }
 
 }
 
-impl Node for PetriPlace {
+impl Node for TAPNPlace {
 
     fn get_label(&self) -> Label {
         self.name.clone()
@@ -92,7 +106,7 @@ impl Node for PetriPlace {
 
 }
 
-impl fmt::Display for PetriPlace {
+impl fmt::Display for TAPNPlace {
 
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Place_{}", self.name)
@@ -100,10 +114,10 @@ impl fmt::Display for PetriPlace {
 
 }
 
-impl Clone for PetriPlace {
+impl Clone for TAPNPlace {
 
     fn clone(&self) -> Self {
-        PetriPlace {
+        TAPNPlace {
             name: self.name.clone(),
             index : self.index,
             ..Default::default()

@@ -207,6 +207,7 @@ impl Query {
 
     pub fn apply_to(&mut self, ctx : &ModelContext) -> MappingResult<()> {
         self.condition = self.condition.apply_to(ctx)?;
+        self.run_bound = self.run_bound.apply_to(ctx)?;
         Ok(())
     }
 

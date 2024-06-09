@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashSet, hash::{DefaultHasher, Hash, Hasher}, sync::{RwLock, Weak}};
+use std::{collections::{HashMap, HashSet}, hash::{DefaultHasher, Hash, Hasher}, sync::{RwLock, Weak}};
 
 use nalgebra::DVector;
 use num_traits::Zero;
@@ -35,6 +35,7 @@ impl StateClass {
         ModelState {
             discrete : self.discrete.clone(),
             clocks : DVector::from(clocks),
+            storages : Vec::new(),
             deadlocked
         }
     }

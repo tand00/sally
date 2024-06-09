@@ -187,7 +187,7 @@ impl Model for ClassGraph {
                 continue;
             }
             if e.get_node_from().index == class_index {
-                actions.insert(e.weight);
+                actions.insert(e.weight.clone());
             }
         }
         actions
@@ -225,7 +225,7 @@ impl Model for ClassGraph {
                     label : Label::from(action.to_string()),
                     from : None,
                     to : None,
-                    weight : *action,
+                    weight : action.clone(),
                     ref_from : Some(Weak::clone(pred)),
                     ref_to : Some(Arc::downgrade(class)),
                 };

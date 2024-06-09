@@ -8,7 +8,7 @@ use super::{TimeBound, ClockValue};
 use TimeBound::*;
 
 /// Time interval with bounds either integer of infinite
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Hash)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct TimeInterval(pub TimeBound, pub TimeBound);
 
 impl TimeInterval {
@@ -42,9 +42,9 @@ impl TimeInterval {
             Large(x) | Strict(x) => x as f64,
             Infinite => f64::INFINITY
         };
-        let mut chosen = ClockValue(gen.gen_range(low..high));
+        let mut chosen = ClockValue::from(gen.gen_range(low..high));
         while !self.contains(chosen) {
-            chosen = ClockValue(gen.gen_range(low..high)); // If on strict bound
+            chosen = ClockValue::from(gen.gen_range(low..high)); // If on strict bound
         }
         chosen
     }

@@ -54,6 +54,10 @@ impl<T, U, V> Edge<T, U, V> {
         }
     }
 
+    pub fn data(&self) -> &T {
+        &self.weight
+    }
+
     pub fn get_node_from(&self) -> Arc<U> {
         self.node_from().unwrap()
     }

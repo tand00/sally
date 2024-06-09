@@ -2,15 +2,15 @@ use std::collections::{HashMap, HashSet};
 
 use num_traits::Zero;
 
-use super::{action::Action, lbl, model_context::ModelContext, time::ClockValue, CompilationResult, Label, Model, ModelMeta, ModelState, NONE};
+use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::ClockValue, CompilationResult, Label, Model, ModelMeta, ModelState, NONE};
 
 pub struct ModelNetwork {
     pub id : usize,
     pub models : Vec<Box<dyn Model>>,
     pub models_map : HashMap<Label, usize>,
-    pub actions_map : HashMap<Action, usize>,
-    pub shared_actions : HashSet<Action>,
-    pub sync_actions : HashMap<Action, HashSet<Action>>, // { Input : Output } s.t. (a => b) to fire
+    pub actions_map : HashMap<usize, usize>,
+    pub io_actions : HashSet<Label, (Vec<Label>, Vec<Label>)>,
+    pub sync_actions : HashMap<Action, ActionPairs>, // { Input : Output } s.t. (a => b) to fire
 }
 
 impl ModelNetwork {
@@ -37,10 +37,10 @@ impl Model for ModelNetwork {
     }
 
     fn next(&self, state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)> {
-        if !self.actions_map.contains_key(&action) {
+        if !self.actions_map.contains_key(&action.get_id()) {
             return None;
         }
-        let model_index = self.actions_map[&action];
+        let model_index = self.actions_map[&action.get_id()];
         let model = &self.models[model_index];
         let next = model.next(state, action);
         if next.is_none() {
@@ -51,7 +51,7 @@ impl Model for ModelNetwork {
             if i == model_index {
                 continue;
             }
-            next_actions.extend(&m.available_actions(&next_state));
+            next_actions.extend(m.available_actions(&next_state));
         }
         Some((next_state, next_actions))
     }
@@ -59,7 +59,14 @@ impl Model for ModelNetwork {
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
         let mut actions = HashSet::new();
         for m in self.models.iter() {
-            actions.extend(&m.available_actions(state));
+            actions.extend(m.available_actions(state));
+        }
+        for (sync, pairs) in self.sync_actions.iter() {
+            let enabled = pairs.enabled(&actions);
+            actions = enabled.remove_io(actions);
+            for (i,o) in enabled.generate_pairs() {
+                actions.insert(Action::Sync(sync.get_id(), Box::new(i), Box::new(o)));
+            }
         }
         actions
     }
@@ -99,7 +106,7 @@ impl Model for ModelNetwork {
             model.compile(context)?;
             let model_actions = context.get_local_actions();
             for action in model_actions {
-                self.actions_map.insert(action, *model_index);
+                self.actions_map.insert(action.get_id(), *model_index);
             }
             context.parent();
         }

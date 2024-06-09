@@ -9,7 +9,7 @@ pub enum Program {
     While(Condition, Box<Program>),
     DoWhile(Condition, Box<Program>),
     For(Box<Program>, Condition, Box<Program>, Box<Program>),
-    Block(Vec<Box<Program>>),
+    Block(Vec<Program>),
     //Definition(ModelVar, VarType)
 }
 

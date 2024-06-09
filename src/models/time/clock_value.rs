@@ -8,7 +8,7 @@ use TimeBound::*;
 
 // Wrapper for f64 to implement extern traits
 #[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct ClockValue(pub f64);
+pub struct ClockValue(f64);
 
 impl ClockValue {
 
@@ -30,6 +30,10 @@ impl ClockValue {
 
     pub fn is_enabled(&self) -> bool {
         !self.0.is_nan()
+    }
+
+    pub fn float(&self) -> f64 {
+        self.0
     }
 
 }
@@ -170,5 +174,11 @@ impl From<TimeBound> for ClockValue {
             Large(x) => ClockValue(x as f64),
             Strict(x) => ClockValue(x as f64)
         }
+    }
+}
+
+impl From<f64> for ClockValue {
+    fn from(value: f64) -> Self {
+        ClockValue(value)
     }
 }

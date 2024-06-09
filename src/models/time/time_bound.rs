@@ -22,16 +22,16 @@ impl TimeBound {
     pub fn greater_than(&self, clock : ClockValue) -> bool {
         match *self {
             Infinite => true,
-            Strict(x) => (x as f64) > clock.0,
-            Large(x) => (x as f64) >= clock.0,
+            Strict(x) => (x as f64) > clock.float(),
+            Large(x) => (x as f64) >= clock.float(),
             MinusInfinite => false,
         }
     }
     pub fn lower_than(&self, clock : ClockValue) -> bool {
         match *self {
             Infinite => false,
-            Strict(x) => (x as f64) < clock.0,
-            Large(x) => (x as f64) <= clock.0,
+            Strict(x) => (x as f64) < clock.float(),
+            Large(x) => (x as f64) <= clock.float(),
             MinusInfinite => true,
         }
     }

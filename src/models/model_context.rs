@@ -2,17 +2,18 @@ use std::{collections::HashMap, fmt::Display};
 
 use crate::computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory};
 
-use super::{action::Action, model_clock::ModelClock, model_var::{ModelVar, VarType}, Label, Model, ModelState};
+use super::{action::Action, model_clock::ModelClock, model_storage::ModelStorage, model_var::{ModelVar, VarType}, Label, Model, ModelState};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelContext {
     n_models : usize,
+    n_storages : usize,
     vars : HashMap<Label, ModelVar>,
     actions : HashMap<Label, Action>,
     clocks : HashMap<Label, ModelClock>,
     //io_actions : HashMap<Label, usize>,
     definer : VariableDefiner,
-    path : Vec<Label>
+    path : Vec<Label>,
 }
 
 impl ModelContext {
@@ -20,12 +21,13 @@ impl ModelContext {
     pub fn new() -> Self {
         ModelContext {
             n_models : 0,
+            n_storages : 0,
             vars : HashMap::new(),
             actions : HashMap::new(),
             clocks : HashMap::new(),
             //io_actions : HashMap::new(),
             definer : VariableDefiner::new(),
-            path : Vec::new()
+            path : Vec::new(),
         }
     }
 
@@ -37,6 +39,16 @@ impl ModelContext {
         let id = self.n_models;
         self.n_models += 1;
         id
+    }
+
+    pub fn add_storage(&mut self) -> usize {
+        let id = self.n_storages;
+        self.n_storages += 1;
+        id
+    }
+
+    pub fn n_storages(&self) -> usize {
+        self.n_storages
     }
 
     pub fn n_vars(&self) -> usize {
@@ -70,12 +82,22 @@ impl ModelContext {
     }
 
     pub fn get_var(&self, name : &Label) -> Option<ModelVar> {
-        let var_name = self.get_local_name(name.clone());
-        if self.vars.contains_key(&var_name) {
-            Some(self.vars[&var_name].clone())
-        } else {
-            None
+        let mut scope = self.path.clone();
+        while scope.len() > 0 {
+            let mut cwd = Label::new();
+            for domain in scope.iter() {
+                cwd += domain.clone() + ".";
+            }
+            let var_name = cwd + name;
+            if self.vars.contains_key(&var_name) {
+                return Some(self.vars[&var_name].clone())
+            }
+            scope.pop();
         }
+        if self.vars.contains_key(&name) {
+            return Some(self.vars[&name].clone())
+        }
+        None
     }
 
     pub fn has_var(&self, name : &Label) -> bool {
@@ -223,6 +245,7 @@ impl ModelContext {
 
     pub fn make_initial_state(&self, model : &impl Model, marking : HashMap<Label, EvaluationType>) -> ModelState {
         let mut state = ModelState::new(self.n_vars(), self.n_clocks());
+        state.storages.resize(self.n_storages(), ModelStorage::EmptyStorage);
         for (k,v) in marking.iter() {
             let var = self.get_var(k);
             if var.is_none() {
@@ -231,7 +254,8 @@ impl ModelContext {
             let var = var.unwrap();
             state.discrete.set(&var, *v)
         }
-        model.init_initial_clocks(state)
+        state = model.init_initial_clocks(state);
+        model.init_initial_storage(state)
     }
 
     pub fn clear(&mut self) {
@@ -259,7 +283,7 @@ impl Display for ModelContext {
         for (name, action) in self.actions.iter() {
             write!(f, " | {} [{}]\n", name, action)?;
         }
-        write!(f, "")
+        write!(f, " | - Storages : [{}]\n", self.n_storages())
     }
 
 }

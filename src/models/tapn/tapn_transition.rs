@@ -6,21 +6,17 @@ use serde::{Deserialize, Serialize};
 use crate::models::action::Action;
 use crate::models::model_clock::ModelClock;
 use crate::models::model_context::ModelContext;
-use crate::models::time::TimeInterval;
 use crate::models::{CompilationError, CompilationResult, Edge, Label, ModelState, Node};
 use crate::models::expressions::Condition;
 
-use super::PetriPlace;
-
-pub type InputEdge = Edge<i32, PetriPlace, PetriTransition>;
-pub type OutputEdge = Edge<i32, PetriTransition, PetriPlace>;
+use super::tapn_place::TAPNPlace;
+use super::tapn_edge::*;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct PetriTransition {
-    pub label: Label,
-    pub from: Vec<Label>,
-    pub to: Vec<Label>,
-    pub interval: TimeInterval,
+pub struct TAPNTransition {
+    pub label : Label,
+    pub from : Vec<Label>,
+    pub to : Vec<Label>,
     pub controllable : bool,
     pub guard : Condition,
 
@@ -28,10 +24,10 @@ pub struct PetriTransition {
     pub index : usize,
 
     #[serde(skip)]
-    pub input_edges: RwLock<Vec<Arc<InputEdge>>>,
+    pub input_edges : RwLock<Vec<Arc<InputEdge>>>,
 
     #[serde(skip)]
-    pub output_edges: RwLock<Vec<Arc<OutputEdge>>>,
+    pub output_edges : RwLock<Vec<Arc<OutputEdge>>>,
 
     #[serde(skip)]
     pub compiled_guard : Condition,
@@ -43,7 +39,7 @@ pub struct PetriTransition {
     pub clock : ModelClock
 }
 
-impl Node for PetriTransition {
+impl Node for TAPNTransition {
 
     fn get_label(&self) -> Label {
         self.label.clone()
@@ -51,35 +47,22 @@ impl Node for PetriTransition {
 
 }
 
-impl PetriTransition {
+impl TAPNTransition {
 
-    pub fn new(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
-        PetriTransition {
+    pub fn new(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
+        TAPNTransition {
             label, 
             from, to, 
-            interval, 
             controllable : true, 
             guard : Condition::True, 
             ..Default::default()
         }
     }
 
-    pub fn new_untimed(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
-        PetriTransition {
+    pub fn new_uncontrollable(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
+        TAPNTransition {
             label, 
             from, to, 
-            controllable : true, 
-            interval : TimeInterval::full(),
-            guard : Condition::True, 
-            ..Default::default()
-        }
-    }
-
-    pub fn new_uncontrollable(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
-        PetriTransition {
-            label, 
-            from, to, 
-            interval, 
             controllable : false, 
             guard : Condition::True,
             ..Default::default()
@@ -98,11 +81,11 @@ impl PetriTransition {
         }).collect()
     }
 
-    pub fn add_input_edge(&self, edge : Edge<i32, PetriPlace, PetriTransition>) {
+    pub fn add_input_edge(&self, edge : Edge<TAPNEdgeData, TAPNPlace, TAPNTransition>) {
         self.input_edges.write().unwrap().push(Arc::new(edge))
     }
 
-    pub fn add_output_edge(&self, edge : Edge<i32, PetriTransition, PetriPlace>) {
+    pub fn add_output_edge(&self, edge : Edge<TAPNEdgeData, TAPNTransition, TAPNPlace>) {
         self.output_edges.write().unwrap().push(Arc::new(edge))
     }
 
@@ -111,7 +94,7 @@ impl PetriTransition {
             if !edge.has_source() {
                 panic!("Every transition edge should have a source");
             }
-            if edge.get_node_from().tokens(marking) < edge.weight {
+            if marking.tokens(edge.get_node_from().get_var()) < edge.data().weight {
                 return false
             }
         }
@@ -119,11 +102,7 @@ impl PetriTransition {
     }
 
     pub fn is_fireable(&self, state : &ModelState) -> bool {
-        let clockvalue = state.get_clock_value(self.get_clock());
-        if clockvalue.is_disabled() {
-            return false;
-        }
-        self.interval.contains(clockvalue)
+        todo!()
     }
 
     pub fn clear_edges(&self) {
@@ -134,10 +113,10 @@ impl PetriTransition {
     pub fn inertia(&self) -> i32 {
         let mut res : i32 = 0;
         for e in self.input_edges.read().unwrap().iter() {
-            res -= e.weight;
+            res -= e.data().weight;
         }
         for e in self.output_edges.read().unwrap().iter() {
-            res += e.weight;
+            res += e.data().weight;
         }
         res
     }
@@ -177,7 +156,7 @@ impl PetriTransition {
 
 }
 
-impl fmt::Display for PetriTransition {
+impl fmt::Display for TAPNTransition {
 
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // TODO : Maybe add from / to in the display text ?
@@ -185,20 +164,19 @@ impl fmt::Display for PetriTransition {
         let to_str : Vec<String> = self.to.iter().map( |lbl| lbl.to_string() ).collect();
         let from_str = from_str.join(",");
         let to_str = to_str.join(",");
-        let to_print = format!("Transition_{}_{}_[{}]->[{}]", self.label, self.interval, from_str, to_str);
+        let to_print = format!("Transition_{}_[{}]->[{}]", self.label, from_str, to_str);
         write!(f, "{}", to_print)
     }
     
 }
 
-impl Clone for PetriTransition {
+impl Clone for TAPNTransition {
 
     fn clone(&self) -> Self {
-        PetriTransition {
+        TAPNTransition {
             label: self.label.clone(),
             from: self.from.clone(),
             to: self.to.clone(),
-            interval: self.interval.clone(),
             controllable : self.controllable.clone(),
             guard : self.guard.clone(),
             index : self.index,

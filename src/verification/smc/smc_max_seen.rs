@@ -23,6 +23,7 @@ impl SMCMaxSeen {
         continue_info(format!("Runs to be executed : {}", self.runs_needed));
         pending("Starting...");
         let now = Instant::now();
+        let bound = bound.apply_to(ctx).unwrap();
         let mut max_seen = 0;
         let vars = ctx.get_vars();
         for _ in 0..self.runs_needed {
@@ -48,6 +49,7 @@ impl SMCMaxSeen {
         pending("Starting...");
         let now = Instant::now();
 
+        let bound = bound.apply_to(ctx).unwrap();
         let runs_done : Mutex<usize> = Mutex::new(0);
         let vars = ctx.get_vars();
         

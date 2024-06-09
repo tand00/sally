@@ -29,45 +29,31 @@ pub struct PetriNet {
 impl PetriNet {
 
     pub fn new(places: Vec<PetriPlace>, transitions : Vec<PetriTransition>) -> Self {
-        let mut places_dic : HashMap<Label, usize> = HashMap::new();
-        let mut transitions_dic : HashMap<Label, usize> = HashMap::new();
         let mut places_ptr : Vec<Arc<PetriPlace>> = Vec::new();
         let mut transitions_ptr : Vec<Arc<PetriTransition>> = Vec::new();
-        for mut place in places {
-            place.index = places_ptr.len();
-            places_dic.insert(place.get_label(), place.index);
+        for place in places {
             places_ptr.push(Arc::new(place));
         }
-        for mut transition in transitions {
-            transition.index = transitions_ptr.len();
-            transitions_dic.insert(transition.get_label(), transition.index);
+        for transition in transitions {
             transitions_ptr.push(Arc::new(transition));
         }
         let petri = PetriNet { 
             id : usize::MAX,
             places : places_ptr, 
             transitions : transitions_ptr, 
-            places_dic, 
-            transitions_dic,
+            places_dic : HashMap::new(), 
+            transitions_dic : HashMap::new(),
             actions_dic : HashMap::new()
         };
         petri
     }
 
-    pub fn get_place_index(&self, place : &Label) -> usize {
-        self.places_dic[place]
+    pub fn get_place(&self, place : &Label) -> Arc<PetriPlace> {
+        Arc::clone(&self.places[self.places_dic[place]])
     }
 
-    pub fn get_transition_index(&self, transition : &Label) -> usize {
-        self.transitions_dic[transition]
-    }
-
-    pub fn get_place_label(&self, place : usize) -> Label {
-        self.places[place].get_label()
-    }
-
-    pub fn get_transition_label(&self, transition : usize) -> Label {
-        self.transitions[transition].get_label()
+    pub fn get_transition(&self, transition : &Label) -> Arc<PetriTransition> {
+        Arc::clone(&self.transitions[self.transitions_dic[transition]])
     }
 
     pub fn enabled_transitions(&self, marking : &ModelState) -> Vec<Arc<PetriTransition>> {
@@ -181,7 +167,7 @@ impl Model for PetriNet {
     fn available_delay(&self, state : &ModelState) -> ClockValue {
         let m = state.clocks.iter().enumerate().filter_map(|(i,c)| {
             if c.is_enabled() {
-                Some((ClockValue::from(self.transitions[i].interval.1) - *c).0)
+                Some((ClockValue::from(self.transitions[i].interval.1) - *c).float())
             } else {
                 None
             }
@@ -189,7 +175,7 @@ impl Model for PetriNet {
         if m.is_none() {
             ClockValue::zero()
         } else {
-            ClockValue(m.unwrap())
+            ClockValue::from(m.unwrap())
         }
     }
 
@@ -224,16 +210,23 @@ impl Model for PetriNet {
 
     fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
         self.id = context.new_model();
+        self.places_dic.clear();
+        self.transitions_dic.clear();
+        self.actions_dic.clear();
         let mut compiled_places = Vec::new();
         let mut compiled_transitions = Vec::new();
-        for place in self.places.iter() {
+        for (i, place) in self.places.iter().enumerate() {
             let mut compiled_place = PetriPlace::clone(place);
+            compiled_place.index = i;
+            self.places_dic.insert(compiled_place.get_label(), compiled_place.index);
             compiled_place.compile(context)?;
             compiled_places.push(Arc::new(compiled_place));
         }
         self.places = compiled_places;
-        for transition in self.transitions.iter() {
+        for (i, transition) in self.transitions.iter().enumerate() {
             let mut compiled_transition = PetriTransition::clone(transition);
+            compiled_transition.index = i;
+            self.transitions_dic.insert(compiled_transition.get_label(), compiled_transition.index);
             compiled_transition.compile(context)?;
             self.actions_dic.insert(compiled_transition.get_action(), compiled_transition.index);
             let compiled_transition = Arc::new(compiled_transition);
