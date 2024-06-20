@@ -4,7 +4,7 @@ use crate::computation::virtual_memory::{EvaluationType, VariableDefiner, Virtua
 
 use super::{action::Action, model_clock::ModelClock, model_storage::ModelStorage, model_var::{ModelVar, VarType}, Label, Model, ModelState};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ModelContext {
     n_models : usize,
     n_storages : usize,
@@ -53,6 +53,10 @@ impl ModelContext {
 
     pub fn n_vars(&self) -> usize {
         self.vars.len()
+    }
+
+    pub fn memory_size(&self) -> usize {
+        self.vars.iter().map(|(_, x)| x.get_type().size() ).sum()
     }
 
     pub fn n_actions(&self) -> usize {
@@ -105,11 +109,17 @@ impl ModelContext {
         self.vars.contains_key(&var_name)
     }
 
+    pub fn get_actions(&self) -> Vec<(Label, Action)> {
+        self.actions.iter().map(|(l,a)| {
+            (l.clone(), a.clone())
+        }).collect()
+    }
+
     pub fn add_action(&mut self, name : Label) -> Action {
         let id = self.n_actions();
         let action_name = self.get_local_name(name.clone());
         let action = Action::Internal(id);
-        self.actions.insert(action_name, action);
+        self.actions.insert(action_name, action.clone());
         action
     }
 
@@ -125,6 +135,12 @@ impl ModelContext {
     pub fn has_action(&self, name : &Label) -> bool {
         let local_name = self.get_local_name(name.clone());
         self.actions.contains_key(&local_name)
+    }
+
+    pub fn get_clocks(&self) -> Vec<ModelClock> {
+        self.clocks.iter().map(|(_, c)| {
+            c.clone()
+        }).collect()
     }
 
     pub fn add_clock(&mut self, name : Label) -> ModelClock {
@@ -244,7 +260,7 @@ impl ModelContext {
     }
 
     pub fn make_initial_state(&self, model : &impl Model, marking : HashMap<Label, EvaluationType>) -> ModelState {
-        let mut state = ModelState::new(self.n_vars(), self.n_clocks());
+        let mut state = ModelState::new(self.memory_size(), self.n_clocks());
         state.storages.resize(self.n_storages(), ModelStorage::EmptyStorage);
         for (k,v) in marking.iter() {
             let var = self.get_var(k);
@@ -256,6 +272,12 @@ impl ModelContext {
         }
         state = model.init_initial_clocks(state);
         model.init_initial_storage(state)
+    }
+
+    pub fn make_empty_state(&self) -> ModelState {
+        let mut state = ModelState::new(self.memory_size(), self.n_clocks());
+        state.storages.resize(self.n_storages(), ModelStorage::EmptyStorage);
+        state
     }
 
     pub fn clear(&mut self) {

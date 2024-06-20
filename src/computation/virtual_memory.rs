@@ -131,7 +131,7 @@ impl Display for VirtualMemory {
 
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct VariableDefiner {
     size : usize
 }

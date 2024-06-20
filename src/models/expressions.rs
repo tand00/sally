@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::HashSet, hash::Hash, ops::Not};
+use std::{collections::HashSet, hash::Hash, ops::Not};
 
-use crate::{models::Label, QueryVisitor};
+use crate::QueryVisitor;
 
 use crate::verification::{Verifiable, VerificationStatus};
 use serde::{Deserialize, Serialize};
@@ -90,7 +90,7 @@ impl Expr {
         }
     }
 
-    pub fn accept(&self, visitor : &impl QueryVisitor) {
+    pub fn accept(&self, visitor : &mut impl QueryVisitor) {
         match self {
             Plus(e1, e2) |
             Minus(e1, e2) |
@@ -141,15 +141,15 @@ impl Condition {
         }
     }
 
-    pub fn is_pure(&self) -> bool {
+    pub fn is_state_condition(&self) -> bool {
         match self {
             Until(_, _) => false,
             Next(_) => false,
-            Not(c) => c.is_pure(),
+            Not(c) => c.is_state_condition(),
             And(c1,c2) | 
             Or(c1, c2) | 
             Implies(c1, c2)
-                => c1.is_pure() && c2.is_pure(),
+                => c1.is_state_condition() && c2.is_state_condition(),
             _ => true
         }
     }
@@ -313,7 +313,7 @@ impl Condition {
         }
     }
 
-    pub fn accept(&self, visitor : &impl QueryVisitor) {
+    pub fn accept(&self, visitor : &mut impl QueryVisitor) {
         match self {
             Not(c) | Next(c) => {
                 visitor.visit_condition(self);
@@ -345,6 +345,12 @@ impl Condition {
         self.evaluate(state).0.good()
     }
 
+    pub fn get_objects(&self) -> ObjectsScannerVisitor {
+        let mut visitor = ObjectsScannerVisitor::new();
+        self.accept(&mut visitor);
+        visitor
+    }
+
 }
 
 impl Default for Condition {
@@ -360,21 +366,26 @@ impl Not for Condition {
     }
 }
 
-pub struct VarQueryVisitor(RefCell<HashSet<Label>>);
-impl VarQueryVisitor {
+pub struct ObjectsScannerVisitor {
+    pub vars : HashSet<ModelVar>,
+    pub clocks : HashSet<ModelClock>
+}
+impl ObjectsScannerVisitor {
     pub fn new() -> Self {
-        VarQueryVisitor(RefCell::new(HashSet::new()))
-    }
-    pub fn vars_names(&self) -> HashSet<Label> {
-        self.0.borrow().clone()
+        ObjectsScannerVisitor { 
+            vars : HashSet::new(),
+            clocks : HashSet::new()
+        }
     }
 }
-impl QueryVisitor for VarQueryVisitor {
-    fn visit_query(&self, _query : &crate::Query) { }
-    fn visit_condition(&self, _condition : &Condition) { }
-    fn visit_expression(&self, expr : &Expr) {
+impl QueryVisitor for ObjectsScannerVisitor {
+    fn visit_query(&mut self, _query : &crate::Query) { }
+    fn visit_condition(&mut self, _condition : &Condition) { }
+    fn visit_expression(&mut self, expr : &Expr) {
         if let Var(x) = expr {
-            self.0.borrow_mut().insert(x.name.clone());
+            self.vars.insert(x.clone());
+        } else if let ClockComparison(_, c, _) = expr {
+            self.clocks.insert(c.clone());
         }
     }
 }

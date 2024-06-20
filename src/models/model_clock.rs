@@ -22,6 +22,10 @@ impl ModelClock {
         }
     }
 
+    pub fn get_name(&self) -> Label {
+        self.name.clone()
+    }
+
     pub fn get_index(&self) -> usize {
         self.index
     }

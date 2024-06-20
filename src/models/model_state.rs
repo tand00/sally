@@ -64,12 +64,20 @@ impl ModelState {
         self.clocks[clock.get_index()]
     }
 
-    pub fn set_marking(&mut self, var : &ModelVar, value : EvaluationType) {
+    pub fn set_var(&mut self, var : &ModelVar, value : EvaluationType) {
         self.discrete.set(var, value);
     }
 
-    pub fn get_marking(&self, var : &ModelVar) -> EvaluationType {
+    pub fn set_marking(&mut self, var : &ModelVar, value : EvaluationType) {
+        self.set_var(var, value);
+    }
+
+    pub fn get_var(&self, var : &ModelVar) -> EvaluationType {
         self.discrete.evaluate(var)
+    }
+
+    pub fn get_marking(&self, var : &ModelVar) -> EvaluationType {
+        self.get_var(var)
     }
 
     pub fn is_marked(&self, var : &ModelVar) -> bool {
@@ -130,7 +138,7 @@ impl ModelState {
 impl Verifiable for ModelState {
 
     fn evaluate_var(&self, var : &ModelVar) -> EvaluationType {
-        self.discrete.evaluate(var)
+        self.get_marking(var)
     }
 
     fn evaluate_clock(&self, clock : &ModelClock) -> f64 {
@@ -143,3 +151,8 @@ impl Verifiable for ModelState {
 
 }
 
+impl Default for ModelState {
+    fn default() -> Self {
+        ModelState::new(0, 0)
+    }
+}

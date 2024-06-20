@@ -12,3 +12,4 @@ pub struct TAPNEdgeData {
 
 pub type InputEdge = Edge<TAPNEdgeData, TAPNPlace, TAPNTransition>;
 pub type OutputEdge = Edge<TAPNEdgeData, TAPNTransition, TAPNPlace>;
+pub type TransportEdge = Edge<TAPNEdgeData, TAPNPlace, TAPNPlace>;

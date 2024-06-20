@@ -76,9 +76,9 @@ use model_characteristics::ModelCharacteristics;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelMeta {
-    name : Label,
-    description : String,
-    characteristics : ModelCharacteristics,
+    pub name : Label,
+    pub description : String,
+    pub characteristics : ModelCharacteristics,
 }
 impl ModelMeta {
 
@@ -154,8 +154,8 @@ pub trait Model : Any {
         if action.is_none() {
             return (Some(delayed_state), delay, None)
         }
-        let action = *action.unwrap();
-        let next = self.next(delayed_state, action);
+        let action = action.unwrap().clone();
+        let next = self.next(delayed_state, action.clone());
         if next.is_none() {
             return (None, delay, Some(action));
         }

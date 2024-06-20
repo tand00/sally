@@ -27,11 +27,37 @@ impl Action {
         }
     }
 
+    pub fn is_epsilon(&self) -> bool {
+        *self == Self::Epsilon
+    }
+
     pub fn base(&self) -> Action {
         match self {
             Self::Epsilon => Self::Epsilon,
             Self::Internal(_) => self.clone(),
             _ => Self::Internal(self.get_id())
+        }
+    }
+
+    pub fn with_data(&self, data : ModelStorage) -> Action {
+        Self::WithData(self.get_id(), data)
+    }
+
+    pub fn sync(&self, a : Action, b : Action) -> Action {
+        Self::Sync(self.get_id(), Box::new(a), Box::new(b))
+    }
+
+    pub fn has_data(&self) -> bool {
+        match self {
+            Self::WithData(_, _) => true,
+            _ => false
+        }
+    }
+
+    pub fn is_sync(&self) -> bool {
+        match self {
+            Self::Sync(_, _, _) => true,
+            _ => false
         }
     }
 
@@ -76,14 +102,31 @@ impl ActionPairs {
     }
     
     pub fn enabled(&self, set : &HashSet<Action>) -> ActionPairs {
-        let inputs : HashSet<Action> = self.0.intersection(set).map(|a| a.clone()).collect();
-        let outputs : HashSet<Action> = self.1.intersection(set).map(|a| a.clone()).collect();
+        let mut inputs = HashSet::new();
+        let mut outputs = HashSet::new();
+        for action in set.iter() {
+            let base = action.base();
+            if self.0.contains(&base) {
+                inputs.insert(action.clone());
+            } else if self.1.contains(&base) {
+                outputs.insert(action.clone());
+            }
+        }
         ActionPairs(inputs, outputs)
     }
 
-    pub fn remove_io(&self, other : HashSet<Action>) -> HashSet<Action> {
-        let other : HashSet<Action> = other.difference(&self.0).map(|x| x.clone()).collect();
-        other.difference(&self.1).map(|x| x.clone()).collect()
+    pub fn remove_io(&self, mut other : HashSet<Action>) -> HashSet<Action> {
+        for input in self.0.iter() {
+            if other.contains(input) {
+                other.remove(input);
+            }
+        }
+        for output in self.1.iter() {
+            if other.contains(output) {
+                other.remove(output);
+            }
+        }
+        other
     }
 
     pub fn choose_pair(&self) -> Option<(Action, Action)> {

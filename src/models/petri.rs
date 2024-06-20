@@ -106,11 +106,19 @@ impl PetriNet {
     fn create_transition_edges(&self, transition : &Arc<PetriTransition>) {
         let from_labels = transition.from.clone();
         let to_labels = transition.to.clone();
+        let guard_vars = transition.compiled_guard.get_objects().vars;
         for place_label in from_labels.iter() {
             let place_index = self.places_dic[place_label];
             let place = &self.places[place_index];
             let in_edge = Edge::data_edge(place, transition, 1);
             transition.add_input_edge(in_edge);
+            place.add_downstream_transition(transition);
+        }
+        for place in self.places.iter() {
+            let place_var = place.get_var();
+            if !guard_vars.contains(place_var) {
+                continue
+            }
             place.add_downstream_transition(transition);
         }
         for place_label in to_labels.iter() {

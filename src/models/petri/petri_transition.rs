@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock};
 
 use serde::{Deserialize, Serialize};
 
+use crate::computation::intervals::Convex;
 use crate::models::action::Action;
 use crate::models::model_clock::ModelClock;
 use crate::models::model_context::ModelContext;

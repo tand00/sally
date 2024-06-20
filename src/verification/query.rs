@@ -211,7 +211,7 @@ impl Query {
         Ok(())
     }
 
-    pub fn accept_visitor(&self, visitor : &impl QueryVisitor) {
+    pub fn accept_visitor(&self, visitor : &mut impl QueryVisitor) {
         visitor.visit_query(self);
         self.condition.accept(visitor);
     }
@@ -220,8 +220,8 @@ impl Query {
 
 pub trait QueryVisitor {
 
-    fn visit_query(&self, query : &Query);
-    fn visit_condition(&self, condition : &Condition);
-    fn visit_expression(&self, expr : &Expr);
+    fn visit_query(&mut self, query : &Query);
+    fn visit_condition(&mut self, condition : &Condition);
+    fn visit_expression(&mut self, expr : &Expr);
 
 }

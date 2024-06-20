@@ -20,23 +20,33 @@ pub enum TimeBound {
 
 impl TimeBound {
     pub fn greater_than(&self, clock : ClockValue) -> bool {
-        match *self {
+        match self {
             Infinite => true,
-            Strict(x) => (x as f64) > clock.float(),
-            Large(x) => (x as f64) >= clock.float(),
+            Strict(x) => (*x as f64) > clock.float(),
+            Large(x) => (*x as f64) >= clock.float(),
             MinusInfinite => false,
         }
     }
     pub fn lower_than(&self, clock : ClockValue) -> bool {
-        match *self {
+        match self {
             Infinite => false,
-            Strict(x) => (x as f64) < clock.float(),
-            Large(x) => (x as f64) <= clock.float(),
+            Strict(x) => (*x as f64) < clock.float(),
+            Large(x) => (*x as f64) <= clock.float(),
             MinusInfinite => true,
         }
     }
     pub fn intersection(self, other : TimeBound) -> TimeBound {
         min(self, other)
+    }
+    pub fn unit() -> TimeBound {
+        Large(1)
+    }
+    pub fn float(&self) -> f64 {
+        match self {
+            Infinite => f64::INFINITY,
+            MinusInfinite => f64::NEG_INFINITY,
+            Strict(x) | Large(x) => *x as f64
+        }
     }
 }
 

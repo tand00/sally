@@ -22,7 +22,8 @@ impl Program {
             Nop => state,
             Update(var, expr) => {
                 let res = expr.evaluate(&state);
-                var.set(&mut state, res);
+                //var.set(&mut state, res);
+                state.set_var(var, res);
                 state
             },
             IfElse(c, i, e) => {

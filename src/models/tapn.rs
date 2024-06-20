@@ -1,4 +1,4 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, iter::zip, sync::Arc};
 
 use num_traits::Zero;
 use tapn_place::TAPNPlace;
@@ -21,9 +21,42 @@ pub struct TAPN {
 
 impl TAPN {
 
-    pub fn fire(&self, mut state : ModelState, transi : usize, in_tokens : TAPNPlaceList) -> (Option<ModelState>, HashSet<usize>, HashSet<usize>) {
-        
-        todo!()
+    pub fn fire(&self, mut state : ModelState, transi : usize, in_tokens : TAPNPlaceList) -> (ModelState, HashSet<usize>) {
+        let mut places_tokens = TAPNPlaceListAccessor::from(state.mut_storage(&self.storage_index));
+        let transi = &(self.transitions[transi]);
+        let mut modified_places = HashSet::new();
+        let mut vars_updates = Vec::new();
+        for edge in transi.input_edges.read().unwrap().iter() {
+            let place = edge.get_node_from();
+            vars_updates.push((place.clone(), -edge.data().weight));
+            let state_tokens = &mut places_tokens.places[place.index]; 
+            let input_tokens = &in_tokens.places[place.index];
+            state_tokens.remove_set(input_tokens);
+        }
+        for edge in transi.output_edges.read().unwrap().iter() {
+            let target = edge.get_node_to();
+            vars_updates.push((target.clone(), edge.data().weight));
+            let target_tokens = &mut places_tokens.places[target.index];
+            target_tokens.insert(TAPNToken { count: edge.data().weight, age: ClockValue::zero() });
+        }
+        for edge in transi.transports.read().unwrap().iter() {
+            let place = edge.get_node_from();
+            let target = edge.get_node_to();
+            vars_updates.push((place.clone(), -edge.data().weight));
+            vars_updates.push((target.clone(), edge.data().weight));
+            let state_tokens = &mut places_tokens.places[place.index]; 
+            let input_tokens = &in_tokens.places[place.index];
+            state_tokens.remove_set(input_tokens);
+            let target_tokens = &mut places_tokens.places[target.index];
+            for token in input_tokens.iter() {
+                target_tokens.insert(token.clone());
+            }
+        }
+        for (place, delta) in vars_updates {
+            state.mark(place.get_var(), delta);
+            modified_places.insert(place.index);
+        }
+        (state, modified_places)
     }
 
 }
@@ -98,6 +131,13 @@ impl Model for TAPN {
             compiled_places.push(Arc::new(compiled_place));
         }
         self.places = compiled_places;
+        let mut compiled_transitions = Vec::new();
+        for transi in self.transitions.iter() {
+            let mut compiled_transition = TAPNTransition::clone(&transi);
+            compiled_transition.compile(context)?;
+            compiled_transitions.push(Arc::new(compiled_transition));
+        }
+        self.transitions = compiled_transitions;
         Ok(())
     }
 

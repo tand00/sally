@@ -61,13 +61,15 @@ impl Model for ModelNetwork {
         for m in self.models.iter() {
             actions.extend(m.available_actions(state));
         }
+        let mut synchros = HashSet::new();
         for (sync, pairs) in self.sync_actions.iter() {
             let enabled = pairs.enabled(&actions);
             actions = enabled.remove_io(actions);
             for (i,o) in enabled.generate_pairs() {
-                actions.insert(Action::Sync(sync.get_id(), Box::new(i), Box::new(o)));
+                synchros.insert(Action::Sync(sync.get_id(), Box::new(i), Box::new(o)));
             }
         }
+        actions.extend(synchros);
         actions
     }
 

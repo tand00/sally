@@ -125,12 +125,12 @@ impl ModelVar {
         state.evaluate_var(&self)
     }
 
-    pub fn set(&self, state : &mut ModelState, value : i32) {
+    /*pub fn set(&self, state : &mut ModelState, value : i32) {
         if self.address.is_none() {
             panic!("Can't set unmapped var !");
         }
         state.set_marking(&self, value);
-    }
+    }*/
     
     pub fn unbind(&mut self) {
         self.address = None;

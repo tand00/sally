@@ -25,7 +25,7 @@ impl Solution for ClassGraphReachabilitySynthesis {
     }
 
     fn is_compatible(&self, _ : &dyn std::any::Any, _ : &ModelContext, query : &crate::verification::query::Query) -> bool {
-        (!query.condition.contains_clock_proposition()) && (query.condition.is_pure())
+        (!query.condition.contains_clock_proposition()) && (query.condition.is_state_condition())
     }
 
     fn solve(&mut self, _ : &dyn std::any::Any, _ : &ModelContext, _ : &crate::verification::query::Query) -> SolverResult {

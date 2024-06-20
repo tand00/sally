@@ -8,6 +8,7 @@ pub mod log;
 
 use std::collections::HashMap;
 
+use computation::intervals::Convex;
 use models::digraph::Digraph;
 use models::expressions::{Condition, Expr};
 use models::lbl;
@@ -17,6 +18,7 @@ use models::model_var::var;
 use models::petri::{PetriPlace, PetriTransition, PetriStructure};
 use models::time::{TimeInterval, TimeBound::*};
 use solution::ClassGraphReachability;
+use translation::observation::{ObservationFunction, PartialObservation};
 
 use crate::models::class_graph::ClassGraph;
 use crate::models::model_solving_graph::ModelSolvingGraph;
@@ -121,6 +123,22 @@ fn main() {
     let res = estim.parallel_verify(&chain, &state, &query);
     println!("{:?}", res);
     println!("{:?}", serde_json::to_string(&chain));
+
+    let test = TimeInterval(Large(3),Strict(10));
+    
+    println!("{:?}", test);
+    let test = test.intersection(TimeInterval(Large(1),Large(5)));
+    println!("{:?}", test);
+    let test = test.union(TimeInterval(Strict(7),Large(9)));
+    println!("{:?}", test);
+    let test = test.union(TimeInterval(Large(5),Strict(7)));
+    println!("{:?}", test);
+    let test = test.complement();
+    println!("{:?}", test);
+    let test = test.complement();
+    println!("{:?}", test);
+    let test = test.difference(TimeInterval(Large(4),Strict(8)));
+    println!("{:?}", test);
 
 }
 

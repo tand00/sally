@@ -2,6 +2,8 @@ mod petri_class_graph;
 mod petri_partial_observation;
 use std::{any::Any, fmt::Display};
 
+pub mod observation;
+
 pub use petri_class_graph::PetriClassGraphTranslation;
 pub use petri_partial_observation::PetriPartialObservation;
 

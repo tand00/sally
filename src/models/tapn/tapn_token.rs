@@ -1,9 +1,29 @@
+
+
+use std::fmt::{write, Display};
+
 use crate::models::{model_storage::ModelStorage, time::ClockValue};
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq)]
 pub struct TAPNToken {
     pub count : i32,
     pub age : ClockValue
+}
+
+impl TAPNToken {
+
+    pub fn flatten(self) -> Vec<TAPNToken> {
+        (0..self.count).map(|_| {
+            TAPNToken { count : 1, age : self.age }
+        }).collect()
+    }
+
+}
+
+impl Display for TAPNToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Tokens({}x{})", self.age, self.count)
+    }
 }
 
 pub type TAPNTokenSet = Vec<(usize, TAPNToken)>;
@@ -98,6 +118,28 @@ impl<'a> TAPNTokenListAccessor<'a> {
         }
     }
 
+    pub fn remove_set(&mut self, other : &TAPNTokenList) {
+        let mut index = 0;
+        for to_remove in other.iter() {
+            if self.tokens.len() == 0 {
+                return;
+            }
+            while index < self.tokens.len() {
+                let token = TAPNTokenAccessor::from(&mut self.tokens[index]);
+                if token.get_age() == to_remove.age {
+                    if *token.count > to_remove.count {
+                        *token.count -= to_remove.count;
+                    } else {
+                        self.tokens.remove(index);
+                    }
+                    break;
+                } else {
+                    index += 1;
+                }
+            }
+        }
+    }
+
     pub fn n_tokens(&self) -> i32 {
         self.tokens.iter().map(|t| *t.ref_tuple().0.ref_int() ).sum()
     }
@@ -125,6 +167,16 @@ impl<'a> From<&'a mut ModelStorage> for TAPNTokenListAccessor<'a> {
 pub struct TAPNPlaceList {
     pub places : Vec<TAPNTokenList>
 }
+impl TAPNPlaceList {
+    pub fn places(n_places : usize) -> TAPNPlaceList {
+        TAPNPlaceList {
+            places : vec![Vec::new() ; n_places]
+        }
+    }
+    pub fn place_has_token(&self, i_place : usize) -> bool {
+        self.places[i_place].len() > 0
+    }
+}
 impl From<ModelStorage> for TAPNPlaceList {
     fn from(value : ModelStorage) -> Self {
         let vec = value.vec();
@@ -149,6 +201,10 @@ impl<'a> TAPNPlaceListAccessor<'a> {
         for place in self.places.iter_mut() {
             place.delta(dt)
         }
+    }
+
+    pub fn n_places(&self) -> usize {
+        self.places.len()
     }
 
 }
