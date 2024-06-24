@@ -1,11 +1,13 @@
 use core::fmt;
 use std::{cmp::min, ops::{Index, IndexMut}};
 
-use nalgebra::DMatrix;
+use nalgebra::{DMatrix, DVector};
 use num_traits::{Bounded, Zero};
 use serde::{Deserialize, Serialize};
 
-use crate::models::time::{TimeBound, TimeInterval};
+use crate::models::time::{ClockValue, TimeBound, TimeInterval};
+
+use super::intervals::Convex;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DBM {

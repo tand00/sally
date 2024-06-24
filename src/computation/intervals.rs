@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ops::{AddAssign, Sub}};
+use std::{fmt::{self, Display}, marker::PhantomData, ops::{Add, Sub}};
 
 use nalgebra::Scalar;
 use num_traits::{Bounded, Zero};
@@ -41,14 +41,16 @@ pub trait Convex<T : Scalar> : Scalar {
         set.push(elem)
     }
 
-    fn delta(&mut self, dx : T) where T : AddAssign;
-
 }
 
 pub trait Measurable {
-
     fn len(&self) -> f64;
-
+}
+pub trait Delta<T : Scalar + Add<Output = T>> {
+    fn delta(&mut self, dx : T);
+}
+pub trait ToPositive {
+    fn positive(self) -> Self;
 }
 
 // VERY UNOPTIMIZED FOR NOW !
@@ -162,17 +164,29 @@ impl<T : Scalar, U : Convex<T>> Disjoint<T,U> {
         disj
     }
 
-    pub fn delta(&mut self, dx : T) where T : AddAssign {
-        for interval in self.intervals.iter_mut() {
-            interval.delta(dx.clone());
-        }
-    }
-
 }
 
 impl<T : Scalar, U : Convex<T> + Measurable> Measurable for Disjoint<T,U> {
     fn len(&self) -> f64 {
         self.intervals.iter().map(|i| i.len()).sum()
+    }
+}
+
+impl<T : Scalar + Add<Output = T> + Clone, U : Convex<T> + Delta<T>> Delta<T> for Disjoint<T,U> {
+    fn delta(&mut self, dx : T) {
+        for i in self.intervals.iter_mut() {
+            i.delta(dx.clone())
+        }
+    }
+}
+
+impl<T : Scalar, U : Convex<T> + ToPositive> ToPositive for Disjoint<T,U> {
+    fn positive(self) -> Self {
+        let mut res = Self::new();
+        for i in self.intervals {
+            res = res.union(i.positive());
+        }
+        res
     }
 }
 
@@ -194,6 +208,16 @@ impl<T : Scalar, U : Convex<T>> From<Vec<U>> for Disjoint<T,U> {
 impl<T : Scalar, U : Convex<T>> From<(U,U)> for Disjoint<T,U> {
     fn from(value: (U,U)) -> Self {
         Disjoint { intervals : vec![value.0, value.1], phantom : PhantomData }
+    }
+}
+
+impl<T : Scalar, U : Convex<T> + Display> Display for Disjoint<T, U> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let intervals : Vec<String> = self.intervals.iter().map(|i| {
+            i.to_string()
+        }).collect();
+        let intervals = intervals.join(",");
+        write!(f, "({})", intervals)
     }
 }
 
@@ -235,7 +259,7 @@ impl<T : Scalar + PartialOrd + Bounded> Convex<T> for (T,T) {
 
     fn complement(self) -> Disjoint<T,Self> where Self : Sized {
         if self.0 == T::min_value() && self.1 == T::max_value() {
-            (T::max_value(), T::min_value()).into()
+            Disjoint::new()
         } else if self.0 == T::min_value() {
             (self.1, T::max_value()).into()
         } else if self.1 == T::max_value() {
@@ -267,11 +291,6 @@ impl<T : Scalar + PartialOrd + Bounded> Convex<T> for (T,T) {
 
     fn covers(&self, other : &Self) -> bool {
         self.0 <= other.0 && self.1 >= other.1
-    }
-
-    fn delta(&mut self, dx : T)  where T : AddAssign {
-        self.0 += dx.clone();
-        self.1 += dx;
     }
 
     fn fuse(set : &mut Vec<Self>, elem : Self) {
@@ -326,7 +345,20 @@ impl<T : Scalar + PartialOrd + Sub<Output = T> + Into<f64>> Measurable for (T,T)
 
 }
 
-pub enum ContinuousSet<T : Scalar + PartialOrd + Bounded, U : Convex<T>> {
+impl<T : Scalar + Add<Output = T> + Clone> Delta<T> for (T,T) {
+    fn delta(&mut self, dx : T) {
+        self.0 = self.0.clone() + dx.clone();
+        self.1 = self.1.clone() + dx;
+    }
+}
+
+impl<T : Scalar + Zero + Bounded + PartialOrd> ToPositive for (T,T) {
+    fn positive(self) -> Self {
+        self.intersection((T::zero(), T::max_value()))
+    }
+}
+
+pub enum ContinuousSet<T : Scalar, U : Convex<T>> {
     EmptySet,
     ConvexSet(U),
     DisjointSet(Disjoint<T,U>)
@@ -334,7 +366,7 @@ pub enum ContinuousSet<T : Scalar + PartialOrd + Bounded, U : Convex<T>> {
 
 use ContinuousSet::*;
 
-impl <T : Scalar + PartialOrd + Bounded, U : Convex<T>> ContinuousSet<T,U> {
+impl <T : Scalar, U : Convex<T>> ContinuousSet<T,U> {
 
     pub fn new() -> Self {
         EmptySet
@@ -397,6 +429,18 @@ impl <T : Scalar + PartialOrd + Bounded, U : Convex<T>> ContinuousSet<T,U> {
         }
     }
 
+    pub fn difference(self, other : impl Into<Self>) -> Self {
+        let other = other.into();
+        match (self, other) {
+            (a, EmptySet) => a,
+            (EmptySet, _) => EmptySet,
+            (ConvexSet(a), ConvexSet(b)) => a.difference(b).into(),
+            (DisjointSet(a), DisjointSet(b)) => a.difference(b).into(),
+            (DisjointSet(a), ConvexSet(b)) => a.difference(b).into(),
+            (ConvexSet(a), DisjointSet(b)) => Disjoint::from(a).difference(b).into()
+        }
+    }
+
     pub fn intersects(&self, other : &Self) -> bool where Self : Clone {
         match (self,other) {
             (EmptySet, _) => false,
@@ -408,21 +452,13 @@ impl <T : Scalar + PartialOrd + Bounded, U : Convex<T>> ContinuousSet<T,U> {
         }
     }
 
-    pub fn delta(&mut self, dx : T)  where T : AddAssign {
-        match self {
-            EmptySet => (),
-            ConvexSet(c) => c.delta(dx).into(),
-            DisjointSet(d) => d.delta(dx).into()
-        }
-    }
-
     pub fn convexs(&self) ->  ConvexIterator<T,U> {
         self.into()
     }
 
 }
 
-impl <T : Scalar + PartialOrd + Bounded, U : Convex<T>> From<U> for ContinuousSet<T,U> {
+impl <T : Scalar, U : Convex<T>> From<U> for ContinuousSet<T,U> {
     fn from(value: U) -> Self {
         if value.is_empty() {
             EmptySet
@@ -432,7 +468,7 @@ impl <T : Scalar + PartialOrd + Bounded, U : Convex<T>> From<U> for ContinuousSe
     }
 }
 
-impl <T : Scalar + PartialOrd + Bounded, U : Convex<T>> From<Disjoint<T,U>> for ContinuousSet<T,U> {
+impl <T : Scalar, U : Convex<T>> From<Disjoint<T,U>> for ContinuousSet<T,U> {
     fn from(value: Disjoint<T,U>) -> Self {
         if value.is_empty() {
             EmptySet
@@ -444,25 +480,35 @@ impl <T : Scalar + PartialOrd + Bounded, U : Convex<T>> From<Disjoint<T,U>> for 
     }
 }
 
-impl <T : Scalar + PartialOrd + Bounded, U : Convex<T>> From<Vec<U>> for ContinuousSet<T,U> {
+impl <T : Scalar, U : Convex<T>> From<Vec<U>> for ContinuousSet<T,U> {
     fn from(value: Vec<U>) -> Self {
         let d : Disjoint<T,U> = value.into();
         d.into()
     }
 }
 
-pub struct ConvexIterator<'a, T : Scalar + PartialOrd + Bounded, U : Convex<T>> {
+impl <T : Scalar, U : Convex<T> + Display> Display for ContinuousSet<T,U> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EmptySet => write!(f, "{{}}"),
+            ConvexSet(c) => std::fmt::Display::fmt(c, f),
+            DisjointSet(d) => d.fmt(f)
+        }
+    }
+}
+
+pub struct ConvexIterator<'a, T : Scalar, U : Convex<T>> {
     set : &'a ContinuousSet<T,U>,
     current : usize
 }
 
-impl <'a, T : Scalar + PartialOrd + Bounded, U : Convex<T>> From<&'a ContinuousSet<T,U>> for ConvexIterator<'a,T,U> {
+impl <'a, T : Scalar, U : Convex<T>> From<&'a ContinuousSet<T,U>> for ConvexIterator<'a,T,U> {
     fn from(value: &'a ContinuousSet<T,U>) -> Self {
         ConvexIterator { set: value, current: 0 }
     }
 }
 
-impl<'a, T : Scalar + PartialOrd + Bounded, U : Convex<T>> Iterator for ConvexIterator<'a,T,U> {
+impl<'a, T : Scalar, U : Convex<T>> Iterator for ConvexIterator<'a,T,U> {
     type Item = &'a U;
     fn next(&mut self) -> Option<Self::Item> {
         match self.set {
@@ -484,6 +530,36 @@ impl<'a, T : Scalar + PartialOrd + Bounded, U : Convex<T>> Iterator for ConvexIt
                     None
                 }
             }
+        }
+    }
+}
+
+impl<T : Scalar, U : Convex<T> + Measurable> Measurable for ContinuousSet<T,U> {
+    fn len(&self) -> f64 {
+        match self {
+            EmptySet => f64::zero(),
+            ConvexSet(c) => c.len(),
+            DisjointSet(d) => d.len()
+        }
+    }
+}
+
+impl<T : Scalar + Add<Output = T> + Clone, U : Convex<T> + Delta<T>> Delta<T> for ContinuousSet<T,U> {
+    fn delta(&mut self, dx : T) {
+        match self {
+            EmptySet => (),
+            ConvexSet(c) => c.delta(dx),
+            DisjointSet(d) => d.delta(dx)
+        }
+    }
+}
+
+impl<T : Scalar, U : Convex<T> + ToPositive> ToPositive for ContinuousSet<T,U> {
+    fn positive(self) -> Self {
+        match self {
+            EmptySet => EmptySet,
+            ConvexSet(c) => c.positive().into(),
+            DisjointSet(d) => d.positive().into()
         }
     }
 }

@@ -126,19 +126,19 @@ fn main() {
 
     let test = TimeInterval(Large(3),Strict(10));
     
-    println!("{:?}", test);
+    println!("{}", test);
     let test = test.intersection(TimeInterval(Large(1),Large(5)));
-    println!("{:?}", test);
+    println!("{}", test);
     let test = test.union(TimeInterval(Strict(7),Large(9)));
-    println!("{:?}", test);
+    println!("{}", test);
     let test = test.union(TimeInterval(Large(5),Strict(7)));
-    println!("{:?}", test);
+    println!("{}", test);
     let test = test.complement();
-    println!("{:?}", test);
+    println!("{}", test);
     let test = test.complement();
-    println!("{:?}", test);
+    println!("{}", test);
     let test = test.difference(TimeInterval(Large(4),Strict(8)));
-    println!("{:?}", test);
+    println!("{}", test);
 
 }
 

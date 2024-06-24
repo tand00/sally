@@ -124,7 +124,7 @@ impl PetriTransition {
         if clockvalue.is_disabled() {
             return false;
         }
-        self.interval.contains(clockvalue)
+        self.interval.contains(&clockvalue)
     }
 
     pub fn clear_edges(&self) {

@@ -19,7 +19,7 @@ pub enum TimeBound {
 }
 
 impl TimeBound {
-    pub fn greater_than(&self, clock : ClockValue) -> bool {
+    pub fn greater_than(&self, clock : &ClockValue) -> bool {
         match self {
             Infinite => true,
             Strict(x) => (*x as f64) > clock.float(),
@@ -27,7 +27,7 @@ impl TimeBound {
             MinusInfinite => false,
         }
     }
-    pub fn lower_than(&self, clock : ClockValue) -> bool {
+    pub fn lower_than(&self, clock : &ClockValue) -> bool {
         match self {
             Infinite => false,
             Strict(x) => (*x as f64) < clock.float(),
@@ -46,6 +46,13 @@ impl TimeBound {
             Infinite => f64::INFINITY,
             MinusInfinite => f64::NEG_INFINITY,
             Strict(x) | Large(x) => *x as f64
+        }
+    }
+    pub fn value(&self) -> i32 {
+        match self {
+            Infinite => i32::MAX,
+            MinusInfinite => i32::MIN,
+            Strict(x) | Large(x) => *x
         }
     }
 }

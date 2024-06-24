@@ -5,10 +5,11 @@ use std::sync::{Arc, RwLock};
 use serde::{Deserialize, Serialize};
 
 use crate::computation::combinatory::{CartesianProduct, KInVec};
+use crate::computation::intervals::{ContinuousSet, Convex};
 use crate::models::action::Action;
 use crate::models::model_clock::ModelClock;
 use crate::models::model_context::ModelContext;
-use crate::models::time::TimeInterval;
+use crate::models::time::{ClockValue, TimeInterval};
 use crate::models::{CompilationError, CompilationResult, Edge, Label, ModelState, Node};
 
 use super::tapn_place::TAPNPlace;
@@ -112,7 +113,7 @@ impl TAPNTransition {
     fn has_enough(interval : &TimeInterval, weight : i32, token_list : &mut TAPNTokenListAccessor) -> bool {
         let mut remaining = weight;
         for token in token_list.tokens() {
-            if interval.contains(token.get_age()) {
+            if interval.contains(&token.get_age()) {
                 remaining -= *token.count;
                 if remaining <= 0 {
                     return false;
@@ -152,7 +153,7 @@ impl TAPNTransition {
     fn combinations_for(interval : &TimeInterval, weight : usize, token_list : &mut TAPNTokenListAccessor) -> Vec<TAPNTokenList> {
         let mut fireable = TAPNTokenList::new();
         for token in token_list.tokens() {
-            if interval.contains(token.get_age()) {
+            if interval.contains(&token.get_age()) {
                 fireable.append(&mut token.get().flatten());
             }
         }
@@ -217,6 +218,51 @@ impl TAPNTransition {
             res.push(input_places);
         }
         res
+    }
+
+    fn arc_dates(interval : &TimeInterval, weight : usize, token_list : &mut TAPNTokenListAccessor) -> ContinuousSet<ClockValue, TimeInterval> {
+        let mut dates = ContinuousSet::EmptySet;
+        let mut first_index : usize = 0;
+        let mut consumed : usize = 0;
+        let list_len = token_list.tokens.len();
+        while first_index < list_len {
+            
+        }
+        dates
+    }
+
+    pub fn firing_dates(&self, mut place_list : TAPNPlaceListAccessor) -> ContinuousSet<ClockValue, TimeInterval> {
+        let mut dates = ContinuousSet::full();
+        for edge in self.inhibitors.read().unwrap().iter() {
+            let place_index = edge.get_node_from().index;
+            let tokens = &mut place_list.places[place_index];
+            let intervals = Self::arc_dates(&edge.data().interval, edge.data().weight as usize, tokens);
+            dates = dates.difference(intervals);
+            if dates.is_empty() {
+                return ContinuousSet::EmptySet;
+            }
+        }
+        for edge in self.input_edges.read().unwrap().iter() {
+            let place_index = edge.get_node_from().index;
+            let tokens = &mut place_list.places[place_index];
+            let intervals = Self::arc_dates(&edge.data().interval, edge.data().weight as usize, tokens);
+            dates = dates.intersection(intervals);
+            if dates.is_empty() {
+                return ContinuousSet::EmptySet;
+            }
+        }
+        for edge in self.transports.read().unwrap().iter() {
+            let place_index = edge.get_node_from().index;
+            let target_inv = TimeInterval::invariant(edge.get_node_to().invariant);
+            let tokens = &mut place_list.places[place_index];
+            let interval = edge.data().interval.clone().intersection(target_inv);
+            let intervals = Self::arc_dates(&interval, edge.data().weight as usize, tokens);
+            dates = dates.intersection(intervals);
+            if dates.is_empty() {
+                return ContinuousSet::EmptySet;
+            }
+        }
+        dates
     }
 
     pub fn clear_edges(&self) {

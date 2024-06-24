@@ -140,6 +140,10 @@ impl<'a> TAPNTokenListAccessor<'a> {
         }
     }
 
+    pub fn get_token(&mut self, index : usize) -> TAPNTokenAccessor {
+        TAPNTokenAccessor::from(&mut self.tokens[index])
+    }
+
     pub fn n_tokens(&self) -> i32 {
         self.tokens.iter().map(|t| *t.ref_tuple().0.ref_int() ).sum()
     }
