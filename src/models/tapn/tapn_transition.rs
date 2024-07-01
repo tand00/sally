@@ -226,6 +226,7 @@ impl TAPNTransition {
         let mut consumed : usize = 0;
         let list_len = token_list.tokens.len();
         while first_index < list_len {
+            let i = first_index;
             
         }
         dates
@@ -239,7 +240,7 @@ impl TAPNTransition {
             let intervals = Self::arc_dates(&edge.data().interval, edge.data().weight as usize, tokens);
             dates = dates.difference(intervals);
             if dates.is_empty() {
-                return ContinuousSet::EmptySet;
+                return dates;
             }
         }
         for edge in self.input_edges.read().unwrap().iter() {
@@ -248,7 +249,7 @@ impl TAPNTransition {
             let intervals = Self::arc_dates(&edge.data().interval, edge.data().weight as usize, tokens);
             dates = dates.intersection(intervals);
             if dates.is_empty() {
-                return ContinuousSet::EmptySet;
+                return dates;
             }
         }
         for edge in self.transports.read().unwrap().iter() {
@@ -259,7 +260,7 @@ impl TAPNTransition {
             let intervals = Self::arc_dates(&interval, edge.data().weight as usize, tokens);
             dates = dates.intersection(intervals);
             if dates.is_empty() {
-                return ContinuousSet::EmptySet;
+                return dates;
             }
         }
         dates

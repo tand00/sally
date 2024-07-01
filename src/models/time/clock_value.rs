@@ -16,6 +16,10 @@ impl ClockValue {
         ClockValue(f64::INFINITY)
     }
 
+    pub fn neg_infinity() -> Self {
+        ClockValue(f64::NEG_INFINITY)
+    }
+
     pub fn disabled() -> Self {
         ClockValue(f64::NAN)
     }
@@ -170,7 +174,7 @@ impl From<TimeBound> for ClockValue {
     fn from(value: TimeBound) -> Self {
         match value {
             Infinite => ClockValue::infinity(),
-            MinusInfinite => ClockValue(f64::NEG_INFINITY),
+            MinusInfinite => ClockValue::neg_infinity(),
             Large(x) => ClockValue(x as f64),
             Strict(x) => ClockValue(x as f64)
         }

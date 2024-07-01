@@ -1,9 +1,9 @@
-use std::{cmp::{max, min}, fmt::{self, format, Display}, ops::Mul};
+use std::{cmp::{max, min}, fmt::{self, Display}, ops::Mul};
 use num_traits::{Bounded, One};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::computation::intervals::{ContinuousSet, Convex, Disjoint, Measurable};
+use crate::computation::intervals::{Convex, Delta, Disjoint, Measurable, ToPositive};
 
 use super::{TimeBound, ClockValue};
 
@@ -12,6 +12,8 @@ use TimeBound::*;
 /// Time interval with bounds either integer of infinite
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct TimeInterval(pub TimeBound, pub TimeBound);
+
+
 
 impl TimeInterval {
 
@@ -45,6 +47,10 @@ impl TimeInterval {
         TimeInterval(Large(0), bound)
     }
 
+    pub fn real(&self) -> (ClockValue, ClockValue) {
+        (self.0.clone().into(), self.1.clone().into())
+    }
+
 }
 
 impl Mul for TimeInterval { // Intersection
@@ -69,7 +75,7 @@ impl Default for TimeInterval {
     }
 }
 
-impl fmt::Display for TimeInterval {
+impl Display for TimeInterval {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.is_empty() {
             return write!(f, "{{}}");
@@ -98,7 +104,7 @@ impl Convex<ClockValue> for TimeInterval {
 
     fn intersection(self, other : Self) -> Self {
         let inter = TimeInterval(
-            max(self.0, other.0),
+            !max(!self.0, !other.0),
             min(self.1, other.1)
         );
         if inter.is_empty() {
@@ -234,6 +240,23 @@ impl Measurable for TimeInterval {
 
     fn len(&self) -> f64 {
         ClockValue::from(self.1 - self.0).float()
+    }
+
+}
+
+impl ToPositive for TimeInterval {
+
+    fn positive(self) -> Self {
+        self.intersection(TimeInterval(Large(0), Infinite))
+    }
+
+}
+
+impl Delta<TimeBound> for TimeInterval {
+
+    fn delta(&mut self, dx : TimeBound) {
+        self.0 += dx;
+        self.1 += dx;
     }
 
 }

@@ -1,4 +1,4 @@
-use std::{fmt::{self, Display}, marker::PhantomData, ops::{Add, Sub}};
+use std::{fmt::{self, Display}, marker::PhantomData, ops::{Add, Range, Sub}};
 
 use nalgebra::Scalar;
 use num_traits::{Bounded, Zero};
@@ -345,7 +345,7 @@ impl<T : Scalar + PartialOrd + Sub<Output = T> + Into<f64>> Measurable for (T,T)
 
 }
 
-impl<T : Scalar + Add<Output = T> + Clone> Delta<T> for (T,T) {
+impl<T : Scalar + Add<Output = T>> Delta<T> for (T,T) {
     fn delta(&mut self, dx : T) {
         self.0 = self.0.clone() + dx.clone();
         self.1 = self.1.clone() + dx;
@@ -544,7 +544,7 @@ impl<T : Scalar, U : Convex<T> + Measurable> Measurable for ContinuousSet<T,U> {
     }
 }
 
-impl<T : Scalar + Add<Output = T> + Clone, U : Convex<T> + Delta<T>> Delta<T> for ContinuousSet<T,U> {
+impl<T : Scalar + Add<Output = T>, U : Convex<T> + Delta<T>> Delta<T> for ContinuousSet<T,U> {
     fn delta(&mut self, dx : T) {
         match self {
             EmptySet => (),
