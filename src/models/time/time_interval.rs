@@ -1,19 +1,21 @@
 use std::{cmp::{max, min}, fmt::{self, Display}, ops::Mul};
-use num_traits::{Bounded, One};
+use nalgebra::Scalar;
+use num_traits::{Bounded, One, Zero};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::computation::intervals::{Convex, Delta, Disjoint, Measurable, ToPositive};
 
-use super::{TimeBound, ClockValue};
+use super::{clock_value::TimeType, Bound, ClockValue, RealTimeBound, TimeBound};
 
-use TimeBound::*;
+use super::Bound::*;
 
 /// Time interval with bounds either integer of infinite
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
-pub struct TimeInterval(pub TimeBound, pub TimeBound);
+pub struct Interval<T>(pub Bound<T>, pub Bound<T>);
 
-
+pub type TimeInterval = Interval<i32>;
+pub type RealTimeInterval = Interval<ClockValue>;
 
 impl TimeInterval {
 
@@ -39,16 +41,33 @@ impl TimeInterval {
         chosen
     }
 
+    pub fn real(&self) -> RealTimeInterval {
+        Interval(self.0.clone().real(), self.1.clone().real())
+    }
+
+}
+
+impl<T> Interval<T> {
+
+    pub fn new(a : Bound<T>, b : Bound<T>) -> Self 
+        where T : TimeType + Scalar + PartialOrd + Bounded
+    {
+        let res = Interval(a,b);
+        if res.is_empty() {
+            Self::empty()
+        } else {
+            res
+        }
+    }
+
     pub fn empty() -> Self {
-        TimeInterval(Infinite, MinusInfinite)
+        Interval(Infinite, MinusInfinite)
     }
 
-    pub fn invariant(bound : TimeBound) -> TimeInterval {
-        TimeInterval(Large(0), bound)
-    }
-
-    pub fn real(&self) -> (ClockValue, ClockValue) {
-        (self.0.clone().into(), self.1.clone().into())
+    pub fn invariant(bound : Bound<T>) -> Self 
+        where T : Zero + PartialEq
+    {
+        Interval(Bound::zero(), bound)
     }
 
 }
@@ -96,26 +115,26 @@ impl Display for TimeInterval {
     }
 }
 
-impl Convex<ClockValue> for TimeInterval {
+impl<T : TimeType + Scalar + PartialOrd + Bounded> Convex<ClockValue> for Interval<T> {
 
     fn contains(&self, elem : &ClockValue) -> bool {
         self.0.lower_than(elem) && self.1.greater_than(elem)
     }
 
     fn intersection(self, other : Self) -> Self {
-        let inter = TimeInterval(
-            !max(!self.0, !other.0),
-            min(self.1, other.1)
+        let inter = Interval(
+            if (!self.0) > (!other.0) { self.0 } else { other.0 },
+            if self.1 < other.1 { self.1 } else { other.1 }
         );
         if inter.is_empty() {
-            TimeInterval::empty()
+            Interval::empty()
         } else {
             inter
         }
     }
 
     fn full() -> Self {
-        TimeInterval(MinusInfinite, Infinite)
+        Interval(MinusInfinite, Infinite)
     }
 
     fn is_empty(&self) -> bool {
@@ -127,7 +146,7 @@ impl Convex<ClockValue> for TimeInterval {
 
     fn union(self, other : Self) -> Disjoint<ClockValue,Self> {
         if self.intersects(&other) {
-            return TimeInterval(
+            return Interval(
                 if self.0 < other.0 { self.0 } else { other.0 },
                 if self.1 > other.1 { self.1 } else { other.1 }
             ).into();
@@ -136,16 +155,16 @@ impl Convex<ClockValue> for TimeInterval {
     }
 
     fn complement(self) -> Disjoint<ClockValue,Self> {
-        if let TimeInterval(MinusInfinite, Infinite) = self {
+        if let Interval(MinusInfinite, Infinite) = self {
             Disjoint::new()
         } else if self.0 == MinusInfinite {
-            TimeInterval(!self.1, Infinite).into()
+            Interval(!self.1, Infinite).into()
         } else if self.1 == Infinite {
-            TimeInterval(MinusInfinite, !self.0).into()
+            Interval(MinusInfinite, !self.0).into()
         } else {
             (
-                TimeInterval(TimeBound::min_value(), !self.0),
-                TimeInterval(!self.1, TimeBound::max_value())
+                Interval(Bound::min_value(), !self.0),
+                Interval(!self.1, Bound::max_value())
             ).into()
         }
     }
@@ -181,7 +200,7 @@ impl Convex<ClockValue> for TimeInterval {
         }
         let mut indexs = (0, 0);
         let mut contained = (false, false);
-        for (i, TimeInterval(a,b)) in set.iter().enumerate() {
+        for (i, Interval(a,b)) in set.iter().enumerate() {
             if indexs.0 != i && indexs.1 != i { break; }
             let lower_skip = match (*b, elem.0) {
                 (Large(i), Large(j)) => i < j,
@@ -225,7 +244,7 @@ impl Convex<ClockValue> for TimeInterval {
             (_, true, true) => set[indexs.0].1 = set[indexs.1].1.clone(),
             (_, false, false) => set[indexs.0] = elem,
             (_, true, false) => set[indexs.0].1 = elem.1,
-            (_, false, true) => set[indexs.0] = TimeInterval(elem.0, set[indexs.1].1.clone())
+            (_, false, true) => set[indexs.0] = Interval(elem.0, set[indexs.1].1.clone())
         }
         if diff != 0 {
             for _ in 0..(diff - 1) {
@@ -244,10 +263,10 @@ impl Measurable for TimeInterval {
 
 }
 
-impl ToPositive for TimeInterval {
+impl<T : TimeType + Scalar + PartialOrd + Bounded + Zero> ToPositive for Interval<T> {
 
     fn positive(self) -> Self {
-        self.intersection(TimeInterval(Large(0), Infinite))
+        self.intersection(Interval(Large(T::zero()), Infinite))
     }
 
 }

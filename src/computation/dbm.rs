@@ -48,14 +48,14 @@ impl DBM {
     }
 
     pub fn rectangulars(&self, i : usize) -> TimeInterval {
-        TimeInterval(
+        TimeInterval::new(
             -self.constraints[(0, i)], 
             self.constraints[(i, 0)]
         )
     }
 
     pub fn diagonals(&self, i : usize, j : usize) -> TimeInterval {
-        TimeInterval(
+        TimeInterval::new(
             -self.constraints[(j, i)], 
             self.constraints[(i, j)]
         )

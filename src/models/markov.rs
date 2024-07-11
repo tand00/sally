@@ -6,9 +6,11 @@ pub mod markov_chain;
 #[derive(Debug, Clone)]
 pub struct ProbabilisticChoice<T>(pub Vec<(T, f64)>);
 
-impl<T : Clone> ProbabilisticChoice<T> {
+impl<T> ProbabilisticChoice<T> {
 
-    pub fn normalized(&self) -> Self {
+    pub fn normalized(&self) -> Self
+        where T : Clone
+    {
         let sum : f64 = self.0.iter().map(|x| x.1).sum();
         Self(self.0.iter().map(|x| {
             (x.0.clone(), x.1 / sum)

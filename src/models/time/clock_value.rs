@@ -4,10 +4,8 @@ use rand::{distributions::{uniform::{SampleBorrow, SampleUniform, UniformFloat, 
 use serde::{Deserialize, Serialize};
 use super::TimeBound;
 
-use TimeBound::*;
-
 // Wrapper for f64 to implement extern traits
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(PartialOrd, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct ClockValue(f64);
 
 impl ClockValue {
@@ -41,6 +39,15 @@ impl ClockValue {
     }
 
 }
+
+pub trait TimeType : Into<ClockValue> + Copy { }
+impl TimeType for ClockValue {}
+impl From<i32> for ClockValue {
+    fn from(value: i32) -> Self {
+        (value as f64).into()
+    }
+}
+impl TimeType for i32 {}
 
 impl Add for ClockValue {
     type Output = ClockValue;
@@ -118,6 +125,16 @@ impl Hash for ClockValue {
     }
 }
 
+impl PartialEq for ClockValue {
+    fn eq(&self, other: &Self) -> bool {
+        if self.is_disabled() && other.is_disabled() {
+            return true;
+        }
+        return self.0 == other.0;
+    }
+}
+impl Eq for ClockValue {}
+
 impl Distribution<ClockValue> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ClockValue {
         let rand_f = rng.gen();
@@ -173,10 +190,10 @@ impl Default for ClockValue {
 impl From<TimeBound> for ClockValue {
     fn from(value: TimeBound) -> Self {
         match value {
-            Infinite => ClockValue::infinity(),
-            MinusInfinite => ClockValue::neg_infinity(),
-            Large(x) => ClockValue(x as f64),
-            Strict(x) => ClockValue(x as f64)
+            TimeBound::Infinite => ClockValue::infinity(),
+            TimeBound::MinusInfinite => ClockValue::neg_infinity(),
+            TimeBound::Large(x) => ClockValue(x as f64),
+            TimeBound::Strict(x) => ClockValue(x as f64)
         }
     }
 }
