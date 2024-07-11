@@ -40,9 +40,9 @@ impl<T : Genetizable> GeneticOptimizer<T> {
         let mut candidates : Vec<(T, f64)> = (0..population).into_par_iter().map(
             |_| ((self.generator)(), 0.0)
         ).collect();
-        let factor = self.objective.factor();
         for g in 0..generations {
             pending(format!("Executing generation {}...", (g+1)));
+            let factor = self.objective.factor();
             candidates.par_iter_mut().for_each(|x| {
                 x.1 = factor * (self.fitness)(&x.0)
             });
@@ -51,7 +51,7 @@ impl<T : Genetizable> GeneticOptimizer<T> {
             });
             let best_score = candidates.last().unwrap().1;
             continue_info(format!("Best fitness : {best_score}"));
-            if g == (population - 1) {
+            if g == (generations - 1) {
                 break;
             }
             let sampler = ProbabilisticChoice(candidates);
