@@ -1,6 +1,7 @@
 pub mod models;
 pub mod computation;
 pub mod game;
+pub mod learning;
 pub mod translation;
 pub mod verification;
 pub mod solution;
@@ -16,7 +17,7 @@ use models::markov::markov_chain::MarkovChain;
 use models::markov::markov_node::MarkovNode;
 use models::model_var::var;
 use models::petri::{PetriPlace, PetriTransition, PetriStructure};
-use models::time::{TimeInterval, TimeBound::*};
+use models::time::{TimeInterval, Bound::*};
 use solution::ClassGraphReachability;
 use translation::observation::{ObservationFunction, PartialObservation};
 
@@ -124,20 +125,20 @@ fn main() {
     println!("{:?}", res);
     println!("{:?}", serde_json::to_string(&chain));
 
-    let test = TimeInterval(Large(3),Strict(10));
+    let test = TimeInterval::new(Large(3),Strict(10));
     
     println!("{}", test);
-    let test = test.intersection(TimeInterval(Large(1),Large(5)));
+    let test = test.intersection(TimeInterval::new(Large(1),Large(5)));
     println!("{}", test);
-    let test = test.union(TimeInterval(Strict(7),Large(9)));
+    let test = test.union(TimeInterval::new(Strict(7),Large(9)));
     println!("{}", test);
-    let test = test.union(TimeInterval(Large(5),Strict(7)));
-    println!("{}", test);
-    let test = test.complement();
+    let test = test.union(TimeInterval::new(Large(5),Strict(7)));
     println!("{}", test);
     let test = test.complement();
     println!("{}", test);
-    let test = test.difference(TimeInterval(Large(4),Strict(8)));
+    let test = test.complement();
+    println!("{}", test);
+    let test = test.difference(TimeInterval::new(Large(4),Strict(8)));
     println!("{}", test);
 
 }
@@ -165,25 +166,25 @@ fn sample_petri() -> PetriNet {
         lbl("t0"), 
         vec![lbl("p0")],
         vec![lbl("p1"), lbl("p4")], 
-        TimeInterval(Large(0), Large(0))
+        TimeInterval::new(Large(0), Large(0))
     );
     let a = PetriTransition::new(
         lbl("a"), 
         vec![lbl("p1")],
         vec![lbl("p2")], 
-        TimeInterval(Large(0), Large(4))
+        TimeInterval::new(Large(0), Large(4))
     );
     let b = PetriTransition::new(
         lbl("b"), 
         vec![lbl("p2"), lbl("p4")],
         vec![lbl("p3")],
-        TimeInterval(Large(3), Large(4))
+        TimeInterval::new(Large(3), Large(4))
     );
     let c = PetriTransition::new(
         lbl("c"), 
         vec![lbl("p4")],
         vec![lbl("p5")],
-        TimeInterval(Large(5), Large(6))
+        TimeInterval::new(Large(5), Large(6))
     );
     let net = PetriNet::new(
         vec![p0, p1, p2, p3, p4, p5], 
