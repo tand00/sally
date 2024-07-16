@@ -1,5 +1,7 @@
 use std::{collections::{HashMap, HashSet}, fmt, sync::{Arc, Weak}};
 
+use crate::verification::Verifiable;
+
 use super::{action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node};
 
 mod petri_place;
@@ -179,17 +181,17 @@ impl Model for PetriNet {
     }
 
     fn available_delay(&self, state : &ModelState) -> ClockValue {
-        let m = state.clocks.iter().enumerate().filter_map(|(i,c)| {
+        let m = self.transitions.iter().filter_map(|t| {
+            let c = state.get_clock_value(t.get_clock());
             if c.is_enabled() {
-                Some((ClockValue::from(self.transitions[i].interval.1) - *c).float())
+                Some(ClockValue::from(t.interval.1) - c)
             } else {
                 None
             }
-        }).reduce(f64::min);
-        if m.is_none() {
-            ClockValue::zero()
-        } else {
-            ClockValue::from(m.unwrap())
+        }).reduce(ClockValue::min);
+        match m {
+            None => ClockValue::zero(),
+            Some(c) => c
         }
     }
 

@@ -38,6 +38,14 @@ impl ClockValue {
         self.0
     }
 
+    pub fn min(self, other : Self) -> Self {
+        if self <= other {
+            self
+        } else {
+            other
+        }
+    }
+
 }
 
 pub trait TimeType : Into<ClockValue> + Copy { }
