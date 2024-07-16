@@ -1,6 +1,6 @@
 use std::{cmp::max, sync::Mutex, thread, time::Instant};
 
-use crate::{models::{model_context::ModelContext, Model, ModelMaker, ModelState}, solution::SolverResult, verification::VerificationBound};
+use crate::{models::{model_context::ModelContext, Model, ModelState}, solution::SolverResult, verification::VerificationBound};
 use crate::log::*;
 
 use super::RandomRunIterator;

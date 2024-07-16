@@ -1,21 +1,20 @@
 use std::time::Instant;
 
+use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
 use crate::models::markov::ProbabilisticChoice;
 use crate::log::*;
 use crate::models::{Model, ModelMaker};
 
-use super::OptimizationObjective;
-
 pub trait Genetizable : Sync + Send {
-    fn make_child(&self, other : &Self) -> Self;
+    fn cross(&self, other : &Self) -> Self;
+    fn mutate(&mut self);
 }
 
 pub struct GeneticOptimizer<T : Genetizable> {
     pub generator : Box<dyn (Fn() -> T) + Sync + Send>,
     pub fitness : Box<dyn (Fn(&T) -> f64) + Sync + Send>,
-    pub objective : OptimizationObjective
 }
 
 impl<T : Genetizable> GeneticOptimizer<T> {
@@ -28,39 +27,54 @@ impl<T : Genetizable> GeneticOptimizer<T> {
         GeneticOptimizer {
             generator : Box::new(generator),
             fitness : Box::new(fitness),
-            objective : OptimizationObjective::default(),
         }
     }
 
-    pub fn optimize(&self, generations : usize, population : usize, elite : usize) -> (T, f64) {
+    fn score_sort(&self, candidates : &mut Vec<(T, f64)>) {
+        candidates.par_iter_mut().for_each(|x| {
+            x.1 = (self.fitness)(&x.0)
+        });
+        candidates.par_sort_by(|a,b| {
+            a.1.partial_cmp(&b.1).unwrap()
+        });
+    }
+
+    pub fn generate_population(&self, population : usize) -> Vec<(T, f64)> {
+        (0..population).into_par_iter().map(
+            |_| ((self.generator)(), 0.0)
+        ).collect()
+    }
+
+    pub fn optimize(&self, generations : usize, population : usize, elite : usize, mutation_rate : f64) -> (T, f64) {
         info("Genetic optimization");
         continue_info(format!("Generations : {generations} | Population : {population} | Elite size : {elite}"));
         let now = Instant::now();
+
         pending("Generating base population...");
-        let mut candidates : Vec<(T, f64)> = (0..population).into_par_iter().map(
-            |_| ((self.generator)(), 0.0)
-        ).collect();
-        let factor = self.objective.factor();
+        let mut candidates = self.generate_population(population);
+
         for g in 0..generations {
             pending(format!("Executing generation {}...", (g+1)));
-            candidates.par_iter_mut().for_each(|x| {
-                x.1 = factor * (self.fitness)(&x.0)
-            });
-            candidates.par_sort_by(|a,b| {
-                a.1.partial_cmp(&b.1).unwrap()
-            });
-            let best_score = factor * candidates.last().unwrap().1;
+
+            self.score_sort(&mut candidates);
+            let best_score = candidates.last().unwrap().1;
             continue_info(format!("Best fitness : {best_score}"));
+
             if g == (generations - 1) {
                 break;
             }
-            let sampler = ProbabilisticChoice(candidates);
-            let mut children = Vec::new();
-            for _ in 0..(population-elite) {
+
+            let sampler = ProbabilisticChoice::new(candidates);
+            let mut children : Vec<(T, f64)> = (0..(population - elite)).into_par_iter().map(|_| {
                 let p1 = sampler.sample();
                 let p2 = sampler.sample();
-                children.push((p1.make_child(p2), 0.0));
-            }
+                let mut child = p1.cross(p2);
+                if thread_rng().gen::<f64>() < mutation_rate {
+                    child.mutate();
+                }
+                (child, 0.0)
+            }).collect();
+
             candidates = sampler.0;
             for _ in 0..elite {
                 children.push(candidates.pop().unwrap());
@@ -85,7 +99,6 @@ impl<T : Genetizable + Model> GeneticOptimizer<T> {
         GeneticOptimizer {
             generator : Box::new(move || maker.make().0),
             fitness : Box::new(fitness),
-            objective : OptimizationObjective::default()
         }
     }
 

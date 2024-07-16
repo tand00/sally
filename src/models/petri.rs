@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, fmt, sync::Arc};
+use std::{collections::{HashMap, HashSet}, fmt, sync::{Arc, Weak}};
 
 use super::{action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node};
 
@@ -66,10 +66,16 @@ impl PetriNet {
     pub fn compute_new_actions(&self, new_state : &mut ModelState, changed_places : &HashSet<usize>) -> (HashSet<usize>, HashSet<usize>) {
         let mut pers = new_state.enabled_clocks();
         let mut newen : HashSet<usize> = HashSet::new();
+        let mut transition_seen = vec![false ; self.transitions.len()];
         for place_index in changed_places {
             let place : &Arc<PetriPlace> = &self.places[*place_index];
-            for transition in place.get_downstream_transitions().iter() {
+            for transition_weak in place.out_transitions.read().unwrap().iter() {
+                let transition = Weak::upgrade(transition_weak).unwrap();
                 let transi_index = transition.index;
+                if transition_seen[transi_index] {
+                    continue;
+                }
+                transition_seen[transi_index] = true;
                 let clock = transition.get_clock();
                 new_state.disable_clock(clock);
                 pers.remove(&transi_index);

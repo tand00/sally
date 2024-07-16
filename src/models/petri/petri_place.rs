@@ -16,10 +16,10 @@ pub struct PetriPlace {
     pub index : usize,
 
     #[serde(skip)]
-    in_transitions : RwLock<Vec<Weak<PetriTransition>>>,
+    pub in_transitions : RwLock<Vec<Weak<PetriTransition>>>,
 
     #[serde(skip)]
-    out_transitions : RwLock<Vec<Weak<PetriTransition>>>,
+    pub out_transitions : RwLock<Vec<Weak<PetriTransition>>>,
 
     #[serde(skip)]
     data_variable : ModelVar

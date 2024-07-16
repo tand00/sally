@@ -44,7 +44,7 @@ impl MarkovChain {
                 let mapped : Vec<(usize, f64)> = c.iter().map(|(l,p)| {
                     (self.nodes_dic[l], *p)
                 }).collect();
-                let choice = ProbabilisticChoice(mapped).normalized();
+                let choice = ProbabilisticChoice::new(mapped).normalized();
                 node.actions.insert(action, choice);
             }
         } else if node.outputs.len() > 0 {
@@ -52,7 +52,7 @@ impl MarkovChain {
                 let mapped : Vec<(usize, f64)> = c.iter().map(|(l,p)| {
                     (self.nodes_dic[l], *p)
                 }).collect();
-                let choice = ProbabilisticChoice(mapped).normalized();
+                let choice = ProbabilisticChoice::new(mapped).normalized();
                 node.actions = HashMap::from([ (Action::Epsilon, choice) ])
             }
         } else {

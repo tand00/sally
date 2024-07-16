@@ -10,6 +10,8 @@ pub mod log;
 use std::collections::HashMap;
 
 use computation::intervals::Convex;
+use learning::genetic::GeneticOptimizer;
+use learning::OptimizationObjective;
 use models::digraph::Digraph;
 use models::expressions::{Condition, Expr};
 use models::lbl;
@@ -18,6 +20,8 @@ use models::markov::markov_node::MarkovNode;
 use models::model_var::var;
 use models::petri::{PetriPlace, PetriTransition, PetriStructure};
 use models::time::{TimeInterval, Bound::*};
+use nalgebra::Vector2;
+use num_traits::Zero;
 use solution::ClassGraphReachability;
 use translation::observation::{ObservationFunction, PartialObservation};
 
@@ -70,6 +74,8 @@ fn main() {
 
     for c in cg.classes.iter() {
         println!("{}", c);
+        let json_m = serde_json::to_string(&c.dbm).unwrap();
+        println!("{}", json_m);
     }
 
     let mut solution = ClassGraphReachability::new();
@@ -140,7 +146,6 @@ fn main() {
     println!("{}", test);
     let test = test.difference(TimeInterval::new(Large(4),Strict(8)));
     println!("{}", test);
-
 }
 
 fn build_solver() -> ModelSolvingGraph {

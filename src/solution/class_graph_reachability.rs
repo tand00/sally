@@ -21,7 +21,7 @@ impl Solution for ClassGraphReachability {
     fn get_meta(&self) -> SolutionMeta {
         SolutionMeta {
             name : lbl("ClassGraphReachability"),
-            description : String::from("Test a pure reachability query against a class graph"),
+            description : String::from("Test a state reachability query against a class graph"),
             problem_type : REACHABILITY,
             model_name : lbl("ClassGraph"),
             result_type : lbl("bool"),
