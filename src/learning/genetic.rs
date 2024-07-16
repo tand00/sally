@@ -65,7 +65,8 @@ impl<T : Genetizable> GeneticOptimizer<T> {
             }
 
             let sampler = ProbabilisticChoice::new(candidates);
-            let mut children : Vec<(T, f64)> = (0..(population - elite)).into_par_iter().map(|_| {
+            let children_to_make = population - elite;
+            let mut children : Vec<(T, f64)> = (0..children_to_make).into_par_iter().map(|_| {
                 let p1 = sampler.sample();
                 let p2 = sampler.sample();
                 let mut child = p1.cross(p2);

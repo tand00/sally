@@ -43,6 +43,7 @@ impl SMCMaxSeen {
 
     pub fn parallel_estimate_max(&self, model : &(impl Model + Send + Sync), ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
         info("Estimating max tokens using SMC...");
+        
         let threads = thread::available_parallelism().unwrap().get();
         continue_info(format!("Parallel mode [Threads : {}]", threads));
         continue_info(format!("Runs to be executed : {}", self.runs_needed));
@@ -56,6 +57,7 @@ impl SMCMaxSeen {
         let max_seen = thread::scope(|s| {
             let mut handles = Vec::new();
             for _ in 0..threads {
+
                 let handle = s.spawn(|| {
                     let mut runs = *runs_done.lock().unwrap();
                     let mut local_max = 0;
@@ -75,6 +77,7 @@ impl SMCMaxSeen {
                     }
                     local_max
                 });
+                
                 handles.push(handle);
             }
             let mut threads_max = 0;

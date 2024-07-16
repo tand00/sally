@@ -73,6 +73,7 @@ pub trait SMCQueryVerification {
         thread::scope(|s| {
             let mut handles = Vec::new();
             for _ in 0..threads {
+
                 let handle = s.spawn(|| {
                     let mut thread_query = query.clone();
                     let mut must_do_another = *must_continue.lock().unwrap();
@@ -84,6 +85,7 @@ pub trait SMCQueryVerification {
                         must_do_another = *must_continue.lock().unwrap();
                     }
                 });
+                
                 handles.push(handle);
             }
 

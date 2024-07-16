@@ -35,7 +35,8 @@ impl<'a> RandomRunIterator<'a> {
             steps : 0,
             time : ClockValue::zero(),
             maximal : false
-        }
+        };
+        self.started = false;
     }
 
 }
