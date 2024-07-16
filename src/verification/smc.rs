@@ -68,7 +68,7 @@ pub trait SMCQueryVerification {
         let now = Instant::now();
 
         let (tx,rx) = mpsc::channel::<VerificationStatus>();
-        let must_continue = Arc::new(Mutex::new(true));
+        let must_continue = Mutex::new(true);
 
         thread::scope(|s| {
             let mut handles = Vec::new();
@@ -85,7 +85,7 @@ pub trait SMCQueryVerification {
                         must_do_another = *must_continue.lock().unwrap();
                     }
                 });
-                
+
                 handles.push(handle);
             }
 
