@@ -1,6 +1,6 @@
 use std::{collections::{hash_map::DefaultHasher, HashSet}, hash::{Hash, Hasher}, ops::Not};
 
-use crate::{models::{expressions::{Condition, Expr}, model_context::ModelContext, model_var::MappingResult, Model}, solution::{get_problem_type, ProblemType}};
+use crate::{models::{expressions::{Condition, Expr}, model_context::ModelContext, model_var::MappingResult}, solution::{get_problem_type, ProblemType}};
 
 use super::{verifier::Verifiable, EvaluationState, VerificationBound, VerificationStatus};
 use serde::{Deserialize, Serialize};

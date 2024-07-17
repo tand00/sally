@@ -87,16 +87,18 @@ impl PetriTransition {
         }
     }
 
+    #[inline]
     pub fn get_inputs(&self) -> &Vec<InputEdge> {
         self.input_edges.get().unwrap()
     }
 
+    #[inline]
     pub fn get_outputs(&self) -> &Vec<OutputEdge> {
         self.output_edges.get().unwrap()
     }
 
     pub fn is_enabled(&self, marking : &ModelState) -> bool {
-        for edge in self.input_edges.get().unwrap().iter() {
+        for edge in self.get_inputs().iter() {
             if !edge.has_source() {
                 panic!("Every transition edge should have a source");
             }
@@ -122,10 +124,10 @@ impl PetriTransition {
 
     pub fn inertia(&self) -> i32 {
         let mut res : i32 = 0;
-        for e in self.input_edges.get().unwrap().iter() {
+        for e in self.get_inputs().iter() {
             res -= e.weight;
         }
-        for e in self.output_edges.get().unwrap().iter() {
+        for e in self.get_outputs().iter() {
             res += e.weight;
         }
         res
