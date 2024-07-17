@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::verification::Verifiable;
 
-use super::{model_context::ModelContext, Label, ModelState};
+use super::{model_context::ModelContext, Label};
 use std::fmt::Display;
 
 #[derive(Debug, Clone)]
@@ -54,10 +54,10 @@ pub struct ModelVar {
 impl ModelVar {
 
     pub fn new() -> ModelVar {
-        ModelVar { 
-            name: Label::new(), 
-            var_type: VarType::UnknownType, 
-            address: None 
+        ModelVar {
+            name: Label::new(),
+            var_type: VarType::UnknownType,
+            address: None
         }
     }
 
@@ -131,7 +131,7 @@ impl ModelVar {
         }
         state.set_marking(&self, value);
     }*/
-    
+
     pub fn unbind(&mut self) {
         self.address = None;
         self.var_type = VarType::UnknownType;

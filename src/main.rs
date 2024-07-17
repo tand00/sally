@@ -10,8 +10,6 @@ pub mod log;
 use std::collections::HashMap;
 
 use computation::intervals::Convex;
-use learning::genetic::GeneticOptimizer;
-use learning::OptimizationObjective;
 use models::digraph::Digraph;
 use models::expressions::{Condition, Expr};
 use models::lbl;
@@ -20,14 +18,11 @@ use models::markov::markov_node::MarkovNode;
 use models::model_var::var;
 use models::petri::{PetriPlace, PetriTransition, PetriStructure};
 use models::time::{TimeInterval, Bound::*};
-use nalgebra::Vector2;
-use num_traits::Zero;
 use solution::ClassGraphReachability;
-use translation::observation::{ObservationFunction, PartialObservation};
 
 use crate::models::class_graph::ClassGraph;
 use crate::models::model_solving_graph::ModelSolvingGraph;
-use crate::models::petri::{PetriMaker, PetriNet};
+use crate::models::petri::PetriNet;
 use crate::translation::{PetriClassGraphTranslation, Translation};
 use crate::models::Model;
 use crate::solution::{ClassGraphReachabilitySynthesis, Solution};
@@ -132,7 +127,7 @@ fn main() {
     println!("{:?}", serde_json::to_string(&chain));
 
     let test = TimeInterval::new(Large(3),Strict(10));
-    
+
     println!("{}", test);
     let test = test.intersection(TimeInterval::new(Large(1),Large(5)));
     println!("{}", test);
@@ -168,37 +163,37 @@ fn sample_petri() -> PetriNet {
     let p4 = PetriPlace::new(lbl("p4"));
     let p5 = PetriPlace::new(lbl("p5"));
     let t0 = PetriTransition::new(
-        lbl("t0"), 
+        lbl("t0"),
         vec![lbl("p0")],
-        vec![lbl("p1"), lbl("p4")], 
+        vec![lbl("p1"), lbl("p4")],
         TimeInterval::new(Large(0), Large(0))
     );
     let a = PetriTransition::new(
-        lbl("a"), 
+        lbl("a"),
         vec![lbl("p1")],
-        vec![lbl("p2")], 
+        vec![lbl("p2")],
         TimeInterval::new(Large(0), Large(4))
     );
     let b = PetriTransition::new(
-        lbl("b"), 
+        lbl("b"),
         vec![lbl("p2"), lbl("p4")],
         vec![lbl("p3")],
         TimeInterval::new(Large(3), Large(4))
     );
     let c = PetriTransition::new(
-        lbl("c"), 
+        lbl("c"),
         vec![lbl("p4")],
         vec![lbl("p5")],
         TimeInterval::new(Large(5), Large(6))
     );
     let net = PetriNet::new(
-        vec![p0, p1, p2, p3, p4, p5], 
+        vec![p0, p1, p2, p3, p4, p5],
         vec![t0, a, b, c]
     );
     net
 }
 
-fn sample_digraph() -> Digraph<usize, i32> {
+fn _sample_digraph() -> Digraph<usize, i32> {
     let mut g : Digraph<usize, i32> = Digraph::new();
     g.make_node(3);
     g.make_node(4);

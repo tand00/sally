@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::{HashMap, HashSet}, hash::{DefaultHasher, Hash, Hasher}, sync::{RwLock, Weak}};
+use std::{collections::HashSet, hash::{DefaultHasher, Hash, Hasher}, sync::{RwLock, Weak}};
 
 use nalgebra::DVector;
 use num_traits::Zero;
@@ -9,7 +9,7 @@ use crate::{computation::{virtual_memory::{EvaluationType, VirtualMemory}, DBM},
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StateClass {
-    
+
     pub discrete : VirtualMemory,
     pub dbm : DBM,
     pub to_dbm_index : Vec<usize>,
@@ -18,11 +18,11 @@ pub struct StateClass {
 
     #[serde(skip)]
     pub predecessors : RwLock<Vec<(Weak<StateClass>, Action)>>,
-    
+
 }
 
 impl StateClass {
-    
+
     pub fn generate_image_state(&self) -> ModelState {
         let deadlocked = self.is_deadlocked();
         let clocks : Vec<ClockValue> = self.to_dbm_index.iter().enumerate().map(|(_, i)| {

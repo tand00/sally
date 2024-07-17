@@ -1,4 +1,4 @@
-use std::{collections::HashSet, iter::zip, sync::Arc};
+use std::{collections::HashSet, sync::Arc};
 
 use num_traits::Zero;
 use tapn_place::TAPNPlace;
@@ -29,7 +29,7 @@ impl TAPN {
         for edge in transi.input_edges.read().unwrap().iter() {
             let place = edge.get_node_from();
             vars_updates.push((place.clone(), -edge.data().weight));
-            let state_tokens = &mut places_tokens.places[place.index]; 
+            let state_tokens = &mut places_tokens.places[place.index];
             let input_tokens = &in_tokens.places[place.index];
             state_tokens.remove_set(input_tokens);
         }
@@ -44,7 +44,7 @@ impl TAPN {
             let target = edge.get_node_to();
             vars_updates.push((place.clone(), -edge.data().weight));
             vars_updates.push((target.clone(), edge.data().weight));
-            let state_tokens = &mut places_tokens.places[place.index]; 
+            let state_tokens = &mut places_tokens.places[place.index];
             let input_tokens = &in_tokens.places[place.index];
             state_tokens.remove_set(input_tokens);
             let target_tokens = &mut places_tokens.places[target.index];
@@ -64,9 +64,9 @@ impl TAPN {
 impl Model for TAPN {
 
     fn get_meta() -> ModelMeta {
-        ModelMeta { 
-            name: lbl("TAPN"), 
-            description: String::from("Timed-Arcs Petri net"), 
+        ModelMeta {
+            name: lbl("TAPN"),
+            description: String::from("Timed-Arcs Petri net"),
             characteristics: TIMED | CONTROLLABLE
         }
     }
@@ -107,8 +107,8 @@ impl Model for TAPN {
 
     fn init_initial_storage(&self, mut state : ModelState) -> ModelState {
         let n_places = self.places.len();
-        let mut place_list = TAPNPlaceList { 
-            places : vec![ TAPNTokenList::new() ; n_places ] 
+        let mut place_list = TAPNPlaceList {
+            places : vec![ TAPNTokenList::new() ; n_places ]
         };
         for (i, place) in self.places.iter().enumerate() {
             let n_tokens = state.tokens(place.get_var());

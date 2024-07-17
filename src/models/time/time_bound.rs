@@ -1,4 +1,4 @@
-use std::{cmp::min, fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}, process::Output};
+use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}};
 use num_traits::{Bounded, One, Zero};
 use serde::{Deserialize, Serialize};
 use super::{clock_value::TimeType, ClockValue};
@@ -67,8 +67,8 @@ impl<T : TimeType> Bound<T> {
 
 impl<T> Bound<T> {
 
-    pub fn intersection(self, other : Self) -> Self 
-        where T : PartialOrd 
+    pub fn intersection(self, other : Self) -> Self
+        where T : PartialOrd
     {
         if self <= other {
             self
@@ -101,14 +101,14 @@ impl<T : Add<Output = T>> Add for Bound<T> {
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Infinite, MinusInfinite) | 
+            (Infinite, MinusInfinite) |
                 (MinusInfinite, Infinite) => panic!("Indeterminate sum !"),
-            (Infinite, _) | 
+            (Infinite, _) |
                 (_, Infinite) => Infinite,
-            (MinusInfinite, _) | 
+            (MinusInfinite, _) |
                 (_, MinusInfinite) => MinusInfinite,
-            (Large(x), Strict(y)) | 
-                (Strict(x), Large(y)) | 
+            (Large(x), Strict(y)) |
+                (Strict(x), Large(y)) |
                 (Strict(x), Strict(y)) => Strict(x + y),
             (Large(x), Large(y)) => Large(x + y)
         }
@@ -163,19 +163,19 @@ impl<T : PartialOrd> PartialOrd for Bound<T> {
         match (self, other) {
             (Infinite,Infinite) |
                 (MinusInfinite,MinusInfinite) => Some(std::cmp::Ordering::Equal),
-            (Infinite, _) | 
+            (Infinite, _) |
                 (_, MinusInfinite) => Some(std::cmp::Ordering::Greater),
-            (_, Infinite) | 
+            (_, Infinite) |
                 (MinusInfinite, _) => Some(std::cmp::Ordering::Less),
             (Strict(x), Strict(y)) => x.partial_cmp(y),
             (Large(x), Large(y)) => x.partial_cmp(y),
-            (Strict(x), Large(y)) => 
+            (Strict(x), Large(y)) =>
                 if *x > *y {
                     Some(std::cmp::Ordering::Greater)
                 } else {
                     Some(std::cmp::Ordering::Less)
                 }
-            (Large(x), Strict(y)) => 
+            (Large(x), Strict(y)) =>
                 if *x >= *y {
                     Some(std::cmp::Ordering::Greater)
                 } else {

@@ -1,10 +1,9 @@
 use std::any::Any;
 
-use crate::models::{class_graph::ClassGraph, lbl, model_context::ModelContext, petri::PetriNet, Model, ModelState};
+use crate::models::{lbl, model_context::ModelContext, Model, ModelState};
 
 use super::{Translation, TranslationMeta, TranslationResult, TranslationType::Observation};
 
-use crate::log::*;
 
 pub struct PetriPartialObservation {
     pub initial_state : ModelState,

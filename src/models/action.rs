@@ -75,7 +75,7 @@ impl Display for Action {
             Self::Epsilon => write!(f, "_"),
             Self::Internal(i) => write!(f, "Action({})", i),
             Self::Sync(id, i, j) => write!(f, "Sync({},{},{})", id, i, j),
-            Self::WithData(i, d) => write!(f, "WithData({})", i)
+            Self::WithData(i, _) => write!(f, "WithData({})", i)
         }
     }
 }
@@ -100,7 +100,7 @@ impl ActionPairs {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty() || self.1.is_empty()
     }
-    
+
     pub fn enabled(&self, set : &HashSet<Action>) -> ActionPairs {
         let mut inputs = HashSet::new();
         let mut outputs = HashSet::new();

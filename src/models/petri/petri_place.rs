@@ -1,4 +1,4 @@
-use std::{fmt, sync::{Arc, RwLock, Weak}};
+use std::{fmt, sync::{Arc, RwLock}};
 
 use serde::{Serialize, Deserialize};
 

@@ -1,6 +1,6 @@
 
 
-use std::fmt::{write, Display};
+use std::fmt::Display;
 
 use crate::models::{model_storage::ModelStorage, time::ClockValue};
 
@@ -34,7 +34,7 @@ pub struct TAPNTokenAccessor<'a> {
 }
 
 impl<'a> TAPNTokenAccessor<'a> {
-    
+
     pub fn get(&self) -> TAPNToken {
         TAPNToken {
             count : *self.count,

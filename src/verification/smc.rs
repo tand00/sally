@@ -3,7 +3,7 @@ mod probability_estimation;
 mod probability_float_comparison;
 mod smc_max_seen;
 
-use std::{sync::{mpsc, Arc, Mutex}, thread, time::Instant};
+use std::{sync::{mpsc, Mutex}, thread, time::Instant};
 
 pub use random_run_generator::RandomRunIterator;
 pub use probability_estimation::ProbabilityEstimation;

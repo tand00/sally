@@ -1,4 +1,4 @@
-use std::{cmp::{max, min}, fmt::{self, Display}, ops::Mul};
+use std::{fmt::{self, Display}, ops::Mul};
 use nalgebra::Scalar;
 use num_traits::{Bounded, One, Zero};
 use rand::Rng;
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::computation::intervals::{Convex, Delta, Disjoint, Measurable, ToPositive};
 
-use super::{clock_value::TimeType, Bound, ClockValue, RealTimeBound, TimeBound};
+use super::{clock_value::TimeType, Bound, ClockValue, TimeBound};
 
 use super::Bound::*;
 
@@ -49,7 +49,7 @@ impl TimeInterval {
 
 impl<T> Interval<T> {
 
-    pub fn new(a : Bound<T>, b : Bound<T>) -> Self 
+    pub fn new(a : Bound<T>, b : Bound<T>) -> Self
         where T : TimeType + Scalar + PartialOrd + Bounded
     {
         let res = Interval(a,b);
@@ -64,7 +64,7 @@ impl<T> Interval<T> {
         Interval(Infinite, MinusInfinite)
     }
 
-    pub fn invariant(bound : Bound<T>) -> Self 
+    pub fn invariant(bound : Bound<T>) -> Self
         where T : Zero + PartialEq
     {
         Interval(Bound::zero(), bound)

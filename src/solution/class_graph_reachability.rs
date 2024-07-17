@@ -1,4 +1,3 @@
-use std::time::Instant;
 
 use crate::{models::{class_graph::ClassGraph, lbl, model_context::ModelContext}, verification::{Verifiable, VerificationStatus}};
 

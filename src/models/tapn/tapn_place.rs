@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, time::TimeBound, CompilationResult, Label, ModelState, Node};
 
-use super::{tapn_transition::TAPNTransition, TAPNTokenListAccessor};
+use super::tapn_transition::TAPNTransition;
 
 const TAPN_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 
@@ -13,7 +13,7 @@ pub struct TAPNPlace {
     pub name : Label,
 
     pub invariant : TimeBound,
-    
+
     #[serde(skip)]
     pub index : usize,
 

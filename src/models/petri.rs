@@ -1,13 +1,10 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt,
-    sync::{Arc, Weak},
+    sync::Arc,
 };
 
-use petri_transition::InputEdge;
-use rand::{distributions::Alphanumeric, seq::SliceRandom, Rng};
 
-use crate::learning::genetic::Genetizable;
 
 use super::{
     action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::ClockValue,
@@ -20,7 +17,6 @@ mod petri_transition;
 use num_traits::Zero;
 pub use petri_place::PetriPlace;
 pub use petri_transition::PetriTransition;
-use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -7,13 +7,12 @@ use serde::{Deserialize, Serialize};
 use crate::computation::combinatory::{CartesianProduct, KInVec};
 use crate::computation::intervals::{ContinuousSet, Convex};
 use crate::models::action::Action;
-use crate::models::model_clock::ModelClock;
 use crate::models::model_context::ModelContext;
 use crate::models::time::{ClockValue, TimeInterval};
-use crate::models::{CompilationError, CompilationResult, Edge, Label, ModelState, Node};
+use crate::models::{CompilationResult, Edge, Label, ModelState, Node};
 
 use super::tapn_place::TAPNPlace;
-use super::{tapn_edge::*, TAPNPlaceList, TAPNPlaceListAccessor, TAPNToken, TAPNTokenList, TAPNTokenListAccessor};
+use super::{tapn_edge::*, TAPNPlaceList, TAPNPlaceListAccessor, TAPNTokenList, TAPNTokenListAccessor};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TAPNTransition {
@@ -50,18 +49,18 @@ impl TAPNTransition {
 
     pub fn new(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
         TAPNTransition {
-            label, 
-            from, to, 
-            controllable : true, 
+            label,
+            from, to,
+            controllable : true,
             ..Default::default()
         }
     }
 
     pub fn new_uncontrollable(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
         TAPNTransition {
-            label, 
-            from, to, 
-            controllable : false, 
+            label,
+            from, to,
+            controllable : false,
             ..Default::default()
         }
     }
@@ -227,7 +226,7 @@ impl TAPNTransition {
         let list_len = token_list.tokens.len();
         while first_index < list_len {
             let i = first_index;
-            
+
         }
         dates
     }
@@ -312,7 +311,7 @@ impl fmt::Display for TAPNTransition {
         let to_print = format!("Transition_{}_[{}]->[{}]", self.label, from_str, to_str);
         write!(f, "{}", to_print)
     }
-    
+
 }
 
 impl Clone for TAPNTransition {

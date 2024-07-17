@@ -4,7 +4,6 @@ use std::ops::AddAssign;
 
 use rand::distributions::Alphanumeric;
 use rand::distributions::DistString;
-use rand::rngs::ThreadRng;
 use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
