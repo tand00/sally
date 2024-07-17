@@ -198,10 +198,17 @@ impl Model for PetriNet {
 
     fn next(&self, state: ModelState, action: Action) -> Option<(ModelState, HashSet<Action>)> {
         let transi = self.actions_dic[&action];
-        let (mut new_state, _, _) = self.fire(state, transi);
-        let actions: HashSet<Action> = self.available_actions(&new_state);
-        if actions.is_empty() && self.available_delay(&new_state).is_zero() {
+        let (mut new_state, newen, pers) = self.fire(state, transi);
+        if newen.len() == 0 && pers.len() == 0 {
             new_state.deadlocked = true;
+            return Some((new_state, HashSet::new()));
+        }
+        let mut actions: HashSet<Action> = HashSet::new();
+        for transi_index in newen.iter().chain(pers.iter()) {
+            let transition = &self.transitions[*transi_index];
+            if transition.is_fireable(&new_state) {
+                actions.insert(transition.get_action());
+            }
         }
         Some((new_state, actions))
     }
