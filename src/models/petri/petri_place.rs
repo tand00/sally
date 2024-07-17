@@ -11,15 +11,15 @@ const PETRI_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct PetriPlace {
     pub name: Label,
-    
+
     #[serde(skip)]
     pub index : usize,
 
     #[serde(skip)]
-    pub in_transitions : RwLock<Vec<Weak<PetriTransition>>>,
+    pub in_transitions : RwLock<Vec<Arc<PetriTransition>>>,
 
     #[serde(skip)]
-    pub out_transitions : RwLock<Vec<Weak<PetriTransition>>>,
+    pub out_transitions : RwLock<Vec<Arc<PetriTransition>>>,
 
     #[serde(skip)]
     data_variable : ModelVar
@@ -38,7 +38,7 @@ impl PetriPlace {
     }
 
     pub fn add_upstream_transition(&self, transi : &Arc<PetriTransition>) {
-        self.in_transitions.write().unwrap().push(Arc::downgrade(transi))
+        self.in_transitions.write().unwrap().push(Arc::clone(transi))
     }
 
     pub fn clear_upstream_transitions(&self) {
@@ -46,13 +46,11 @@ impl PetriPlace {
     }
 
     pub fn get_upstream_transitions(&self) -> Vec<Arc<PetriTransition>> {
-        self.in_transitions.read().unwrap().iter().map(|pt| {
-            Weak::upgrade(pt).unwrap()
-        }).collect()
+        self.in_transitions.read().unwrap().clone()
     }
 
     pub fn add_downstream_transition(&self, transi : &Arc<PetriTransition>) {
-        self.out_transitions.write().unwrap().push(Arc::downgrade(transi))
+        self.out_transitions.write().unwrap().push(Arc::clone(transi))
     }
 
     pub fn clear_downstream_transitions(&self) {
@@ -60,9 +58,7 @@ impl PetriPlace {
     }
 
     pub fn get_downstream_transitions(&self) -> Vec<Arc<PetriTransition>> {
-        self.out_transitions.read().unwrap().iter().map(|pt| {
-            Weak::upgrade(pt).unwrap()
-        }).collect()
+        self.out_transitions.read().unwrap().clone()
     }
 
     pub fn set_var(&mut self, var : ModelVar) {

@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, OnceLock, RwLock};
 
 use serde::{Deserialize, Serialize};
 
@@ -29,10 +29,10 @@ pub struct PetriTransition {
     pub index : usize,
 
     #[serde(skip)]
-    pub input_edges: RwLock<Vec<Arc<InputEdge>>>,
+    pub input_edges: OnceLock<Vec<InputEdge>>,
 
     #[serde(skip)]
-    pub output_edges: RwLock<Vec<Arc<OutputEdge>>>,
+    pub output_edges: OnceLock<Vec<OutputEdge>>,
 
     #[serde(skip)]
     pub compiled_guard : Condition,
@@ -56,59 +56,47 @@ impl PetriTransition {
 
     pub fn new(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
-            label, 
-            from, to, 
-            interval, 
-            controllable : true, 
-            guard : Condition::True, 
+            label,
+            from, to,
+            interval,
+            controllable : true,
+            guard : Condition::True,
             ..Default::default()
         }
     }
 
     pub fn new_untimed(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
         PetriTransition {
-            label, 
-            from, to, 
-            controllable : true, 
+            label,
+            from, to,
+            controllable : true,
             interval : TimeInterval::full(),
-            guard : Condition::True, 
+            guard : Condition::True,
             ..Default::default()
         }
     }
 
     pub fn new_uncontrollable(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
-            label, 
-            from, to, 
-            interval, 
-            controllable : false, 
+            label,
+            from, to,
+            interval,
+            controllable : false,
             guard : Condition::True,
             ..Default::default()
         }
     }
 
-    pub fn get_inputs(&self) -> Vec<Arc<InputEdge>> {
-        self.input_edges.read().unwrap().iter().map(|e| {
-            Arc::clone(e)
-        }).collect()
+    pub fn get_inputs(&self) -> &Vec<InputEdge> {
+        self.input_edges.get().unwrap()
     }
 
-    pub fn get_outputs(&self) -> Vec<Arc<OutputEdge>> {
-        self.output_edges.read().unwrap().iter().map(|e| {
-            Arc::clone(e)
-        }).collect()
-    }
-
-    pub fn add_input_edge(&self, edge : Edge<i32, PetriPlace, PetriTransition>) {
-        self.input_edges.write().unwrap().push(Arc::new(edge))
-    }
-
-    pub fn add_output_edge(&self, edge : Edge<i32, PetriTransition, PetriPlace>) {
-        self.output_edges.write().unwrap().push(Arc::new(edge))
+    pub fn get_outputs(&self) -> &Vec<OutputEdge> {
+        self.output_edges.get().unwrap()
     }
 
     pub fn is_enabled(&self, marking : &ModelState) -> bool {
-        for edge in self.input_edges.read().unwrap().iter() {
+        for edge in self.input_edges.get().unwrap().iter() {
             if !edge.has_source() {
                 panic!("Every transition edge should have a source");
             }
@@ -127,22 +115,23 @@ impl PetriTransition {
         self.interval.contains(&clockvalue)
     }
 
-    pub fn clear_edges(&self) {
-        self.input_edges.write().unwrap().clear();
-        self.output_edges.write().unwrap().clear();
+    pub fn clear_edges(&mut self) {
+        self.input_edges = OnceLock::new();
+        self.output_edges = OnceLock::new();
     }
 
     pub fn inertia(&self) -> i32 {
         let mut res : i32 = 0;
-        for e in self.input_edges.read().unwrap().iter() {
+        for e in self.input_edges.get().unwrap().iter() {
             res -= e.weight;
         }
-        for e in self.output_edges.read().unwrap().iter() {
+        for e in self.output_edges.get().unwrap().iter() {
             res += e.weight;
         }
         res
     }
 
+    #[inline]
     pub fn is_conservative(self) -> bool {
         return self.inertia() == 0
     }
@@ -151,6 +140,7 @@ impl PetriTransition {
         self.clock = clock;
     }
 
+    #[inline]
     pub fn get_clock(&self) -> &ModelClock {
         &self.clock
     }
@@ -159,8 +149,22 @@ impl PetriTransition {
         self.action = action
     }
 
+    #[inline]
     pub fn get_action(&self) -> Action {
         self.action.clone()
+    }
+
+    pub fn untimed(&self) -> Self {
+        PetriTransition {
+            label: self.label.clone(),
+            from: self.from.clone(),
+            to: self.to.clone(),
+            interval: TimeInterval::full(),
+            controllable : self.controllable.clone(),
+            guard : self.guard.clone(),
+            index : self.index,
+            ..Default::default()
+        }
     }
 
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {
@@ -189,7 +193,7 @@ impl fmt::Display for PetriTransition {
         let to_print = format!("Transition_{}_{}_[{}]->[{}]", self.label, self.interval, from_str, to_str);
         write!(f, "{}", to_print)
     }
-    
+
 }
 
 impl Clone for PetriTransition {

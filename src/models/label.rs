@@ -2,6 +2,10 @@ use std::fmt;
 use std::ops::Add;
 use std::ops::AddAssign;
 
+use rand::distributions::Alphanumeric;
+use rand::distributions::DistString;
+use rand::rngs::ThreadRng;
+use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -36,6 +40,10 @@ impl Label {
         return self.0.starts_with(&prefix.0)
     }
 
+    pub fn new_random(rng : &mut impl Rng, len : usize) -> Self {
+        Self::from(Alphanumeric.sample_string(rng, len))
+    }
+
 }
 
 impl Default for Label {
@@ -51,7 +59,7 @@ impl<T : ToString> Add<T> for Label {
     }
 }
 
-impl<T : ToString> AddAssign<T> for Label {    
+impl<T : ToString> AddAssign<T> for Label {
     fn add_assign(&mut self, rhs: T) {
         self.0 += &rhs.to_string()
     }

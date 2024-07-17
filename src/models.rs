@@ -1,35 +1,38 @@
-mod label;
-mod node;
 mod edge;
+mod label;
 mod model_state;
+mod node;
 
 use std::{any::Any, collections::HashSet};
 
+pub use edge::Edge;
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
 pub use node::Node;
-pub use edge::Edge;
 use num_traits::Zero;
-use rand::{thread_rng, Rng, seq::SliceRandom};
+use rand::{seq::SliceRandom, thread_rng, Rng};
 
-pub mod time;
-pub mod model_var;
-pub mod model_clock;
-pub mod model_storage;
 pub mod action;
-pub mod model_context;
-pub mod expressions;
-pub mod program;
-pub mod petri;
+pub mod caching;
 pub mod class_graph;
-pub mod model_solving_graph;
 pub mod digraph;
-pub mod tapn;
-pub mod model_network;
+pub mod expressions;
 pub mod markov;
+pub mod model_clock;
+pub mod model_context;
+pub mod model_network;
+pub mod model_solving_graph;
+pub mod model_storage;
+pub mod model_var;
+pub mod petri;
+pub mod program;
 pub mod run;
+pub mod tapn;
+pub mod time;
 
-use self::{action::Action, model_characteristics::*, model_context::ModelContext, time::ClockValue};
+use self::{
+    action::Action, model_characteristics::*, model_context::ModelContext, time::ClockValue,
+};
 
 #[derive(Debug, Clone)]
 pub struct CompilationError;
@@ -40,18 +43,21 @@ pub mod model_characteristics {
 
     use super::{lbl, Label};
     pub type ModelCharacteristics = u16;
-    pub const NONE : ModelCharacteristics = 0;
-    pub const TIMED : ModelCharacteristics = flag!(0);
-    pub const CONTROLLABLE : ModelCharacteristics = flag!(1);
-    pub const STOCHASTIC : ModelCharacteristics = flag!(2);
-    pub const SYMBOLIC : ModelCharacteristics = flag!(3);
+    pub const NONE: ModelCharacteristics = 0;
+    pub const TIMED: ModelCharacteristics = flag!(0);
+    pub const CONTROLLABLE: ModelCharacteristics = flag!(1);
+    pub const STOCHASTIC: ModelCharacteristics = flag!(2);
+    pub const SYMBOLIC: ModelCharacteristics = flag!(3);
 
-    pub fn has_characteristic(model_characteristics : ModelCharacteristics, characteristic : ModelCharacteristics) -> bool {
+    pub fn has_characteristic(
+        model_characteristics: ModelCharacteristics,
+        characteristic: ModelCharacteristics,
+    ) -> bool {
         (model_characteristics & characteristic) != 0
     }
 
-    pub fn characteristics_label(model : ModelCharacteristics) -> Label {
-        let mut characteritics : Vec<&str> = Vec::new();
+    pub fn characteristics_label(model: ModelCharacteristics) -> Label {
+        let mut characteritics: Vec<&str> = Vec::new();
         if model == 0 {
             return lbl("()");
         }
@@ -69,67 +75,83 @@ pub mod model_characteristics {
         }
         Label::from(characteritics.join("|"))
     }
-
 }
 
 use model_characteristics::ModelCharacteristics;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelMeta {
-    pub name : Label,
-    pub description : String,
-    pub characteristics : ModelCharacteristics,
+    pub name: Label,
+    pub description: String,
+    pub characteristics: ModelCharacteristics,
 }
 impl ModelMeta {
-
-    pub fn is_timed(&self) -> bool where Self : Sized {
+    pub fn is_timed(&self) -> bool
+    where
+        Self: Sized,
+    {
         has_characteristic(self.characteristics, TIMED)
     }
 
-    pub fn is_stochastic(&self) -> bool where Self : Sized {
+    pub fn is_stochastic(&self) -> bool
+    where
+        Self: Sized,
+    {
         has_characteristic(self.characteristics, STOCHASTIC)
     }
-
 }
 
 impl std::fmt::Display for ModelMeta {
-
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, " [.] Model ({})\n | Description : \n | {}\n | Characteristics : {}", self.name, self.description, characteristics_label(self.characteristics))
+        write!(
+            f,
+            " [.] Model ({})\n | Description : \n | {}\n | Characteristics : {}",
+            self.name,
+            self.description,
+            characteristics_label(self.characteristics)
+        )
     }
-    
 }
 
 /// Generic trait that should be implemented by all Timed Transition Systems
-pub trait Model : Any {
-    
+pub trait Model: Any {
     // Given a state and an action, returns a state and actions available
-    fn next(&self, state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)>;
+    fn next(&self, state: ModelState, action: Action) -> Option<(ModelState, HashSet<Action>)>;
 
-    fn available_actions(&self, state : &ModelState) -> HashSet<Action>;
+    fn available_actions(&self, state: &ModelState) -> HashSet<Action>;
 
-    fn available_delay(&self, state : &ModelState) -> ClockValue {
+    fn available_delay(&self, state: &ModelState) -> ClockValue {
         let _ = state;
-        ClockValue::zero()
+        if self.is_timed() {
+            ClockValue::zero()
+        } else {
+            ClockValue::infinity()
+        }
     }
 
-    fn delay(&self, state : ModelState, dt : ClockValue) -> Option<ModelState> {
+    fn delay(&self, state: ModelState, dt: ClockValue) -> Option<ModelState> {
         let _ = dt;
         let _ = state;
-        None
+        Some(state)
     }
 
-    fn init_initial_clocks(&self, state : ModelState) -> ModelState {
+    fn init_initial_clocks(&self, state: ModelState) -> ModelState {
         state
     }
 
-    fn init_initial_storage(&self, state : ModelState) -> ModelState {
+    fn init_initial_storage(&self, state: ModelState) -> ModelState {
         state
     }
 
-    fn get_meta() -> ModelMeta where Self : Sized;
+    fn get_meta() -> ModelMeta
+    where
+        Self: Sized;
 
-    fn get_model_meta(&self) -> ModelMeta where Self : Sized { // Same as before but instance
+    fn get_model_meta(&self) -> ModelMeta
+    where
+        Self: Sized,
+    {
+        // Same as before but instance
         Self::get_meta()
     }
 
@@ -137,9 +159,9 @@ pub trait Model : Any {
 
     fn is_stochastic(&self) -> bool;
 
-    // Default implementation of random_next sampler for SMC. 
+    // Default implementation of random_next sampler for SMC.
     // Should be overrided by stochastic models with a more relevant behaviour !
-    fn random_next(&self, state : ModelState) -> (Option<ModelState>, ClockValue, Option<Action>) {
+    fn random_next(&self, state: ModelState) -> (Option<ModelState>, ClockValue, Option<Action>) {
         let mut rng = thread_rng();
         let max_delay = self.available_delay(&state);
         let mut delayed_state = state;
@@ -149,10 +171,10 @@ pub trait Model : Any {
             delay = rng.gen_range(delay_range);
             delayed_state = self.delay(delayed_state, delay).unwrap();
         }
-        let actions : Vec<Action> = self.available_actions(&delayed_state).into_iter().collect();
+        let actions: Vec<Action> = self.available_actions(&delayed_state).into_iter().collect();
         let action = actions.choose(&mut rng);
         if action.is_none() {
-            return (Some(delayed_state), delay, None)
+            return (Some(delayed_state), delay, None);
         }
         let action = action.unwrap().clone();
         let next = self.next(delayed_state, action.clone());
@@ -162,7 +184,7 @@ pub trait Model : Any {
         (Some(next.unwrap().0), delay, Some(action))
     }
 
-    fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()>;
+    fn compile(&mut self, context: &mut ModelContext) -> CompilationResult<()>;
 
     fn singleton(&mut self) -> ModelContext {
         let mut ctx = ModelContext::new();
@@ -171,14 +193,11 @@ pub trait Model : Any {
     }
 
     fn get_id(&self) -> usize;
-
 }
 
 // Trait that should implement Send and Sync, to be shared amongst threads and do parallel verification by creating local models
-pub trait ModelMaker<T : Model> : Send + Sync {
-
-    fn create_maker(model : T) -> Self;
+pub trait ModelMaker<T: Model>: Send + Sync {
+    fn create_maker(model: T) -> Self;
 
     fn make(&self) -> (T, ModelContext);
-
 }
