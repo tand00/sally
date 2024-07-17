@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::computation::intervals::{Convex, Delta, Disjoint, Measurable, ToPositive};
 
-use super::{clock_value::TimeType, Bound, ClockValue, TimeBound};
+use super::{clock_value::TimeType, Bound, ClockValue, RealTimeBound, TimeBound};
 
 use super::Bound::*;
 
@@ -72,25 +72,25 @@ impl<T> Interval<T> {
 
 }
 
-impl Mul for TimeInterval { // Intersection
+impl<T : TimeType + Scalar + PartialOrd + Bounded> Mul for Interval<T>  { // Intersection
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         self.intersection(rhs)
     }
 }
 
-impl One for TimeInterval {
+impl<T : TimeType + Scalar + PartialOrd + Bounded> One for Interval<T> {
     fn one() -> Self {
-        TimeInterval::full()
+        Interval::full()
     }
     fn is_one(&self) -> bool {
         self.0 == MinusInfinite && self.1 == Infinite
     }
 }
 
-impl Default for TimeInterval {
+impl<T : TimeType + Scalar + PartialOrd + Bounded> Default for Interval<T> {
     fn default() -> Self {
-        TimeInterval::full()
+        Interval::full()
     }
 }
 
@@ -256,11 +256,14 @@ impl<T : TimeType + Scalar + PartialOrd + Bounded> Convex<ClockValue> for Interv
 }
 
 impl Measurable for TimeInterval {
-
     fn len(&self) -> f64 {
         ClockValue::from(self.1 - self.0).float()
     }
-
+}
+impl Measurable for RealTimeInterval {
+    fn len(&self) -> f64 {
+        ClockValue::from(self.1 - self.0).float()
+    }
 }
 
 impl<T : TimeType + Scalar + PartialOrd + Bounded + Zero> ToPositive for Interval<T> {
@@ -272,10 +275,20 @@ impl<T : TimeType + Scalar + PartialOrd + Bounded + Zero> ToPositive for Interva
 }
 
 impl Delta<TimeBound> for TimeInterval {
-
     fn delta(&mut self, dx : TimeBound) {
         self.0 += dx;
         self.1 += dx;
     }
-
+}
+impl Delta<RealTimeBound> for RealTimeInterval {
+    fn delta(&mut self, dx : RealTimeBound) {
+        self.0 += dx;
+        self.1 += dx;
+    }
+}
+impl Delta<ClockValue> for RealTimeInterval {
+    fn delta(&mut self, dx : ClockValue) {
+        self.0 += Large(dx);
+        self.1 += Large(dx);
+    }
 }

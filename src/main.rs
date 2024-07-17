@@ -162,25 +162,25 @@ fn sample_petri() -> PetriNet {
     let p3 = PetriPlace::new(lbl("p3"));
     let p4 = PetriPlace::new(lbl("p4"));
     let p5 = PetriPlace::new(lbl("p5"));
-    let t0 = PetriTransition::new(
+    let t0 = PetriTransition::safe(
         lbl("t0"),
         vec![lbl("p0")],
         vec![lbl("p1"), lbl("p4")],
         TimeInterval::new(Large(0), Large(0))
     );
-    let a = PetriTransition::new(
+    let a = PetriTransition::safe(
         lbl("a"),
         vec![lbl("p1")],
         vec![lbl("p2")],
         TimeInterval::new(Large(0), Large(4))
     );
-    let b = PetriTransition::new(
+    let b = PetriTransition::safe(
         lbl("b"),
         vec![lbl("p2"), lbl("p4")],
         vec![lbl("p3")],
         TimeInterval::new(Large(3), Large(4))
     );
-    let c = PetriTransition::new(
+    let c = PetriTransition::safe(
         lbl("c"),
         vec![lbl("p4")],
         vec![lbl("p5")],

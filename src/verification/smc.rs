@@ -79,9 +79,7 @@ pub trait SMCQueryVerification {
                     let mut must_do_another = *must_continue.lock().unwrap();
                     while must_do_another {
                         let result = Self::execute_run(model, initial_state, &mut thread_query);
-                        if tx.send(result).is_err() {
-                            panic!("Unable to send result !");
-                        }
+                        tx.send(result).expect("Unable to send result !");
                         must_do_another = *must_continue.lock().unwrap();
                     }
                 });

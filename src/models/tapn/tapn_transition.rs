@@ -1,6 +1,6 @@
 use std::cmp::min;
 use std::fmt;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, OnceLock, RwLock};
 
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ use crate::computation::combinatory::{CartesianProduct, KInVec};
 use crate::computation::intervals::{ContinuousSet, Convex};
 use crate::models::action::Action;
 use crate::models::model_context::ModelContext;
-use crate::models::time::{ClockValue, TimeInterval};
+use crate::models::time::{ClockValue, RealTimeInterval, TimeInterval};
 use crate::models::{CompilationResult, Edge, Label, ModelState, Node};
 
 use super::tapn_place::TAPNPlace;
@@ -19,19 +19,20 @@ pub struct TAPNTransition {
     pub label : Label,
     pub from : Vec<Label>,
     pub to : Vec<Label>,
+    pub transports : Vec<(Label, Label)>,
     pub controllable : bool,
 
     #[serde(skip)]
     pub index : usize,
 
     #[serde(skip)]
-    pub input_edges : RwLock<Vec<Arc<InputEdge>>>,
+    pub input_edges : OnceLock<Vec<InputEdge>>,
     #[serde(skip)]
-    pub output_edges : RwLock<Vec<Arc<OutputEdge>>>,
+    pub output_edges : OnceLock<Vec<OutputEdge>>,
     #[serde(skip)]
-    pub inhibitors : RwLock<Vec<Arc<InputEdge>>>,
+    pub inhibitors_edges : OnceLock<Vec<InputEdge>>,
     #[serde(skip)]
-    pub transports : RwLock<Vec<Arc<TransportEdge>>>,
+    pub transports_edges : OnceLock<Vec<TransportEdge>>,
 
     #[serde(skip)]
     pub action : Action,
@@ -65,40 +66,32 @@ impl TAPNTransition {
         }
     }
 
-    pub fn get_inputs(&self) -> Vec<Arc<InputEdge>> {
-        self.input_edges.read().unwrap().iter().map(|e| {
-            Arc::clone(e)
-        }).collect()
+    pub fn get_inputs(&self) -> &Vec<InputEdge> {
+        self.input_edges.get().unwrap()
     }
 
-    pub fn get_outputs(&self) -> Vec<Arc<OutputEdge>> {
-        self.output_edges.read().unwrap().iter().map(|e| {
-            Arc::clone(e)
-        }).collect()
+    pub fn get_outputs(&self) -> &Vec<OutputEdge> {
+        self.output_edges.get().unwrap()
     }
 
-    pub fn get_transports(&self) -> Vec<Arc<TransportEdge>> {
-        self.transports.read().unwrap().iter().map(|e| {
-            Arc::clone(e)
-        }).collect()
+    pub fn get_transports(&self) -> &Vec<TransportEdge> {
+        self.transports_edges.get().unwrap()
     }
 
-    pub fn get_inhibitors(&self) -> Vec<Arc<InputEdge>> {
-        self.inhibitors.read().unwrap().iter().map(|e| {
-            Arc::clone(e)
-        }).collect()
-    }
-
-    pub fn add_input_edge(&self, edge : Edge<TAPNEdgeData, TAPNPlace, TAPNTransition>) {
-        self.input_edges.write().unwrap().push(Arc::new(edge))
-    }
-
-    pub fn add_output_edge(&self, edge : Edge<TAPNEdgeData, TAPNTransition, TAPNPlace>) {
-        self.output_edges.write().unwrap().push(Arc::new(edge))
+    pub fn get_inhibitors(&self) -> &Vec<InputEdge> {
+        self.inhibitors_edges.get().unwrap()
     }
 
     pub fn is_enabled(&self, marking : &ModelState) -> bool {
-        for edge in self.input_edges.read().unwrap().iter() {
+        for edge in self.get_inputs().iter() {
+            if !edge.has_source() {
+                panic!("Every transition edge should have a source");
+            }
+            if marking.tokens(edge.get_node_from().get_var()) < edge.data().weight as i32 {
+                return false
+            }
+        }
+        for edge in self.get_transports().iter() {
             if !edge.has_source() {
                 panic!("Every transition edge should have a source");
             }
@@ -115,29 +108,29 @@ impl TAPNTransition {
             if interval.contains(&token.get_age()) {
                 remaining -= *token.count;
                 if remaining <= 0 {
-                    return false;
+                    return true;
                 }
             }
         }
-        true
+        false
     }
 
     pub fn is_fireable(&self, mut place_list : TAPNPlaceListAccessor) -> bool {
-        for inhib in self.inhibitors.read().unwrap().iter() {
+        for inhib in self.get_inhibitors().iter() {
             let place_index = inhib.get_node_from().index;
             let token_list = &mut place_list.places[place_index];
             if Self::has_enough(&inhib.data().interval, inhib.data().weight, token_list) {
                 return false;
             }
         }
-        for edge in self.input_edges.read().unwrap().iter() {
+        for edge in self.get_inputs().iter() {
             let place_index = edge.get_node_from().index;
             let token_list = &mut place_list.places[place_index];
             if !Self::has_enough(&edge.data().interval, edge.data().weight, token_list) {
                 return false;
             }
         }
-        for edge in self.transports.read().unwrap().iter() {
+        for edge in self.get_transports().iter() {
             let place_index = edge.get_node_from().index;
             let mut interval = edge.data().interval.clone();
             interval.1 = min(interval.1, edge.get_node_to().invariant);
@@ -179,14 +172,14 @@ impl TAPNTransition {
         let mut res = Vec::new();
         let mut place_combinations = Vec::new();
         let mut places_index = Vec::new();
-        for inhib in self.inhibitors.read().unwrap().iter() {
+        for inhib in self.get_inhibitors().iter() {
             let place_index = inhib.get_node_from().index;
             let token_list = &mut place_list.places[place_index];
             if Self::has_enough(&inhib.data().interval, inhib.data().weight, token_list) {
                 return Vec::new();
             }
         }
-        for edge in self.input_edges.read().unwrap().iter() {
+        for edge in self.get_inputs().iter() {
             let place_index = edge.get_node_from().index;
             places_index.push(place_index);
             let token_list = &mut place_list.places[place_index];
@@ -196,7 +189,7 @@ impl TAPNTransition {
             }
             place_combinations.push(combinations);
         }
-        for edge in self.transports.read().unwrap().iter() {
+        for edge in self.get_transports().iter() {
             let place_index = edge.get_node_from().index;
             places_index.push(place_index);
             let token_list = &mut place_list.places[place_index];
@@ -219,7 +212,7 @@ impl TAPNTransition {
         res
     }
 
-    fn arc_dates(interval : &TimeInterval, weight : usize, token_list : &mut TAPNTokenListAccessor) -> ContinuousSet<ClockValue, TimeInterval> {
+    fn arc_dates(interval : &TimeInterval, weight : usize, token_list : &mut TAPNTokenListAccessor) -> ContinuousSet<ClockValue, RealTimeInterval> {
         let mut dates = ContinuousSet::EmptySet;
         let mut first_index : usize = 0;
         let mut consumed : usize = 0;
@@ -231,9 +224,9 @@ impl TAPNTransition {
         dates
     }
 
-    pub fn firing_dates(&self, mut place_list : TAPNPlaceListAccessor) -> ContinuousSet<ClockValue, TimeInterval> {
+    pub fn firing_dates(&self, mut place_list : TAPNPlaceListAccessor) -> ContinuousSet<ClockValue, RealTimeInterval> {
         let mut dates = ContinuousSet::full();
-        for edge in self.inhibitors.read().unwrap().iter() {
+        for edge in self.get_inhibitors().iter() {
             let place_index = edge.get_node_from().index;
             let tokens = &mut place_list.places[place_index];
             let intervals = Self::arc_dates(&edge.data().interval, edge.data().weight as usize, tokens);
@@ -242,7 +235,7 @@ impl TAPNTransition {
                 return dates;
             }
         }
-        for edge in self.input_edges.read().unwrap().iter() {
+        for edge in self.get_inputs().iter() {
             let place_index = edge.get_node_from().index;
             let tokens = &mut place_list.places[place_index];
             let intervals = Self::arc_dates(&edge.data().interval, edge.data().weight as usize, tokens);
@@ -251,7 +244,7 @@ impl TAPNTransition {
                 return dates;
             }
         }
-        for edge in self.transports.read().unwrap().iter() {
+        for edge in self.get_transports().iter() {
             let place_index = edge.get_node_from().index;
             let target_inv = TimeInterval::invariant(edge.get_node_to().invariant);
             let tokens = &mut place_list.places[place_index];
@@ -265,17 +258,17 @@ impl TAPNTransition {
         dates
     }
 
-    pub fn clear_edges(&self) {
-        self.input_edges.write().unwrap().clear();
-        self.output_edges.write().unwrap().clear();
+    pub fn clear_edges(&mut self) {
+        self.input_edges = OnceLock::new();
+        self.output_edges = OnceLock::new();
     }
 
     pub fn inertia(&self) -> i32 {
         let mut res : i32 = 0;
-        for e in self.input_edges.read().unwrap().iter() {
+        for e in self.get_inputs().iter() {
             res -= e.data().weight as i32;
         }
-        for e in self.output_edges.read().unwrap().iter() {
+        for e in self.get_outputs().iter() {
             res += e.data().weight as i32;
         }
         res

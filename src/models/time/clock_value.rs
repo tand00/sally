@@ -1,8 +1,8 @@
 use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}};
-use num_traits::{One, Zero};
+use num_traits::{Bounded, One, Zero};
 use rand::{distributions::{uniform::{SampleBorrow, SampleUniform, UniformFloat, UniformSampler}, Distribution, Standard}, Rng};
 use serde::{Deserialize, Serialize};
-use super::TimeBound;
+use super::{RealTimeBound, TimeBound};
 
 // Wrapper for f64 to implement extern traits
 #[derive(PartialOrd, Clone, Copy, Debug, Serialize, Deserialize)]
@@ -143,6 +143,15 @@ impl PartialEq for ClockValue {
 }
 impl Eq for ClockValue {}
 
+impl Bounded for ClockValue {
+    fn min_value() -> Self {
+        ClockValue::neg_infinity()
+    }
+    fn max_value() -> Self {
+        ClockValue::infinity()
+    }
+}
+
 impl Distribution<ClockValue> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ClockValue {
         let rand_f = rng.gen();
@@ -205,6 +214,18 @@ impl From<TimeBound> for ClockValue {
         }
     }
 }
+
+impl From<RealTimeBound> for ClockValue {
+    fn from(value: RealTimeBound) -> Self {
+        match value {
+            RealTimeBound::Infinite => ClockValue::infinity(),
+            RealTimeBound::MinusInfinite => ClockValue::neg_infinity(),
+            RealTimeBound::Large(x) => x,
+            RealTimeBound::Strict(x) => x
+        }
+    }
+}
+
 
 impl From<f64> for ClockValue {
     fn from(value: f64) -> Self {

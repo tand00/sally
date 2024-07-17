@@ -19,8 +19,8 @@ pub type OutputEdge = Edge<i32, PetriTransition, PetriPlace>;
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct PetriTransition {
     pub label: Label,
-    pub from: Vec<Label>,
-    pub to: Vec<Label>,
+    pub from: Vec<(Label, i32)>,
+    pub to: Vec<(Label, i32)>,
     pub interval: TimeInterval,
     pub controllable : bool,
     pub guard : Condition,
@@ -54,7 +54,7 @@ impl Node for PetriTransition {
 
 impl PetriTransition {
 
-    pub fn new(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
+    pub fn new(label : Label, from : Vec<(Label, i32)>, to : Vec<(Label, i32)>, interval : TimeInterval) -> Self {
         PetriTransition {
             label,
             from, to,
@@ -65,7 +65,19 @@ impl PetriTransition {
         }
     }
 
-    pub fn new_untimed(label : Label, from : Vec<Label>, to : Vec<Label>) -> Self {
+    pub fn safe(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
+        PetriTransition {
+            label,
+            from : from.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(), 
+            to : to.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(),
+            interval,
+            controllable : true,
+            guard : Condition::True,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_untimed(label : Label, from : Vec<(Label, i32)>, to : Vec<(Label, i32)>) -> Self {
         PetriTransition {
             label,
             from, to,
@@ -76,7 +88,7 @@ impl PetriTransition {
         }
     }
 
-    pub fn new_uncontrollable(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
+    pub fn new_uncontrollable(label : Label, from : Vec<(Label, i32)>, to : Vec<(Label, i32)>, interval : TimeInterval) -> Self {
         PetriTransition {
             label,
             from, to,
@@ -188,8 +200,8 @@ impl fmt::Display for PetriTransition {
 
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // TODO : Maybe add from / to in the display text ?
-        let from_str : Vec<String> = self.from.iter().map( |lbl| lbl.to_string() ).collect();
-        let to_str : Vec<String> = self.to.iter().map( |lbl| lbl.to_string() ).collect();
+        let from_str : Vec<String> = self.from.iter().map( |lbl| lbl.0.to_string() ).collect();
+        let to_str : Vec<String> = self.to.iter().map( |lbl| lbl.0.to_string() ).collect();
         let from_str = from_str.join(",");
         let to_str = to_str.join(",");
         let to_print = format!("Transition_{}_{}_[{}]->[{}]", self.label, self.interval, from_str, to_str);

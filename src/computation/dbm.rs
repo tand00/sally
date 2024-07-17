@@ -5,7 +5,7 @@ use std::{
 };
 
 use nalgebra::DMatrix;
-use num_traits::{Bounded, Zero};
+use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
 use crate::models::time::{TimeBound, TimeInterval};
@@ -23,7 +23,7 @@ impl DBM {
                 if i == j {
                     TimeBound::zero()
                 } else {
-                    TimeBound::max_value()
+                    TimeBound::Infinite
                 }
             }),
         }

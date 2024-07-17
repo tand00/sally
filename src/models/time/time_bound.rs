@@ -235,3 +235,30 @@ impl Default for TimeBound {
         Infinite
     }
 }
+
+
+impl AddAssign<ClockValue> for RealTimeBound {
+    fn add_assign(&mut self, rhs: ClockValue) {
+        *self += Large(rhs)
+    }
+}
+
+impl SubAssign<ClockValue> for RealTimeBound {
+    fn sub_assign(&mut self, rhs: ClockValue) {
+        *self -= Large(rhs)
+    }
+}
+
+impl Add<ClockValue> for RealTimeBound {
+    type Output = Self;
+    fn add(self, rhs: ClockValue) -> Self::Output {
+        self + Large(rhs)
+    }
+}
+
+impl Sub<ClockValue> for RealTimeBound {
+    type Output = Self;
+    fn sub(self, rhs: ClockValue) -> Self::Output {
+        self - Large(rhs)
+    }
+}

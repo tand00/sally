@@ -4,8 +4,6 @@ use std::{
     sync::Arc,
 };
 
-
-
 use super::{
     action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::ClockValue,
     CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node,
@@ -139,10 +137,10 @@ impl PetriNet {
         let guard_vars = transition.compiled_guard.get_objects().vars;
         let mut input_edges = Vec::new();
         let mut output_edges = Vec::new();
-        for place_label in from_labels.iter() {
-            let place_index = self.places_dic[place_label];
+        for place_from in from_labels.iter() {
+            let place_index = self.places_dic[&place_from.0];
             let place = &self.places[place_index];
-            let in_edge = Edge::data_edge(place, transition, 1);
+            let in_edge = Edge::data_edge(place, transition, place_from.1);
             input_edges.push(in_edge);
             place.add_downstream_transition(transition);
         }
@@ -154,10 +152,10 @@ impl PetriNet {
             }
             place.add_downstream_transition(transition);
         }
-        for place_label in to_labels.iter() {
-            let place_index = self.places_dic[place_label];
+        for place_to in to_labels.iter() {
+            let place_index = self.places_dic[&place_to.0];
             let place = &self.places[place_index];
-            let out_edge = Edge::data_edge(transition, place, 1);
+            let out_edge = Edge::data_edge(transition, place, place_to.1);
             output_edges.push(out_edge);
             place.add_upstream_transition(transition);
         }
@@ -220,9 +218,7 @@ impl Model for PetriNet {
         if !self.is_timed() {
             return ClockValue::infinity();
         }
-        let m = self
-            .transitions
-            .iter()
+        let m = self.transitions.iter()
             .filter_map(|t| {
                 let c = state.get_clock_value(t.get_clock());
                 if c.is_enabled() {

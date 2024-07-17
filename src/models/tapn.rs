@@ -1,11 +1,12 @@
 use std::{collections::HashSet, sync::Arc};
 
+use nalgebra::min;
 use num_traits::Zero;
 use tapn_place::TAPNPlace;
 use tapn_token::*;
 use tapn_transition::TAPNTransition;
 
-use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::ClockValue, CompilationResult, Model, ModelMeta, ModelState, CONTROLLABLE, TIMED};
+use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Model, ModelMeta, ModelState, CONTROLLABLE, TIMED};
 
 pub mod tapn_place;
 pub mod tapn_edge;
@@ -26,20 +27,20 @@ impl TAPN {
         let transi = &(self.transitions[transi]);
         let mut modified_places = HashSet::new();
         let mut vars_updates = Vec::new();
-        for edge in transi.input_edges.read().unwrap().iter() {
+        for edge in transi.get_inputs().iter() {
             let place = edge.get_node_from();
             vars_updates.push((place.clone(), -edge.data().weight));
             let state_tokens = &mut places_tokens.places[place.index];
             let input_tokens = &in_tokens.places[place.index];
             state_tokens.remove_set(input_tokens);
         }
-        for edge in transi.output_edges.read().unwrap().iter() {
+        for edge in transi.get_outputs().iter() {
             let target = edge.get_node_to();
             vars_updates.push((target.clone(), edge.data().weight));
             let target_tokens = &mut places_tokens.places[target.index];
             target_tokens.insert(TAPNToken { count: edge.data().weight, age: ClockValue::zero() });
         }
-        for edge in transi.transports.read().unwrap().iter() {
+        for edge in transi.get_transports().iter() {
             let place = edge.get_node_from();
             let target = edge.get_node_to();
             vars_updates.push((place.clone(), -edge.data().weight));
@@ -91,6 +92,10 @@ impl Model for TAPN {
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
         HashSet::new()
+    }
+
+    fn available_delay(&self, state: &ModelState) -> ClockValue {
+        ClockValue::zero()
     }
 
     fn get_id(&self) -> usize {

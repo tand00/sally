@@ -1,10 +1,10 @@
-use std::{fmt, sync::{Arc, RwLock, Weak}};
+use std::{cmp::max, fmt, sync::{Arc, RwLock}};
 
+use num_traits::Zero;
 use serde::{Serialize, Deserialize};
 
-use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, time::TimeBound, CompilationResult, Label, ModelState, Node};
-
-use super::tapn_transition::TAPNTransition;
+use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, time::{Bound, ClockValue, RealTimeBound, TimeBound}, CompilationResult, Label, ModelState, Node};
+use super::{tapn_transition::TAPNTransition, TAPNTokenList, TAPNTokenListAccessor};
 
 const TAPN_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 
@@ -18,10 +18,10 @@ pub struct TAPNPlace {
     pub index : usize,
 
     #[serde(skip)]
-    in_transitions : RwLock<Vec<Weak<TAPNTransition>>>,
+    in_transitions : RwLock<Vec<Arc<TAPNTransition>>>,
 
     #[serde(skip)]
-    out_transitions : RwLock<Vec<Weak<TAPNTransition>>>,
+    out_transitions : RwLock<Vec<Arc<TAPNTransition>>>,
 
     #[serde(skip)]
     data_variable : ModelVar
@@ -52,7 +52,7 @@ impl TAPNPlace {
     }
 
     pub fn add_upstream_transition(&self, transi : &Arc<TAPNTransition>) {
-        self.in_transitions.write().unwrap().push(Arc::downgrade(transi))
+        self.in_transitions.write().unwrap().push(Arc::clone(transi))
     }
 
     pub fn clear_upstream_transitions(&self) {
@@ -60,13 +60,11 @@ impl TAPNPlace {
     }
 
     pub fn get_upstream_transitions(&self) -> Vec<Arc<TAPNTransition>> {
-        self.in_transitions.read().unwrap().iter().map(|pt| {
-            Weak::upgrade(pt).unwrap()
-        }).collect()
+        self.in_transitions.read().unwrap().clone()
     }
 
     pub fn add_downstream_transition(&self, transi : &Arc<TAPNTransition>) {
-        self.out_transitions.write().unwrap().push(Arc::downgrade(transi))
+        self.out_transitions.write().unwrap().push(Arc::clone(transi))
     }
 
     pub fn clear_downstream_transitions(&self) {
@@ -74,9 +72,7 @@ impl TAPNPlace {
     }
 
     pub fn get_downstream_transitions(&self) -> Vec<Arc<TAPNTransition>> {
-        self.out_transitions.read().unwrap().iter().map(|pt| {
-            Weak::upgrade(pt).unwrap()
-        }).collect()
+        self.out_transitions.read().unwrap().clone()
     }
 
     pub fn set_var(&mut self, var : ModelVar) {
@@ -89,6 +85,17 @@ impl TAPNPlace {
 
     pub fn n_tokens(&self, state : &ModelState) -> i32 {
         state.tokens(self.get_var())
+    }
+
+    pub fn available_delay(&self, tokens : &TAPNTokenListAccessor) -> RealTimeBound {
+        let max_age = tokens.max_age();
+        let inv = self.invariant.real();
+        let translated = inv - max_age;
+        if translated < RealTimeBound::zero() {
+            RealTimeBound::zero()
+        } else {
+            translated
+        }
     }
 
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {

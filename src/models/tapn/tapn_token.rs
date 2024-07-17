@@ -158,6 +158,14 @@ impl<'a> TAPNTokenListAccessor<'a> {
         self.tokens.iter().map(|t| TAPNToken::from(t.clone()) ).collect()
     }
 
+    pub fn max_age(&self) -> ClockValue {
+        if self.tokens.len() == 0 {
+            return ClockValue::neg_infinity();
+        }
+        let last_age = self.tokens.last().unwrap().ref_tuple().1;
+        ClockValue::from(*last_age.ref_float())
+    }
+
 }
 
 impl<'a> From<&'a mut ModelStorage> for TAPNTokenListAccessor<'a> {
