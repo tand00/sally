@@ -156,7 +156,7 @@ impl Model for ClassGraph {
     }
 
     // Not optimized AT ALL ! Class graph is made for back-propagation
-    fn next(&self, state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)> {
+    fn next(&self, state : ModelState, action : Action) -> Option<ModelState> {
         let mut next_index : Option<usize> = None;
         let class_index = state.evaluate_var(&self.current_class) as usize;
         for e in self.edges.iter() {
@@ -175,8 +175,7 @@ impl Model for ClassGraph {
         let mut next_state = next_class.generate_image_state();
         next_state.discrete.size_delta(self.current_class.size());
         next_state.discrete.set(&self.current_class, next_index as EvaluationType);
-        let actions = self.available_actions(&next_state);
-        Some((next_state, actions))
+        Some(next_state)
     }
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {

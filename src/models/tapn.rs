@@ -71,7 +71,7 @@ impl Model for TAPN {
         }
     }
 
-    fn next(&self, mut state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)> {
+    fn next(&self, mut state : ModelState, action : Action) -> Option<ModelState> {
         let storage = state.mut_storage(&self.storage_index);
         let mut placeList = TAPNPlaceListAccessor::from(storage);
 

@@ -36,7 +36,7 @@ impl Model for ModelNetwork {
         }
     }
 
-    fn next(&self, state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)> {
+    fn next(&self, state : ModelState, action : Action) -> Option<ModelState> {
         if !self.actions_map.contains_key(&action.get_id()) {
             return None;
         }
@@ -46,14 +46,7 @@ impl Model for ModelNetwork {
         if next.is_none() {
             return None;
         }
-        let (next_state, mut next_actions) = next.unwrap();
-        for (i, m) in self.models.iter().enumerate() {
-            if i == model_index {
-                continue;
-            }
-            next_actions.extend(m.available_actions(&next_state));
-        }
-        Some((next_state, next_actions))
+        next
     }
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {

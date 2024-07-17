@@ -69,7 +69,7 @@ impl MarkovChain {
 
 impl Model for MarkovChain {
 
-    fn next(&self,mut state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)> {
+    fn next(&self,mut state : ModelState, action : Action) -> Option<ModelState> {
         let node = self.get_current_node(&state);
         let next_index = node.act(action);
         if next_index == None {
@@ -81,7 +81,7 @@ impl Model for MarkovChain {
         state.unmark(node.get_var(), 1);
         state.mark(next_node.get_var(), 1);
         state.deadlocked = actions.len() == 0;
-        Some((state, actions))
+        Some(state)
     }
 
     fn available_actions(&self, state : &ModelState) -> HashSet<Action> {

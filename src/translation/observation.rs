@@ -145,7 +145,7 @@ impl<T : Model> Model for PartialObservation<T> {
         }
     }
 
-    fn next(&self, state : ModelState, action : Action) -> Option<(ModelState, HashSet<Action>)> {
+    fn next(&self, state : ModelState, action : Action) -> Option<ModelState> {
         todo!()
     }
 

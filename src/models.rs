@@ -116,7 +116,7 @@ impl std::fmt::Display for ModelMeta {
 /// Generic trait that should be implemented by all Timed Transition Systems
 pub trait Model: Any {
     // Given a state and an action, returns a state and actions available
-    fn next(&self, state: ModelState, action: Action) -> Option<(ModelState, HashSet<Action>)>;
+    fn next(&self, state: ModelState, action: Action) -> Option<ModelState>;
 
     fn available_actions(&self, state: &ModelState) -> HashSet<Action>;
 
@@ -181,7 +181,7 @@ pub trait Model: Any {
         if next.is_none() {
             return (None, delay, Some(action));
         }
-        (Some(next.unwrap().0), delay, Some(action))
+        (Some(next.unwrap()), delay, Some(action))
     }
 
     fn compile(&mut self, context: &mut ModelContext) -> CompilationResult<()>;
