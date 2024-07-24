@@ -1,6 +1,6 @@
 use std::{any::Any, cmp::max, collections::{HashMap, HashSet}};
 
-use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::ClockValue, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelState}, verification::Verifiable};
+use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelState}, verification::Verifiable};
 use crate::log::*;
 
 use serde::{Deserialize, Serialize};
@@ -157,7 +157,7 @@ impl<T : Model> Model for PartialObservation<T> {
         todo!()
     }
 
-    fn available_delay(&self, state : &ModelState) -> ClockValue {
+    fn available_delay(&self, state : &ModelState) -> RealTimeBound {
         todo!()
     }
 

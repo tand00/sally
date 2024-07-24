@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use num_traits::Zero;
 
-use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::ClockValue, CompilationResult, Label, Model, ModelMeta, ModelState, NONE};
+use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound}, CompilationResult, Label, Model, ModelMeta, ModelState, NONE};
 
 pub struct ModelNetwork {
     pub id : usize,
@@ -66,8 +66,8 @@ impl Model for ModelNetwork {
         actions
     }
 
-    fn available_delay(&self, state : &ModelState) -> ClockValue {
-        let mut min_delay = ClockValue::infinity();
+    fn available_delay(&self, state : &ModelState) -> RealTimeBound {
+        let mut min_delay = RealTimeBound::Infinite;
         let mut is_timed = false;
         for model in self.models.iter() {
             if !model.is_timed() {
@@ -82,7 +82,7 @@ impl Model for ModelNetwork {
         if is_timed { 
             min_delay
         } else {
-            ClockValue::zero()
+            RealTimeBound::zero()
         }
     }
 

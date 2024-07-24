@@ -46,6 +46,18 @@ impl ClockValue {
         }
     }
 
+    #[inline]
+    pub fn sample_distribution<R : Rng>(rng : &mut R, dist : &impl Distribution<f64>) -> Self {
+        ClockValue::from(dist.sample(rng))
+    }
+
+    #[inline]
+    pub fn distribution<R, D>(dist : D) -> Box<dyn Fn(&mut R) -> Self>
+        where R : Rng, D : Distribution<f64> + 'static
+    {
+        Box::new(move |rng : &mut R| ClockValue::from(dist.sample(rng)))
+    }
+
 }
 
 pub trait TimeType : Into<ClockValue> + Copy { }

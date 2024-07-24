@@ -6,3 +6,13 @@ pub mod smc;
 pub mod text_query_parser;
 
 pub use verifier::*;
+
+pub enum VerificationType {
+    Analytical,
+    Discrete,
+    SMC
+}
+
+pub struct VerificationConfig {
+
+}

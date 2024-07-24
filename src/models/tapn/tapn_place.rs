@@ -3,8 +3,8 @@ use std::{cmp::max, fmt, sync::{Arc, RwLock}};
 use num_traits::Zero;
 use serde::{Serialize, Deserialize};
 
-use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, time::{Bound, ClockValue, RealTimeBound, TimeBound}, CompilationResult, Label, ModelState, Node};
-use super::{tapn_transition::TAPNTransition, TAPNTokenList, TAPNTokenListAccessor};
+use crate::models::{model_context::ModelContext, model_storage::ModelStorage, model_var::{ModelVar, VarType}, time::{Bound, ClockValue, RealTimeBound, TimeBound}, CompilationResult, Label, ModelState, Node};
+use super::{tapn_transition::TAPNTransition, TAPNTokenList, TAPNTokenListWriter, TAPNTokenListReader};
 
 const TAPN_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 
@@ -87,12 +87,12 @@ impl TAPNPlace {
         state.tokens(self.get_var())
     }
 
-    pub fn available_delay(&self, tokens : &TAPNTokenListAccessor) -> RealTimeBound {
+    pub fn available_delay(&self, tokens : &TAPNTokenListReader) -> RealTimeBound {
         let max_age = tokens.max_age();
         let inv = self.invariant.real();
         let translated = inv - max_age;
         if translated < RealTimeBound::zero() {
-            RealTimeBound::zero()
+            RealTimeBound::MinusInfinite
         } else {
             translated
         }

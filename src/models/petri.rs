@@ -5,7 +5,7 @@ use std::{
 };
 
 use super::{
-    action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::ClockValue,
+    action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::{ClockValue, RealTimeBound},
     CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node,
 };
 
@@ -78,11 +78,9 @@ impl PetriNet {
             .collect()
     }
 
-    pub fn compute_new_actions(
-        &self,
-        new_state: &mut ModelState,
-        changed_places: &HashSet<usize>,
-    ) -> (HashSet<usize>, HashSet<usize>) {
+    pub fn compute_new_actions(&self, new_state: &mut ModelState, changed_places: &HashSet<usize>) 
+        -> (HashSet<usize>, HashSet<usize>) 
+    {
         let mut pers = new_state.enabled_clocks();
         let mut newen: HashSet<usize> = HashSet::new();
         let mut transition_seen = vec![false; self.transitions.len()];
@@ -106,21 +104,19 @@ impl PetriNet {
         (newen, pers)
     }
 
-    pub fn fire(
-        &self,
-        mut state: ModelState,
-        transi: usize,
-    ) -> (ModelState, HashSet<usize>, HashSet<usize>) {
+    pub fn fire(&self, mut state: ModelState, transi: usize) 
+        -> (ModelState, HashSet<usize>, HashSet<usize>) 
+    {
         let transi = &self.transitions[transi];
         let mut changed_places: HashSet<usize> = HashSet::new();
-        for edge in transi.input_edges.get().unwrap().iter() {
+        for edge in transi.get_inputs().iter() {
             let place_ptr = edge.get_node_from();
             let place_var = place_ptr.get_var();
             let place_index = place_ptr.index;
             state.unmark(place_var, edge.weight);
             changed_places.insert(place_index);
         }
-        for edge in transi.output_edges.get().unwrap().iter() {
+        for edge in transi.get_outputs().iter() {
             let place_ptr = edge.get_node_to();
             let place_var = place_ptr.get_var();
             let place_index = place_ptr.index;
@@ -214,22 +210,22 @@ impl Model for PetriNet {
         res
     }
 
-    fn available_delay(&self, state: &ModelState) -> ClockValue {
+    fn available_delay(&self, state: &ModelState) -> RealTimeBound {
         if !self.is_timed() {
-            return ClockValue::infinity();
+            return RealTimeBound::Infinite;
         }
         let m = self.transitions.iter()
             .filter_map(|t| {
                 let c = state.get_clock_value(t.get_clock());
                 if c.is_enabled() {
-                    Some(ClockValue::from(t.interval.1) - c)
+                    Some(t.interval.1.real() - c)
                 } else {
                     None
                 }
             })
-            .reduce(ClockValue::min);
+            .reduce(|a,b| if a < b { a } else { b });
         match m {
-            None => ClockValue::zero(),
+            None => RealTimeBound::zero(),
             Some(c) => c,
         }
     }
@@ -277,8 +273,7 @@ impl Model for PetriNet {
         for (i, place) in self.places.iter().enumerate() {
             let mut compiled_place = PetriPlace::clone(place);
             compiled_place.index = i;
-            self.places_dic
-                .insert(compiled_place.get_label(), compiled_place.index);
+            self.places_dic.insert(compiled_place.get_label(), compiled_place.index);
             compiled_place.compile(context)?;
             compiled_places.push(Arc::new(compiled_place));
         }
@@ -286,11 +281,9 @@ impl Model for PetriNet {
         for (i, transition) in self.transitions.iter().enumerate() {
             let mut compiled_transition = PetriTransition::clone(transition);
             compiled_transition.index = i;
-            self.transitions_dic
-                .insert(compiled_transition.get_label(), compiled_transition.index);
+            self.transitions_dic.insert(compiled_transition.get_label(), compiled_transition.index);
             compiled_transition.compile(context)?;
-            self.actions_dic
-                .insert(compiled_transition.get_action(), compiled_transition.index);
+            self.actions_dic.insert(compiled_transition.get_action(), compiled_transition.index);
             let compiled_transition = Arc::new(compiled_transition);
             self.create_transition_edges(&compiled_transition);
             compiled_transitions.push(compiled_transition);

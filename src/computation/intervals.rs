@@ -494,6 +494,23 @@ impl<T: Scalar, U: Convex<T>> ContinuousSet<T, U> {
     pub fn convexs(&self) -> ConvexIterator<T, U> {
         self.into()
     }
+
+    pub fn convert_convexs<W,X>(self) -> ContinuousSet<W,X>
+        where W : Scalar, X : Convex<W> + From<U>
+    {
+        match self {
+            EmptySet => EmptySet,
+            ConvexSet(c) => ConvexSet(c.into()),
+            DisjointSet(d) => {
+                let mut res = Disjoint::new();
+                for convex in d.intervals {
+                    res = res.union(X::from(convex));
+                }
+                DisjointSet(res)
+            },
+        }
+    }
+
 }
 
 impl<T: Scalar, U: Convex<T>> From<U> for ContinuousSet<T, U> {
@@ -601,6 +618,16 @@ impl<T: Scalar, U: Convex<T> + ToPositive> ToPositive for ContinuousSet<T, U> {
             EmptySet => EmptySet,
             ConvexSet(c) => c.positive().into(),
             DisjointSet(d) => d.positive().into(),
+        }
+    }
+}
+
+impl<T : Scalar + Clone, U : Convex<T> + Clone> Clone for ContinuousSet<T,U> {
+    fn clone(&self) -> Self {
+        match self {
+            EmptySet => EmptySet,
+            ConvexSet(c) => ConvexSet(c.clone()),
+            DisjointSet(d) => DisjointSet(d.clone())
         }
     }
 }

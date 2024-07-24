@@ -43,6 +43,13 @@ impl Action {
         Self::WithData(self.get_id(), data)
     }
 
+    pub fn extract_data(self) -> Option<(Action, ModelStorage)> {
+        match self {
+            Self::WithData(i, d) => Some((Self::Internal(i), d)),
+            _ => None
+        }
+    }
+
     pub fn sync(&self, a : Action, b : Action) -> Action {
         Self::Sync(self.get_id(), Box::new(a), Box::new(b))
     }

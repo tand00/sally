@@ -46,7 +46,7 @@ pub trait SMCQueryVerification {
     }
 
     fn execute_run(model : &impl Model, initial_state : &ModelState, query : &mut Query) -> VerificationStatus {
-        let run_gen = RandomRunIterator::generate(model, initial_state, query.run_bound.clone());
+        let run_gen = model.random_run(initial_state, query.run_bound.clone());
         for (state, _, _) in run_gen {
             query.verify_state(state.as_verifiable());
             if query.is_run_decided() {

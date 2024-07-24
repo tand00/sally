@@ -19,3 +19,6 @@ rayon = "1.10"
 pest = "2.7.9"
 pest_derive = "2.7.9"
 lazy_static = "1.4.0"
+quick-xml = { version = "0.36.0", features = ["serialize"] }
+rand_distr = { version = "0.4.3", features = ["serde1"] }
+statrs = "0.17.1"

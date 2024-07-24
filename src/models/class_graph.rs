@@ -192,10 +192,6 @@ impl Model for ClassGraph {
         actions
     }
 
-    fn available_delay(&self, _state : &ModelState) -> ClockValue {
-        ClockValue::zero()
-    }
-
     fn init_initial_clocks(&self, mut state : ModelState) -> ModelState {
         let current_class = state.evaluate_var(&self.current_class) as usize;
         let class = &self.classes[current_class];

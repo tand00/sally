@@ -3,7 +3,7 @@ mod label;
 mod model_state;
 mod node;
 
-use std::{any::Any, collections::HashSet};
+use std::{any::Any, collections::HashSet, rc::Rc};
 
 pub use edge::Edge;
 pub use label::{lbl, Label};
@@ -11,6 +11,7 @@ pub use model_state::ModelState;
 pub use node::Node;
 use num_traits::Zero;
 use rand::{seq::SliceRandom, thread_rng, Rng};
+use time::RealTimeBound;
 
 pub mod action;
 pub mod caching;
@@ -29,6 +30,8 @@ pub mod program;
 pub mod run;
 pub mod tapn;
 pub mod time;
+
+use crate::verification::{smc::RandomRunIterator, VerificationBound};
 
 use self::{
     action::Action, model_characteristics::*, model_context::ModelContext, time::ClockValue,
@@ -120,12 +123,12 @@ pub trait Model: Any {
 
     fn available_actions(&self, state: &ModelState) -> HashSet<Action>;
 
-    fn available_delay(&self, state: &ModelState) -> ClockValue {
+    fn available_delay(&self, state: &ModelState) -> RealTimeBound {
         let _ = state;
         if self.is_timed() {
-            ClockValue::zero()
+            RealTimeBound::zero()
         } else {
-            ClockValue::infinity()
+            RealTimeBound::Infinite
         }
     }
 
@@ -133,6 +136,14 @@ pub trait Model: Any {
         let _ = dt;
         let _ = state;
         Some(state)
+    }
+
+    fn delay_next(&self, state : ModelState, dt : ClockValue, action : Action) -> Option<ModelState> {
+        if let Some(delayed) = self.delay(state, dt) {
+            self.next(delayed, action)
+        } else {
+            None
+        }
     }
 
     fn init_initial_clocks(&self, state: ModelState) -> ModelState {
@@ -163,7 +174,7 @@ pub trait Model: Any {
     // Should be overrided by stochastic models with a more relevant behaviour !
     fn random_next(&self, state: ModelState) -> (Option<ModelState>, ClockValue, Option<Action>) {
         let mut rng = thread_rng();
-        let max_delay = self.available_delay(&state);
+        let max_delay : ClockValue = self.available_delay(&state).into();
         let mut delayed_state = state;
         let mut delay = ClockValue::zero();
         if !max_delay.is_zero() && self.is_timed() {
@@ -184,6 +195,13 @@ pub trait Model: Any {
         (Some(next.unwrap()), delay, Some(action))
     }
 
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
+        -> impl Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)>
+        where Self : Sized
+    {
+        RandomRunIterator::generate(self, initial, bound)
+    }
+
     fn compile(&mut self, context: &mut ModelContext) -> CompilationResult<()>;
 
     fn singleton(&mut self) -> ModelContext {
@@ -193,6 +211,7 @@ pub trait Model: Any {
     }
 
     fn get_id(&self) -> usize;
+
 }
 
 // Trait that should implement Send and Sync, to be shared amongst threads and do parallel verification by creating local models

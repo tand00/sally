@@ -181,6 +181,19 @@ impl PetriTransition {
         }
     }
 
+    pub fn reversed(&self) -> Self {
+        PetriTransition {
+            label: self.label.clone(),
+            from: self.to.clone(),
+            to: self.from.clone(),
+            interval: self.interval.clone(),
+            controllable : self.controllable.clone(),
+            guard : self.guard.clone(),
+            index : self.index,
+            ..Default::default()
+        }
+    }
+
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {
         let res = self.guard.apply_to(ctx);
         match res {
