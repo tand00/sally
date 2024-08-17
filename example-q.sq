@@ -1,0 +1,14 @@
+P <> [t <= 100]
+    (
+        P2 
+        | 
+        deadlock
+    )
+    &
+    (
+        P5
+    )
+
+
+i16 nenuphar = 1;
+Clock leapTime;

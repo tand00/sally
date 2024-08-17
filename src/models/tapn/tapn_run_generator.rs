@@ -1,10 +1,12 @@
-use std::{collections::HashSet, rc::Rc};
+use std::rc::Rc;
 
 use num_traits::Zero;
 
-use crate::{computation::intervals::ContinuousSet, models::{action::Action, run::RunStatus, time::{ClockValue, RealTimeBound, RealTimeInterval}, Model, ModelState}, verification::VerificationBound};
+use crate::{computation::intervals::{ContinuousSet, Delta, ToPositive}, models::{action::Action, run::RunStatus, time::{ClockValue, RealTimeInterval}, Model, ModelState}, verification::VerificationBound};
 
 use super::{TAPNPlaceList, TAPNPlaceListReader, TAPN};
+
+use rand::{seq::SliceRandom, thread_rng, Rng};
 
 pub struct TAPNRunGenerator<'a> {
     pub tapn : &'a TAPN,
@@ -33,7 +35,7 @@ impl<'a> TAPNRunGenerator<'a> {
                 maximal : false
             }
         };
-        generator.init_intervals();
+        generator.refresh_intervals();
         generator
     }
 
@@ -45,46 +47,23 @@ impl<'a> TAPNRunGenerator<'a> {
             maximal : false
         };
         self.started = false;
-        self.init_intervals();
+        self.refresh_intervals();
     }
 
-    pub fn init_intervals(&mut self) {
+    pub fn refresh_intervals(&mut self) {
         let state = &self.run_status.current_state;
         let avail_delay = self.tapn.available_delay(&self.run_status.current_state);
         let avail_delay : ContinuousSet<ClockValue, RealTimeInterval> = RealTimeInterval::invariant(avail_delay).into();
         let place_list = TAPNPlaceListReader::from(state.storage(&self.tapn.tokens_storage));
-        for i in 0..self.intervals.len() {
-            let transition = &self.tapn.transitions[i];
-            let transi_dates = transition.firing_dates(&place_list);
-            self.intervals[i] = transi_dates.intersection(avail_delay.clone());
-            if self.intervals[i].contains(&ClockValue::zero()) {
-                self.firing_dates[i] = transition.sample_date();
-            }
-        }
-    }
-
-    pub fn refresh_intervals(&mut self, modified_places : HashSet<usize>) {
-        let state = &self.run_status.current_state;
-        let avail_delay = self.tapn.available_delay(&self.run_status.current_state);
-        let avail_delay : ContinuousSet<ClockValue, RealTimeInterval> = RealTimeInterval::invariant(avail_delay).into();
-        let place_list = TAPNPlaceListReader::from(state.storage(&self.tapn.tokens_storage));
-        let mut transition_seen = vec![false ; self.intervals.len()];
-        for place_index in modified_places.iter() {
-            let place = &self.tapn.places[*place_index];
-            for transition in place.get_downstream_transitions().iter() {
-                if transition_seen[transition.index] {
-                    continue;
-                }
-                transition_seen[transition.index] = true;
-                let dates = transition.firing_dates(&place_list).intersection(avail_delay.clone());
-                let enabled = dates.contains(&ClockValue::zero());
-                let newly_enabled = enabled && self.firing_dates[transition.index].is_disabled();
-                self.intervals[transition.index] = dates;
-                if !enabled {
-                    self.firing_dates[transition.index] = ClockValue::disabled();
-                } else if newly_enabled {
-                    self.firing_dates[transition.index] = transition.sample_date();
-                }
+        for transition in self.tapn.transitions.iter() {
+            let dates = transition.firing_dates(&place_list).intersection(avail_delay.clone());
+            let enabled = dates.contains(&ClockValue::zero());
+            let newly_enabled = enabled && self.firing_dates[transition.index].is_disabled();
+            self.intervals[transition.index] = dates;
+            if !enabled {
+                self.firing_dates[transition.index] = ClockValue::disabled();
+            } else if newly_enabled {
+                self.firing_dates[transition.index] = transition.sample_date();
             }
         }
     }
@@ -94,21 +73,59 @@ impl<'a> TAPNRunGenerator<'a> {
         let mut candidates : Vec<usize> = Vec::new();
         for i in 0..self.intervals.len() {
             let dates = &self.intervals[i];
+            let firing = &self.firing_dates[i];
             if dates.is_empty() {
                 continue;
             }
             let first = dates.convexs().next().unwrap();
-            if first.1 > RealTimeBound::zero() && first.1.lower_than(&delay) {
-                
+            let a = ClockValue::from(first.0);
+            let b = ClockValue::from(first.1);
+            let mut date =  if a > ClockValue::zero() { a } 
+                        else if b > ClockValue::zero() { b }
+                        else { ClockValue::infinity() };
+            if firing.is_enabled() && *firing < date && first.1.greater_than(firing) {
+                date = *firing;
+            }
+            if date < delay {
+                delay = date;
+                candidates.clear();
+            }
+            if *firing == delay {
+                candidates.push(i);
             }
         }
-
-        (None, delay)
+        let winner = candidates.choose(&mut thread_rng()).map(|i| *i);
+        (winner, delay)
     }
 
     pub fn random_token_set(&self, transition : usize, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
         let transition = &self.tapn.transitions[transition];
-        todo!()
+        let mut token_sets = transition.fireable_tokens(&place_list);
+        let random_index = thread_rng().gen_range(0..token_sets.len());
+        token_sets.swap_remove(random_index)
+    }
+
+    pub fn disable_transitions(&mut self, places : &TAPNPlaceListReader) {
+        for transition in self.tapn.transitions.iter() {
+            if !transition.is_fireable(places) {
+                self.firing_dates[transition.index] = ClockValue::disabled();
+            }
+        }
+    }
+
+    pub fn time_forward(&mut self, delay : ClockValue) {
+        for i in 0..self.firing_dates.len() {
+            let date = &mut self.firing_dates[i];
+            if date.is_enabled() {
+                *date -= delay;
+                if *date < ClockValue::zero() {
+                    *date = ClockValue::zero();
+                }
+            }
+            let interval = &mut self.intervals[i];
+            interval.delta(-delay);
+            interval.into_positive();
+        }
     }
 
 }
@@ -128,11 +145,16 @@ impl<'a> Iterator for TAPNRunGenerator<'a> {
             return None;
         };
         self.run_status.time += delay;
+
+        self.time_forward(delay);
+        
         if let Some(winner) = winner {
             let place_list = TAPNPlaceListReader::from(next_state.storage(&self.tapn.tokens_storage));
             let in_tokens = self.random_token_set(winner, place_list);
-            let (next_state, modified) = self.tapn.fire(next_state, winner, in_tokens);
-            self.refresh_intervals(modified);
+            let (next_state, intermed) = self.tapn.fire(next_state, winner, in_tokens);
+            self.firing_dates[winner] = ClockValue::disabled();
+            self.disable_transitions(&TAPNPlaceListReader::from(&intermed));
+            self.refresh_intervals();
             self.run_status.steps += 1;
             self.run_status.current_state = Rc::new(next_state);
             let action = self.tapn.transitions[winner].get_action();

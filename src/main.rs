@@ -8,6 +8,7 @@ pub mod solution;
 pub mod io;
 pub mod log;
 
+use std::any::Any;
 use std::collections::HashMap;
 
 use computation::intervals::Convex;

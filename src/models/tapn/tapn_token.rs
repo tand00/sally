@@ -292,6 +292,11 @@ impl<'a> TAPNPlaceListReader<'a> {
         TAPNTokenListReader::from(&self.places[place])
     }
 
+    pub fn get(&self) -> TAPNPlaceList {
+        let places = self.places.iter().map(|p| TAPNTokenListReader::from(p).get()).collect();
+        TAPNPlaceList { places }
+    }
+
 }
 impl<'a> TAPNPlaceListWriter<'a> {
 
@@ -308,6 +313,11 @@ impl<'a> TAPNPlaceListWriter<'a> {
 
     pub fn place(&mut self, place : usize) -> TAPNTokenListWriter {
         TAPNTokenListWriter::from(&mut self.places[place])
+    }
+
+    pub fn get(&self) -> TAPNPlaceList {
+        let places = self.places.iter().map(|p| TAPNTokenListReader::from(p).get()).collect();
+        TAPNPlaceList { places }
     }
 
 }

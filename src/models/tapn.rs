@@ -29,10 +29,9 @@ impl TAPN {
         &self.transitions[self.actions_dic[action]]
     }
 
-    pub fn fire(&self, mut state : ModelState, transi : usize, in_tokens : TAPNPlaceList) -> (ModelState, HashSet<usize>) {
+    pub fn fire(&self, mut state : ModelState, transi : usize, in_tokens : TAPNPlaceList) -> (ModelState, ModelStorage) {
         let mut places_tokens = TAPNPlaceListWriter::from(state.mut_storage(&self.tokens_storage));
         let transi = &(self.transitions[transi]);
-        let mut modified_places = HashSet::new();
         let mut vars_updates = Vec::new();
         for edge in transi.get_inputs().iter() {
             let place = edge.get_node_from();
@@ -41,12 +40,7 @@ impl TAPN {
             let input_tokens = &in_tokens.places[place.index];
             state_tokens.remove_set(input_tokens);
         }
-        for edge in transi.get_outputs().iter() {
-            let target = edge.get_node_to();
-            vars_updates.push((target.clone(), edge.weight));
-            let mut target_tokens =places_tokens.place(target.index);
-            target_tokens.insert(TAPNToken { count: edge.weight, age: ClockValue::zero() });
-        }
+        let mut to_create : Vec<(usize, TAPNToken)> = Vec::new();
         for edge in transi.get_transports().iter() {
             let place = edge.get_node_from();
             let target = edge.get_node_to();
@@ -55,16 +49,26 @@ impl TAPN {
             let mut state_tokens = places_tokens.place(place.index);
             let input_tokens = &in_tokens.places[place.index];
             state_tokens.remove_set(input_tokens);
-            let mut target_tokens = places_tokens.place(target.index);
             for token in input_tokens.iter() {
-                target_tokens.insert(token.clone());
+                to_create.push((target.index, token.clone()))
             }
+        }
+        let intermed = state.storage(&self.tokens_storage).clone();
+        let mut places_tokens = TAPNPlaceListWriter::from(state.mut_storage(&self.tokens_storage));
+        for (index, token) in to_create {
+            let mut target_tokens = places_tokens.place(index);
+            target_tokens.insert(token);
+        }
+        for edge in transi.get_outputs().iter() {
+            let target = edge.get_node_to();
+            vars_updates.push((target.clone(), edge.weight));
+            let mut target_tokens =places_tokens.place(target.index);
+            target_tokens.insert(TAPNToken { count: edge.weight, age: ClockValue::zero() });
         }
         for (place, delta) in vars_updates {
             state.mark(place.get_var(), delta);
-            modified_places.insert(place.index);
         }
-        (state, modified_places)
+        (state, intermed)
     }
 
     pub fn create_transition_edges(&self, transition : &Arc<TAPNTransition>) {

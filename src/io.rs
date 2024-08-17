@@ -1,6 +1,4 @@
-use std::any::Any;
-
-use crate::models::Label;
+use crate::models::{Label, Model};
 
 pub mod pnml;
 
@@ -15,6 +13,6 @@ pub trait ModelLoader {
 
     fn get_meta(&self) -> ModelLoaderMeta;
 
-    fn load(&self, path : String) -> Box<dyn Any>;
+    fn load(&self, path : String) -> Box<dyn Model>;
 
 }

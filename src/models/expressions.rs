@@ -1,6 +1,6 @@
 use std::{collections::HashSet, hash::Hash, ops::Not};
 
-use crate::QueryVisitor;
+use crate::verification::query::{Query, QueryVisitor};
 
 use crate::verification::{Verifiable, VerificationStatus};
 use serde::{Deserialize, Serialize};
@@ -379,7 +379,7 @@ impl ObjectsScannerVisitor {
     }
 }
 impl QueryVisitor for ObjectsScannerVisitor {
-    fn visit_query(&mut self, _query : &crate::Query) { }
+    fn visit_query(&mut self, _query : &Query) { }
     fn visit_condition(&mut self, _condition : &Condition) { }
     fn visit_expression(&mut self, expr : &Expr) {
         if let Var(x) = expr {

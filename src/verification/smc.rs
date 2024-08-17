@@ -10,9 +10,9 @@ pub use probability_estimation::ProbabilityEstimation;
 pub use probability_float_comparison::ProbabilityFloatComparison;
 pub use smc_max_seen::SMCMaxSeen;
 
-use crate::{models::{Model, ModelState}, solution::SolverResult, Query};
+use crate::{models::{Model, ModelState}, solution::SolverResult};
 
-use super::{VerificationStatus, Verifiable};
+use super::{query::Query, Verifiable, VerificationStatus};
 
 use crate::log::*;
 

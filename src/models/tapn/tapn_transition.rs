@@ -10,7 +10,7 @@ use crate::computation::intervals::{ContinuousSet, Convex};
 use crate::models::action::Action;
 use crate::models::model_context::ModelContext;
 use crate::models::time::{ClockValue, RealTimeInterval, TimeInterval};
-use crate::models::{CompilationResult, Label, ModelState, Node};
+use crate::models::{CompilationResult, Label, Node};
 
 use super::{tapn_edge::*, TAPNPlaceList, TAPNPlaceListReader, TAPNTokenList, TAPNTokenListReader};
 
@@ -78,26 +78,6 @@ impl TAPNTransition {
 
     pub fn get_inhibitors(&self) -> &Vec<InputEdge> {
         self.inhibitor_edges.get().unwrap()
-    }
-
-    pub fn is_enabled(&self, marking : &ModelState) -> bool {
-        for edge in self.get_inputs().iter() {
-            if !edge.has_source() {
-                panic!("Every transition edge should have a source");
-            }
-            if marking.tokens(edge.get_node_from().get_var()) < edge.data().weight as i32 {
-                return false
-            }
-        }
-        for edge in self.get_transports().iter() {
-            if !edge.has_source() {
-                panic!("Every transition edge should have a source");
-            }
-            if marking.tokens(edge.get_node_from().get_var()) < edge.data().weight as i32 {
-                return false
-            }
-        }
-        true
     }
 
     fn has_enough(interval : &TimeInterval, weight : i32, token_list : TAPNTokenListReader) -> bool {

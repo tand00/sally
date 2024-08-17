@@ -6,6 +6,7 @@ pub mod smc;
 pub mod text_query_parser;
 
 pub use verifier::*;
+pub use query::Query;
 
 pub enum VerificationType {
     Analytical,

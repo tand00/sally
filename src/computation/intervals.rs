@@ -74,6 +74,10 @@ pub trait Delta<T: Scalar + Add<Output = T>> {
 }
 pub trait ToPositive {
     fn positive(self) -> Self;
+
+    fn into_positive(&mut self) where Self : Clone {
+        *self = self.clone().positive();
+    }
 }
 
 // VERY UNOPTIMIZED FOR NOW !
