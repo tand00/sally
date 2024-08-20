@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::models::{lbl, model_context::ModelContext, Model, ModelState};
+use crate::models::{lbl, model_context::ModelContext, Model, ModelObject, ModelState};
 
 use super::{Translation, TranslationMeta, TranslationResult, TranslationType::Observation};
 
@@ -29,15 +29,11 @@ impl Translation for PetriPartialObservation {
         }
     }
 
-    fn translate(&mut self, base : &dyn Any, ctx : &ModelContext, initial_state : &ModelState) -> TranslationResult {
+    fn translate(&mut self, base : &dyn ModelObject, ctx : &ModelContext, initial_state : &ModelState) -> TranslationResult {
         panic!("Nothing for now")
     }
 
-    fn get_translated(&mut self) -> (&mut dyn Any, &ModelContext, &ModelState) {
-        panic!("Nothing for now")
-    }
-
-    fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelContext, &ModelState) {
+    fn get_translated(&mut self) -> (&mut dyn ModelObject, &ModelContext, &ModelState) {
         panic!("Nothing for now")
     }
 

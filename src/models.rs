@@ -90,17 +90,11 @@ pub struct ModelMeta {
     pub characteristics: ModelCharacteristics,
 }
 impl ModelMeta {
-    pub fn is_timed(&self) -> bool
-    where
-        Self: Sized,
-    {
+    pub fn is_timed(&self) -> bool {
         has_characteristic(self.characteristics, TIMED)
     }
 
-    pub fn is_stochastic(&self) -> bool
-    where
-        Self: Sized,
-    {
+    pub fn is_stochastic(&self) -> bool {
         has_characteristic(self.characteristics, STOCHASTIC)
     }
 }
@@ -211,45 +205,22 @@ pub trait Model: Any {
         ctx
     }
 
-    fn into_any(self) -> Box<dyn Any>
-        where Self : Sized 
-    {
-        Box::new(self)
-    }
-
-    fn as_any(&self) -> &dyn Any
-        where Self : Sized 
-    {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any
-        where Self : Sized 
-    {
-        self
-    }
-
-    fn downcast<T>(self) -> Result<Box<T>, Box<dyn Any>>
-        where T : Model, Self : Sized
-    {
-        let boxed : Box<dyn Any> = Box::new(self);
-        boxed.downcast()
-    }
-
-    fn downcast_ref<T>(&self) -> Option<&T> 
-        where T : Model, Self : Sized
-    {
-        (self as &dyn Any).downcast_ref::<T>()
-    }
-
-    fn downcast_mut<T>(&mut self) -> Option<&mut T> 
-        where T : Model, Self : Sized
-    {
-        (self as &mut dyn Any).downcast_mut::<T>()
-    }
-
     fn get_id(&self) -> usize;
 
+}
+
+pub trait ModelObject : Model {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
+impl<T : Model> ModelObject for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 // Trait that should implement Send and Sync, to be shared amongst threads and do parallel verification by creating local models

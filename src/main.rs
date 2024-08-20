@@ -64,7 +64,7 @@ fn main() {
     ]));
     translation.translate(&net, &ctx, &initial_state).unwrap();
     let (g, n_ctx, _) = translation.get_translated();
-    let cg = g.downcast_ref::<ClassGraph>().unwrap();
+    let cg = g.as_any().downcast_ref::<ClassGraph>().unwrap();
     println!("{}", n_ctx);
     println!("{}", cg.get_model_meta());
     lf();

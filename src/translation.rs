@@ -7,7 +7,7 @@ pub mod observation;
 pub use petri_class_graph::PetriClassGraphTranslation;
 pub use petri_partial_observation::PetriPartialObservation;
 
-use crate::models::{lbl, model_context::ModelContext, Label, Model, ModelState};
+use crate::models::{lbl, model_context::ModelContext, Label, Model, ModelObject, ModelState};
 
 #[derive(Debug, Clone)]
 pub struct TranslationError(pub String);
@@ -40,10 +40,9 @@ use TranslationType::*;
 
 pub trait Translation {
 
-    fn translate(&mut self, base : &dyn Any, context : &ModelContext, initial_state : &ModelState) -> TranslationResult;
+    fn translate(&mut self, base : &dyn ModelObject, context : &ModelContext, initial_state : &ModelState) -> TranslationResult;
 
-    fn get_translated(&mut self) -> (&mut dyn Any, &ModelContext, &ModelState);
-    fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelContext, &ModelState);
+    fn get_translated(&mut self) -> (&mut dyn ModelObject, &ModelContext, &ModelState);
 
     fn get_meta(&self) -> TranslationMeta;
 
@@ -87,7 +86,7 @@ impl Translation for TranslationChain {
         }
     }
 
-    fn translate(&mut self, base : &dyn Any, ctx : &ModelContext, initial_state : &ModelState) -> TranslationResult {
+    fn translate(&mut self, base : &dyn ModelObject, ctx : &ModelContext, initial_state : &ModelState) -> TranslationResult {
         if self.translations.is_empty() {
             return Err(TranslationError(String::from("Empty translation chain")));
         }
@@ -101,12 +100,8 @@ impl Translation for TranslationChain {
         Ok(())
     }
 
-    fn get_translated(&mut self) -> (&mut dyn Any, &ModelContext, &ModelState) {
+    fn get_translated(&mut self) -> (&mut dyn ModelObject, &ModelContext, &ModelState) {
         self.translations.last_mut().unwrap().get_translated()
-    }
-
-    fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelContext, &ModelState) {
-        self.translations.last_mut().unwrap().get_translated_model()
     }
 
     fn back_translate(&self, state : ModelState) -> Option<ModelState> {

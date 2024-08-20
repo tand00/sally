@@ -7,7 +7,7 @@ use std::any::Any;
 
 use crate::flag;
 use crate::models::model_context::ModelContext;
-use crate::models::{lbl, Label, ModelState};
+use crate::models::{lbl, Label, ModelObject, ModelState};
 use crate::verification::query::{Quantifier, Query, StateLogic};
 use Quantifier::*;
 use StateLogic::*;
@@ -89,8 +89,8 @@ pub trait Solution {
 
     fn get_meta(&self) -> SolutionMeta;
 
-    fn is_compatible(&self, model : &dyn Any, context : &ModelContext, query : &Query) -> bool;
+    fn is_compatible(&self, model : &dyn ModelObject, context : &ModelContext, query : &Query) -> bool;
 
-    fn solve(&mut self, model : &dyn Any, context : &ModelContext, query : &Query) -> SolverResult;
+    fn solve(&mut self, model : &dyn ModelObject, context : &ModelContext, query : &Query) -> SolverResult;
 
 }

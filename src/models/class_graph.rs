@@ -55,10 +55,9 @@ impl ClassGraph {
             for t_index in clocks {
                 let next_class = ClassGraph::successor(p_net, &class, t_index);
                 let action = cg.transitions[t_index].get_action();
-                if next_class.is_none() {
+                let Some(mut next_class) = next_class else {
                     continue;
-                }
-                let mut next_class = next_class.unwrap();
+                };
                 let new_hash = next_class.get_hash();
                 if seen.contains_key(&new_hash) {
                     cg.classes[seen[&new_hash]].predecessors.write().unwrap().push((Arc::downgrade(&class), action));
@@ -167,10 +166,9 @@ impl Model for ClassGraph {
                 next_index = Some(e.get_node_to().index);
             }
         }
-        if next_index.is_none() {
+        let Some(next_index) = next_index else {
             return None;
-        }
-        let next_index = next_index.unwrap();
+        };
         let next_class = &self.classes[next_index];
         let mut next_state = next_class.generate_image_state();
         next_state.discrete.size_delta(self.current_class.size());

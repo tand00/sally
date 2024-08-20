@@ -264,10 +264,9 @@ impl ModelContext {
         state.storages.resize(self.n_storages(), ModelStorage::EmptyStorage);
         for (k,v) in marking.iter() {
             let var = self.get_var(k);
-            if var.is_none() {
+            let Some(var) = var else {
                 continue;
-            }
-            let var = var.unwrap();
+            };
             state.discrete.set(&var, *v)
         }
         state = model.init_initial_clocks(state);

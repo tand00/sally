@@ -1,6 +1,6 @@
 use std::{any::Any, cmp::max, collections::{HashMap, HashSet}};
 
-use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelState}, verification::Verifiable};
+use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState}, verification::Verifiable};
 use crate::log::*;
 
 use serde::{Deserialize, Serialize};
@@ -191,9 +191,9 @@ impl<T : Model + Clone> Translation for PartialObservation<T> {
         }
     }
 
-    fn translate(&mut self, base : &dyn Any, ctx : &ModelContext, initial_state : &ModelState) -> TranslationResult {
+    fn translate(&mut self, base : &dyn ModelObject, ctx : &ModelContext, initial_state : &ModelState) -> TranslationResult {
         pending("Computing Petri net Class graph...");
-        let model = base.downcast_ref::<T>();
+        let model = base.as_any().downcast_ref::<T>();
         if model.is_none() {
             return Err(TranslationError(String::from("Unable to downcast model")))
         }
@@ -204,14 +204,7 @@ impl<T : Model + Clone> Translation for PartialObservation<T> {
         Ok(())
     }
 
-    fn get_translated(&mut self) -> (&mut dyn Any, &ModelContext, &ModelState) {
-        (match &mut self.model {
-            None => panic!("No translation computed !"),
-            Some(m) => m
-        }, &self.context, &self.initial_state)
-    }
-
-    fn get_translated_model(&mut self) -> (&mut dyn Model, &ModelContext, &ModelState) {
+    fn get_translated(&mut self) -> (&mut dyn ModelObject, &ModelContext, &ModelState) {
         (match &mut self.model {
             None => panic!("No translation computed !"),
             Some(m) => m

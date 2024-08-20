@@ -1,6 +1,8 @@
-use crate::models::{Label, Model};
+use crate::models::{Label, ModelObject};
 
 pub mod pnml;
+pub mod tapn;
+pub mod sly;
 
 pub struct ModelLoaderMeta {
     pub name : Label,
@@ -13,6 +15,6 @@ pub trait ModelLoader {
 
     fn get_meta(&self) -> ModelLoaderMeta;
 
-    fn load(&self, path : String) -> Box<dyn Model>;
+    fn load(&self, path : String) -> Box<dyn ModelObject>;
 
 }

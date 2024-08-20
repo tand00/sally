@@ -1,4 +1,4 @@
-use crate::models::{lbl, model_context::ModelContext};
+use crate::models::{lbl, model_context::ModelContext, ModelObject};
 
 use super::{Solution, SolutionMeta, SolverResult, REACHABILITY, SYNTHESIS, TWO_PLAYERS};
 
@@ -24,11 +24,11 @@ impl Solution for ClassGraphReachabilitySynthesis {
         }
     }
 
-    fn is_compatible(&self, _ : &dyn std::any::Any, _ : &ModelContext, query : &crate::verification::query::Query) -> bool {
+    fn is_compatible(&self, _ : &dyn ModelObject, _ : &ModelContext, query : &crate::verification::query::Query) -> bool {
         (!query.condition.contains_clock_proposition()) && (query.condition.is_state_condition())
     }
 
-    fn solve(&mut self, _ : &dyn std::any::Any, _ : &ModelContext, _ : &crate::verification::query::Query) -> SolverResult {
+    fn solve(&mut self, _ : &dyn ModelObject, _ : &ModelContext, _ : &crate::verification::query::Query) -> SolverResult {
         SolverResult::SolverError
     }
 

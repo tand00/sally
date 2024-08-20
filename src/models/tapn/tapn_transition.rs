@@ -2,8 +2,9 @@ use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::OnceLock;
-use rand::distributions::Distribution;
+use rand_distr::Distribution;
 use serde::{Deserialize, Serialize};
+use statrs::distribution::Dirac;
 
 use crate::computation::combinatory::{CartesianProduct, KInVec};
 use crate::computation::intervals::{ContinuousSet, Convex};
@@ -22,6 +23,10 @@ pub struct TAPNTransition {
     pub transports : Vec<(Label, Label, TAPNEdgeData)>,
     pub inhibitors : Vec<(Label, TAPNEdgeData)>,
     pub controllable : bool,
+    pub weight : f64,
+
+    #[serde(skip, default="TAPNTransition::default_distribution")]
+    pub distribution : Box<dyn Distribution<f64>>,
 
     #[serde(skip)]
     pub index : usize,
@@ -78,6 +83,10 @@ impl TAPNTransition {
 
     pub fn get_inhibitors(&self) -> &Vec<InputEdge> {
         self.inhibitor_edges.get().unwrap()
+    }
+
+    pub fn default_distribution() -> Box<dyn Distribution<f64>> {
+        Box::new(Dirac::new(1.0).unwrap())
     }
 
     fn has_enough(interval : &TimeInterval, weight : i32, token_list : TAPNTokenListReader) -> bool {
