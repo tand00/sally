@@ -5,7 +5,7 @@ use num_traits::{Bounded, Zero};
 
 use crate::computation::DBM;
 
-use super::{node::DataNode, time::TimeBound, Edge, Label, Node};
+use super::{node::DataNode, time::TimeBound, Edge, Label};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
 pub struct Digraph<T : 'static, U> {
@@ -13,7 +13,7 @@ pub struct Digraph<T : 'static, U> {
     pub edges : Vec<Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>>,
 }
 
-impl<T : ToString, U> Digraph<T,U> {
+impl<T, U> Digraph<T,U> {
 
     pub fn new() -> Self {
         Self {
@@ -43,12 +43,10 @@ impl<T : ToString, U> Digraph<T,U> {
         for node in self.nodes.iter() {
             if node.element == from {
                 e.set_node_from(node);
-                e.from = Some(node.get_label());
                 node_from = Some(Arc::clone(node));
             }
             if node.element == to {
                 e.set_node_to(node);
-                e.from = Some(node.get_label());
                 node_to = Some(Arc::clone(node));
             }
         }
@@ -72,9 +70,7 @@ impl<T : ToString, U> Digraph<T,U> {
         for from in self.nodes.iter() {
             for to in self.nodes.iter() {
                 if !filter(&from.element, &to.element) { continue };
-                let mut e = Edge::data_edge(from, to, weight.clone());
-                e.from = Some(from.get_label());
-                e.to = Some(to.get_label());
+                let e = Edge::data_edge(from, to, weight.clone());
                 let e = Arc::new(e);
                 self.edges.push(Arc::clone(&e));
                 res.push(e);
@@ -233,12 +229,7 @@ impl<T : ToString, U> Digraph<T,U> {
             }
             let from = &self.nodes[i];
             let to = &self.nodes[j];
-            let mut e = Edge::new_weighted(
-                from.get_label(), 
-                to.get_label(), 
-                w.clone());
-            e.set_node_from(from);
-            e.set_node_to(to);
+            let e = Edge::data_edge(from, to, w.clone());
             let e = Arc::new(e);
             from.out_edges.write().unwrap().push(Arc::clone(&e));
             from.in_edges.write().unwrap().push(Arc::clone(&e));
@@ -247,7 +238,7 @@ impl<T : ToString, U> Digraph<T,U> {
 
 }
 
-impl<T : ToString, U> From<Vec<T>> for Digraph<T,U> {
+impl<T, U> From<Vec<T>> for Digraph<T,U> {
     fn from(data : Vec<T>) -> Self {
         let nodes : Vec<Arc<DataNode<T, U>>> = data.into_iter().enumerate().map(|(i,x)| {
             let mut node = DataNode::from(x);
@@ -258,7 +249,7 @@ impl<T : ToString, U> From<Vec<T>> for Digraph<T,U> {
     }
 }
 
-impl<T : ToString, U> Default for Digraph<T,U> {
+impl<T, U> Default for Digraph<T,U> {
     fn default() -> Self {
         Digraph::new()
     }
