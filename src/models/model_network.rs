@@ -2,11 +2,11 @@ use std::collections::{HashMap, HashSet};
 
 use num_traits::Zero;
 
-use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound}, CompilationResult, Label, Model, ModelMeta, ModelState, NONE};
+use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound}, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState, NONE};
 
 pub struct ModelNetwork {
     pub id : usize,
-    pub models : Vec<Box<dyn Model>>,
+    pub models : Vec<Box<dyn ModelObject>>,
     pub models_map : HashMap<Label, usize>,
     pub actions_map : HashMap<usize, usize>,
     pub io_actions : HashSet<Label, (Vec<Label>, Vec<Label>)>,
@@ -15,7 +15,7 @@ pub struct ModelNetwork {
 
 impl ModelNetwork {
 
-    pub fn add_model(&mut self, name : Label, model : Box<dyn Model>) {
+    pub fn add_model(&mut self, name : Label, model : Box<dyn ModelObject>) {
         self.models_map.insert(name, self.n_models());
         self.models.push(model);
     }
@@ -96,7 +96,7 @@ impl Model for ModelNetwork {
 
     fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
         for (name, model_index) in self.models_map.iter() {
-            let model : &mut Box<dyn Model> = &mut self.models[*model_index];
+            let model : &mut Box<dyn ModelObject> = &mut self.models[*model_index];
             context.add_domain(name.clone());
             model.compile(context)?;
             let model_actions = context.get_local_actions();

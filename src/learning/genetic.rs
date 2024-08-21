@@ -3,7 +3,7 @@ use std::time::Instant;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
-use crate::models::markov::ProbabilisticChoice;
+use crate::computation::probability::ProbabilisticChoice;
 use crate::log::*;
 use crate::models::{Model, ModelMaker};
 
@@ -67,10 +67,11 @@ impl<T : Genetizable> GeneticOptimizer<T> {
             let sampler = ProbabilisticChoice::new(candidates);
             let children_to_make = population - elite;
             let mut children : Vec<(T, f64)> = (0..children_to_make).into_par_iter().map(|_| {
-                let p1 = sampler.sample();
-                let p2 = sampler.sample();
+                let mut rng = thread_rng();
+                let p1 = sampler.sample(&mut rng);
+                let p2 = sampler.sample(&mut rng);
                 let mut child = p1.cross(p2);
-                if thread_rng().gen::<f64>() < mutation_rate {
+                if rng.gen::<f64>() < mutation_rate {
                     child.mutate();
                 }
                 (child, 0.0)

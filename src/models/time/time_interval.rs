@@ -19,8 +19,7 @@ pub type RealTimeInterval = Interval<ClockValue>;
 
 impl TimeInterval {
 
-    pub fn random_date(&self) -> ClockValue {
-        let mut gen = rand::thread_rng();
+    pub fn random_date(&self, gen : &mut impl Rng) -> ClockValue {
         if self.is_empty() {
             return ClockValue::disabled();
         }

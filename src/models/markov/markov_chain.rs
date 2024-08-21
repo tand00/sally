@@ -2,9 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::models::{action::Action, lbl, model_context::ModelContext, model_var::ModelVar, CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC};
+use crate::{computation::probability::ProbabilisticChoice, models::{action::Action, lbl, model_context::ModelContext, model_var::ModelVar, CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC}};
 
-use super::{markov_node::MarkovNode, ProbabilisticChoice};
+use super::markov_node::MarkovNode;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarkovChain {

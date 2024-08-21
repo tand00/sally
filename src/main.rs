@@ -8,13 +8,14 @@ pub mod solution;
 pub mod io;
 pub mod log;
 
-use std::any::Any;
 use std::collections::HashMap;
 
 use computation::intervals::Convex;
+use io::sly::SLYWriter;
+use io::ModelWriter;
 use models::digraph::Digraph;
 use models::expressions::{Condition, Expr};
-use models::lbl;
+use models::{lbl, ModelObject};
 use models::markov::markov_chain::MarkovChain;
 use models::markov::markov_node::MarkovNode;
 use models::model_var::var;
@@ -47,15 +48,15 @@ fn main() {
 
     pending("Building Model Solving Graph...");
     let solver = build_solver();
-    positive(format!("Models loaded : \t[{}]", solver.models.len()));
-    positive(format!("Translations : \t[{}]", solver.translations.len()));
-    positive(format!("Solutions : \t[{}]", solver.solutions.len()));
     lf();
+
+    let mut writer = SLYWriter;
 
     let mut net = sample_petri();
     let ctx = net.singleton();
     println!("{}", ctx);
     println!("{}", net.get_model_meta());
+    println!("{}", writer.write(&net).unwrap_or("Error".to_owned()));
     lf();
 
     let mut translation = PetriClassGraphTranslation::new();

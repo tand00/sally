@@ -1,6 +1,6 @@
 use crate::models::{lbl, tapn::TAPN, Model};
 
-use super::{ModelLoader, ModelLoaderMeta};
+use super::{ModelLoader, ModelLoaderMeta, ModelLoadingResult};
 
 pub struct TAPNLoader {
 
@@ -16,7 +16,7 @@ impl ModelLoader for TAPNLoader {
         }
     }
 
-    fn load(&self, path : String) -> Box<dyn crate::models::ModelObject> {
+    fn load(&mut self, path : String) -> ModelLoadingResult {
         todo!()
     }
 }

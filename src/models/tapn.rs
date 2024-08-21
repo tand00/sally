@@ -1,6 +1,7 @@
-use std::{collections::{HashMap, HashSet}, sync::Arc};
+use std::{collections::{HashMap, HashSet}, sync::Arc, usize};
 
 use num_traits::Zero;
+use serde::{Deserialize, Serialize};
 use tapn_place::TAPNPlace;
 use tapn_run_generator::TAPNRunGenerator;
 use tapn_token::*;
@@ -14,6 +15,12 @@ pub mod tapn_transition;
 pub mod tapn_token;
 pub mod tapn_run_generator;
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TAPNStructure {
+    pub places: Vec<TAPNPlace>,
+    pub transitions: Vec<TAPNTransition>,
+}
+
 pub struct TAPN {
     pub id : usize,
     pub tokens_storage : usize,
@@ -24,6 +31,25 @@ pub struct TAPN {
 }
 
 impl TAPN {
+
+    pub fn new(places : Vec<TAPNPlace>, transitions : Vec<TAPNTransition>) -> Self {
+        let mut places_ptr = Vec::new();
+        for place in places {
+            places_ptr.push(Arc::new(place));
+        }
+        let mut transitions_ptr = Vec::new();
+        for transition in transitions {
+            transitions_ptr.push(Arc::new(transition));
+        }
+        TAPN { 
+            id: usize::MAX, 
+            tokens_storage: usize::MAX, 
+            places: places_ptr, 
+            transitions: transitions_ptr, 
+            places_dic: HashMap::new(),
+            actions_dic: HashMap::new() 
+        }
+    }
 
     pub fn transition_for_action(&self, action : &Action) -> &Arc<TAPNTransition> {
         &self.transitions[self.actions_dic[action]]
@@ -111,6 +137,23 @@ impl TAPN {
             target_place.add_upstream_transition(transition);
         }
         transition.transport_edges.set(transports).unwrap();
+    }
+
+    pub fn get_structure(&self) -> TAPNStructure {
+        let mut places: Vec<TAPNPlace> = Vec::new();
+        let mut transitions: Vec<TAPNTransition> = Vec::new();
+        for place_ptr in self.places.iter() {
+            let place = TAPNPlace::clone(place_ptr);
+            places.push(place);
+        }
+        for transi_ptr in self.transitions.iter() {
+            let transi = TAPNTransition::clone(transi_ptr);
+            transitions.push(transi);
+        }
+        TAPNStructure {
+            places,
+            transitions,
+        }
     }
 
 }
@@ -234,4 +277,16 @@ impl Model for TAPN {
         Ok(())
     }
 
+}
+
+impl From<TAPNStructure> for TAPN {
+    fn from(value: TAPNStructure) -> Self {
+        TAPN::new(value.places, value.transitions)
+    }
+}
+
+impl From<&TAPN> for TAPNStructure {
+    fn from(value: &TAPN) -> Self {
+        value.get_structure()
+    }
 }

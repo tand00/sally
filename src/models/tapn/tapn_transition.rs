@@ -2,18 +2,29 @@ use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::OnceLock;
-use rand_distr::Distribution;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
-use statrs::distribution::Dirac;
 
 use crate::computation::combinatory::{CartesianProduct, KInVec};
 use crate::computation::intervals::{ContinuousSet, Convex};
+use crate::computation::probability::RealDistribution;
 use crate::models::action::Action;
 use crate::models::model_context::ModelContext;
 use crate::models::time::{ClockValue, RealTimeInterval, TimeInterval};
 use crate::models::{CompilationResult, Label, Node};
 
 use super::{tapn_edge::*, TAPNPlaceList, TAPNPlaceListReader, TAPNTokenList, TAPNTokenListReader};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FiringMode {
+    Oldest, Youngest, Random
+}
+
+impl Default for FiringMode {
+    fn default() -> Self {
+        return Self::Random
+    }
+}
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TAPNTransition {
@@ -24,9 +35,8 @@ pub struct TAPNTransition {
     pub inhibitors : Vec<(Label, TAPNEdgeData)>,
     pub controllable : bool,
     pub weight : f64,
-
-    #[serde(skip, default="TAPNTransition::default_distribution")]
-    pub distribution : Box<dyn Distribution<f64>>,
+    pub distribution : RealDistribution,
+    pub firing_mode : FiringMode,
 
     #[serde(skip)]
     pub index : usize,
@@ -83,10 +93,6 @@ impl TAPNTransition {
 
     pub fn get_inhibitors(&self) -> &Vec<InputEdge> {
         self.inhibitor_edges.get().unwrap()
-    }
-
-    pub fn default_distribution() -> Box<dyn Distribution<f64>> {
-        Box::new(Dirac::new(1.0).unwrap())
     }
 
     fn has_enough(interval : &TimeInterval, weight : i32, token_list : TAPNTokenListReader) -> bool {
@@ -282,8 +288,8 @@ impl TAPNTransition {
         }).collect()
     }
 
-    pub fn sample_date(&self) -> ClockValue {
-        todo!()
+    pub fn sample_date(&self, rng : &mut impl Rng) -> ClockValue {
+        self.distribution.sample_date(rng)
     }
 
     pub fn has_preset(&self) -> bool {
@@ -325,7 +331,12 @@ impl Clone for TAPNTransition {
             label: self.label.clone(),
             from: self.from.clone(),
             to: self.to.clone(),
+            inhibitors : self.inhibitors.clone(),
+            transports : self.transports.clone(),
             controllable : self.controllable.clone(),
+            weight : self.weight.clone(),
+            distribution : self.distribution.clone(),
+            firing_mode : self.firing_mode.clone(),
             index : self.index,
             ..Default::default()
         }

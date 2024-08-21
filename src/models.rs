@@ -153,14 +153,6 @@ pub trait Model: Any {
     where
         Self: Sized;
 
-    fn get_model_meta(&self) -> ModelMeta
-    where
-        Self: Sized,
-    {
-        // Same as before but instance
-        Self::get_meta()
-    }
-
     fn is_timed(&self) -> bool;
 
     fn is_stochastic(&self) -> bool;
@@ -212,6 +204,8 @@ pub trait Model: Any {
 pub trait ModelObject : Model {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
+    fn get_model_meta(&self) -> ModelMeta;
+    fn into_any(self) -> Box<dyn Any>;
 }
 
 impl<T : Model> ModelObject for T {
@@ -221,6 +215,13 @@ impl<T : Model> ModelObject for T {
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
+    fn get_model_meta(&self) -> ModelMeta {
+        Self::get_meta()
+    }
+    fn into_any(self) -> Box<dyn Any> {
+        Box::new(self)
+    }
+    
 }
 
 // Trait that should implement Send and Sync, to be shared amongst threads and do parallel verification by creating local models

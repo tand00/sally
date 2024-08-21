@@ -1,9 +1,10 @@
 use std::{collections::{HashMap, HashSet}, fmt::Display};
 
+use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
 use crate::models::{action::Action, model_context::ModelContext, model_var::{ModelVar, VarType}, CompilationResult, Label, Node};
-use super::ProbabilisticChoice;
+use crate::computation::probability::ProbabilisticChoice;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct MarkovNode {
@@ -80,7 +81,7 @@ impl MarkovNode {
         if !self.has_action(&action) {
             return None
         }
-        return Some(self.actions[&action].sample().clone())
+        return Some(self.actions[&action].sample(&mut thread_rng()).clone())
     }
 
 }

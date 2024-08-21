@@ -127,6 +127,7 @@ impl Clone for TAPNPlace {
         TAPNPlace {
             name: self.name.clone(),
             index : self.index,
+            invariant : self.invariant.clone(),
             ..Default::default()
         }
     }

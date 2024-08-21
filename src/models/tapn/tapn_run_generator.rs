@@ -4,9 +4,9 @@ use num_traits::Zero;
 
 use crate::{computation::intervals::{ContinuousSet, Delta, ToPositive}, models::{action::Action, run::RunStatus, time::{ClockValue, RealTimeInterval}, Model, ModelState}, verification::VerificationBound};
 
-use super::{TAPNPlaceList, TAPNPlaceListReader, TAPN};
+use super::{tapn_transition::{FiringMode, TAPNTransition}, TAPNPlaceList, TAPNPlaceListReader, TAPN};
 
-use rand::{seq::SliceRandom, thread_rng, Rng};
+use rand::{rngs::ThreadRng, seq::SliceRandom, thread_rng, Rng};
 
 pub struct TAPNRunGenerator<'a> {
     pub tapn : &'a TAPN,
@@ -16,6 +16,7 @@ pub struct TAPNRunGenerator<'a> {
     pub firing_dates : Vec<ClockValue>,
     pub started : bool,
     pub run_status : RunStatus,
+    pub rng : ThreadRng,
 }
 
 impl<'a> TAPNRunGenerator<'a> {
@@ -33,7 +34,8 @@ impl<'a> TAPNRunGenerator<'a> {
                 steps : 0,
                 time : ClockValue::zero(),
                 maximal : false
-            }
+            },
+            rng : thread_rng()
         };
         generator.refresh_intervals();
         generator
@@ -63,12 +65,12 @@ impl<'a> TAPNRunGenerator<'a> {
             if !enabled {
                 self.firing_dates[transition.index] = ClockValue::disabled();
             } else if newly_enabled {
-                self.firing_dates[transition.index] = transition.sample_date();
+                self.firing_dates[transition.index] = transition.sample_date(&mut self.rng);
             }
         }
     }
 
-    pub fn get_winner_and_delay(&self) -> (Option<usize>, ClockValue) {
+    pub fn get_winner_and_delay(&mut self) -> (Option<usize>, ClockValue) {
         let mut delay = ClockValue::infinity(); 
         let mut candidates : Vec<usize> = Vec::new();
         for i in 0..self.intervals.len() {
@@ -94,14 +96,30 @@ impl<'a> TAPNRunGenerator<'a> {
                 candidates.push(i);
             }
         }
-        let winner = candidates.choose(&mut thread_rng()).map(|i| *i);
+        let winner = candidates.choose(&mut self.rng).map(|i| *i);
         (winner, delay)
     }
 
-    pub fn random_token_set(&self, transition : usize, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
+    pub fn select_token_set(&mut self, transition : usize, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
         let transition = &self.tapn.transitions[transition];
+        match transition.firing_mode {
+            FiringMode::Oldest => self.oldest_token_set(transition, place_list),
+            FiringMode::Youngest => self.youngest_token_set(transition, place_list),
+            FiringMode::Random => self.random_token_set(transition, place_list),
+        }
+    }
+
+    pub fn oldest_token_set(&self, transition : &TAPNTransition, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
+        todo!()
+    }
+
+    pub fn youngest_token_set(&self, transition : &TAPNTransition, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
+        todo!()
+    }
+
+    pub fn random_token_set(&mut self, transition : &TAPNTransition, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
         let mut token_sets = transition.fireable_tokens(&place_list);
-        let random_index = thread_rng().gen_range(0..token_sets.len());
+        let random_index = self.rng.gen_range(0..token_sets.len());
         token_sets.swap_remove(random_index)
     }
 
@@ -150,7 +168,7 @@ impl<'a> Iterator for TAPNRunGenerator<'a> {
         
         if let Some(winner) = winner {
             let place_list = TAPNPlaceListReader::from(next_state.storage(&self.tapn.tokens_storage));
-            let in_tokens = self.random_token_set(winner, place_list);
+            let in_tokens = self.select_token_set(winner, place_list);
             let (next_state, intermed) = self.tapn.fire(next_state, winner, in_tokens);
             self.firing_dates[winner] = ClockValue::disabled();
             self.disable_transitions(&TAPNPlaceListReader::from(&intermed));

@@ -1,36 +1,59 @@
-use crate::{models::*, solution::Solution, verification::query::Query, translation::Translation};
+use std::fmt::Display;
+
+use digraph::Digraph;
+
+use crate::{io::{ModelLoader, ModelWriter}, models::*, solution::Solution, translation::Translation, verification::query::Query};
 
 use self::node::DataNode;
 
+pub enum SolverGraphNode {
+    Semantics(ModelMeta),
+    Solution(Box<dyn Solution>),
+    Loader(Box<dyn ModelLoader>),
+    Writer(Box<dyn ModelWriter>)
+}
+
+pub enum SolverGraphEdge {
+    Translation(Box<dyn Translation>),
+    Feature
+}
+
+impl Display for SolverGraphNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
 pub struct ModelSolvingGraph {
-    pub models : Vec<DataNode<ModelMeta, usize>>,
-    pub translations : Vec<Box<dyn Translation>>,
-    pub solutions : Vec<Box<dyn Solution>>,
-    pub edges : Vec<Edge<usize, usize, usize>>,
+    pub graph : Digraph<SolverGraphNode, SolverGraphEdge>
 }
 
 impl ModelSolvingGraph {
     
     pub fn new() -> Self {
         ModelSolvingGraph {
-            models : Vec::new(),
-            translations : Vec::new(),
-            solutions : Vec::new(),
-            edges : Vec::new()
+            graph : Digraph::new()
         }
     }
 
     pub fn register_model(&mut self, meta : ModelMeta) {
-        let node = DataNode::from(meta);
-        self.models.push(node);
+        self.graph.make_node(SolverGraphNode::Semantics(meta))
     }
 
     pub fn register_translation(&mut self, translation : Box<dyn Translation>) {
-        self.translations.push(translation)
+        
     }
 
     pub fn register_solution(&mut self, solution : Box<dyn Solution>) {
-        self.solutions.push(solution)
+        self.graph.make_node(SolverGraphNode::Solution(solution))
+    }
+
+    pub fn register_loader(&mut self, loader : Box<dyn ModelLoader>) {
+        self.graph.make_node(SolverGraphNode::Loader(loader))
+    }
+
+    pub fn register_writer(&mut self, writer : Box<dyn ModelWriter>) {
+        self.graph.make_node(SolverGraphNode::Writer(writer))
     }
 
     pub fn solve(&mut self, model : &dyn Any, query : &Query) {

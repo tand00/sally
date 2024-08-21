@@ -4,6 +4,7 @@ mod dbm;
 pub mod virtual_memory;
 pub mod combinatory;
 pub mod intervals;
+pub mod probability;
 
 pub use bit_set::BitSet;
 pub use dbm::DBM;

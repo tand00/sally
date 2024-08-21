@@ -339,3 +339,9 @@ impl From<PetriNet> for PetriMaker {
         }
     }
 }
+
+impl From<&PetriNet> for PetriStructure {
+    fn from(value: &PetriNet) -> Self {
+        value.get_structure()
+    }
+}
