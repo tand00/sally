@@ -11,8 +11,7 @@ pub mod log;
 use std::collections::HashMap;
 
 use computation::intervals::Convex;
-use io::sly::SLYWriter;
-use io::ModelWriter;
+use io::sly::{SLYLoader, SLYWriter};
 use models::digraph::Digraph;
 use models::expressions::{Condition, Expr};
 use models::{lbl, ModelObject};
@@ -48,15 +47,18 @@ fn main() {
 
     pending("Building Model Solving Graph...");
     let solver = build_solver();
+    positive("Solver ready ! Loaded :");
+    continue_info(format!("Semantics : \t[{}]", solver.semantics.len()));
+    continue_info(format!("Solutions : \t[{}]", solver.solutions.len()));
+    continue_info(format!("Loaders :   \t[{}]", solver.loaders.len()));
+    continue_info(format!("Writers :   \t[{}]", solver.writers.len()));
+    continue_info(format!("Translations : \t[{}]", solver.translations.len()));
     lf();
-
-    let mut writer = SLYWriter;
 
     let mut net = sample_petri();
     let ctx = net.singleton();
     println!("{}", ctx);
     println!("{}", net.get_model_meta());
-    println!("{}", writer.write(&net).unwrap_or("Error".to_owned()));
     lf();
 
     let mut translation = PetriClassGraphTranslation::new();
@@ -154,7 +156,8 @@ fn build_solver() -> ModelSolvingGraph {
     solver.register_translation(Box::new(PetriClassGraphTranslation::new()));
     solver.register_solution(Box::new(ClassGraphReachability::new()));
     solver.register_solution(Box::new(ClassGraphReachabilitySynthesis::new()));
-    solver.compile();
+    solver.register_loader(Box::new(SLYLoader));
+    solver.register_writer(Box::new(SLYWriter));
     solver
 }
 

@@ -23,7 +23,33 @@ pub struct DataNode<T, U> {
 
 impl<T, U> DataNode<T, U> {
 
-    pub fn from(element : T) -> Self {
+    pub fn downstream_nodes(&self) -> Vec<Arc<Self>> {
+        let mut res = Vec::new();
+        for edge in self.out_edges.read().unwrap().iter() {
+            if !edge.has_target() {
+                continue;
+            }
+            res.push(edge.get_node_to());
+        }
+        res
+    }
+
+    pub fn upstream_nodes(&self) -> Vec<Arc<Self>> {
+        let mut res = Vec::new();
+        for edge in self.in_edges.read().unwrap().iter() {
+            if !edge.has_source() {
+                continue;
+            }
+            res.push(edge.get_node_from());
+        }
+        res
+    }
+
+}
+
+impl<T, U> From<T> for DataNode<T, U> {
+
+    fn from(element : T) -> Self {
         DataNode {
             element,
             out_edges : Default::default(),

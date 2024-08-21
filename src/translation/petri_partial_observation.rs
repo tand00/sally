@@ -5,6 +5,7 @@ use crate::models::{lbl, model_context::ModelContext, Model, ModelObject, ModelS
 use super::{Translation, TranslationMeta, TranslationResult, TranslationType::Observation};
 
 
+#[derive(Clone)]
 pub struct PetriPartialObservation {
     pub initial_state : ModelState,
 }
@@ -35,6 +36,10 @@ impl Translation for PetriPartialObservation {
 
     fn get_translated(&mut self) -> (&mut dyn ModelObject, &ModelContext, &ModelState) {
         panic!("Nothing for now")
+    }
+
+    fn make_instance(&self) -> Box<dyn Translation> {
+        Box::new(Self::new())
     }
 
 }

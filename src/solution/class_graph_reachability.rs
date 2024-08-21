@@ -31,7 +31,7 @@ impl Solution for ClassGraphReachability {
         (!query.condition.contains_clock_proposition()) && (query.condition.is_state_condition())
     }
 
-    fn solve(&mut self, model : &dyn ModelObject, _ : &ModelContext, query : &crate::verification::query::Query) -> SolverResult {
+    fn solve(&self, model : &dyn ModelObject, _ : &ModelContext, query : &crate::verification::query::Query) -> SolverResult {
         pending("Solving reachability problem on Class graph...");
         let cg : Option<&ClassGraph> = model.as_any().downcast_ref();
         if cg.is_none() {

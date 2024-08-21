@@ -3,8 +3,6 @@ pub use class_graph_reachability_synthesis::ClassGraphReachabilitySynthesis;
 pub mod class_graph_reachability;
 pub use class_graph_reachability::ClassGraphReachability;
 
-use std::any::Any;
-
 use crate::flag;
 use crate::models::model_context::ModelContext;
 use crate::models::{lbl, Label, ModelObject, ModelState};
@@ -91,6 +89,6 @@ pub trait Solution {
 
     fn is_compatible(&self, model : &dyn ModelObject, context : &ModelContext, query : &Query) -> bool;
 
-    fn solve(&mut self, model : &dyn ModelObject, context : &ModelContext, query : &Query) -> SolverResult;
+    fn solve(&self, model : &dyn ModelObject, context : &ModelContext, query : &Query) -> SolverResult;
 
 }

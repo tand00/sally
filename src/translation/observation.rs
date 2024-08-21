@@ -214,5 +214,9 @@ impl<T : Model + Clone> Translation for PartialObservation<T> {
     fn forward_translate(&self, state : ModelState) -> Option<ModelState> {
         Some(self.observe(&state))
     }
+    
+    fn make_instance(&self) -> Box<dyn Translation> {
+        Box::new(Self::new(self.observation_function.clone()))
+    }
 
 }

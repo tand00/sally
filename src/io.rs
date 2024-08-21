@@ -38,9 +38,9 @@ pub trait ModelLoader {
 
     fn get_meta(&self) -> ModelLoaderMeta;
 
-    fn load(&mut self, content : String) -> ModelLoadingResult;
+    fn load(&self, content : String) -> ModelLoadingResult;
 
-    fn load_file(&mut self, path : String) -> ModelLoadingResult {
+    fn load_file(&self, path : String) -> ModelLoadingResult {
         let content = fs::read_to_string(path)?;
         self.load(content)
     }
@@ -51,9 +51,9 @@ pub trait ModelWriter {
 
     fn get_meta(&self) -> ModelWriterMeta;
 
-    fn write(&mut self, model : &dyn ModelObject) -> ModelWritingResult;
+    fn write(&self, model : &dyn ModelObject) -> ModelWritingResult;
 
-    fn write_file(&mut self, path : String, model : &dyn ModelObject) -> ModelWritingResult {
+    fn write_file(&self, path : String, model : &dyn ModelObject) -> ModelWritingResult {
         let content = self.write(model)?;
         fs::write(path, content.clone())?;
         Ok(content)

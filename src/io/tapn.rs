@@ -16,7 +16,7 @@ impl ModelLoader for TAPNLoader {
         }
     }
 
-    fn load(&mut self, path : String) -> ModelLoadingResult {
+    fn load(&self, path : String) -> ModelLoadingResult {
         todo!()
     }
 }

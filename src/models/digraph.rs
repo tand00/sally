@@ -8,7 +8,7 @@ use crate::computation::DBM;
 use super::{node::DataNode, time::TimeBound, Edge, Label, Node};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
-pub struct Digraph<T : ToString + 'static, U> {
+pub struct Digraph<T : 'static, U> {
     pub nodes : Vec<Arc<DataNode<T, U>>>,
     pub edges : Vec<Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>>,
 }
@@ -22,25 +22,15 @@ impl<T : ToString, U> Digraph<T,U> {
         }
     }
 
-    pub fn make_node(&mut self, value : T) {
+    pub fn make_node(&mut self, value : T) -> Arc<DataNode<T,U>> {
         let mut node = DataNode::from(value);
         node.index = self.nodes.len();
-        self.nodes.push(Arc::new(node));
+        let node = Arc::new(node);
+        self.nodes.push(Arc::clone(&node));
+        node
     }
 
-    pub fn from(data : Vec<T>) -> Self 
-    where 
-        T : Clone 
-    {
-        let nodes : Vec<Arc<DataNode<T, U>>> = data.iter().enumerate().map(|(i,x)| {
-            let mut node = DataNode::from(x.clone());
-            node.index = i;
-            Arc::new(node)
-        }).collect();
-        Digraph { nodes, ..Default::default() }
-    }
-
-    pub fn make_edge(&mut self, from : T, to : T, weight : U) 
+    pub fn make_edge(&mut self, from : T, to : T, weight : U) -> Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>
     where 
         T : PartialEq
     {
@@ -62,7 +52,6 @@ impl<T : ToString, U> Digraph<T,U> {
                 node_to = Some(Arc::clone(node));
             }
         }
-        e.label = e.from.clone().unwrap_or_default() + "->" + e.to.clone().unwrap_or_default();
         let e = Arc::new(e);
         if let Some(node_from) = node_from {
             node_from.out_edges.write().unwrap().push(Arc::clone(&e));
@@ -70,24 +59,51 @@ impl<T : ToString, U> Digraph<T,U> {
         if let Some(node_to) = node_to {
             node_to.in_edges.write().unwrap().push(Arc::clone(&e));
         }
-        self.edges.push(e);
+        self.edges.push(Arc::clone(&e));
+        e
     }
 
-    pub fn make_edge_when<F>(&mut self, filter : F, weight : U) 
+    pub fn make_edge_when<F>(&mut self, filter : F, weight : U) -> Vec<Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>>
     where 
         F : Fn (&T,&T) -> bool,
         U : Clone
     {
+        let mut res = Vec::new();
         for from in self.nodes.iter() {
             for to in self.nodes.iter() {
                 if !filter(&from.element, &to.element) { continue };
                 let mut e = Edge::data_edge(from, to, weight.clone());
                 e.from = Some(from.get_label());
                 e.to = Some(to.get_label());
-                e.label = from.get_label() + "->" + to.get_label();
-                self.edges.push(Arc::new(e));
+                let e = Arc::new(e);
+                self.edges.push(Arc::clone(&e));
+                res.push(e);
             }
         }
+        res
+    }
+
+    pub fn find<F>(&self, filter : F) -> Vec<Arc<DataNode<T,U>>> 
+        where F : Fn(&T) -> bool
+    {
+        let mut res = Vec::new();
+        for node in self.nodes.iter() {
+            if filter(&node.element) {
+                res.push(Arc::clone(node));
+            }
+        }
+        res
+    }
+
+    pub fn find_first<F>(&self, filter : F) -> Option<Arc<DataNode<T,U>>>
+        where F : Fn(&T) -> bool
+    {
+        for node in self.nodes.iter() {
+            if filter(&node.element) {
+                return Some(Arc::clone(node));
+            }
+        }
+        None
     }
 
     // Implementation of the Floyd-Warshall algorithm
@@ -126,9 +142,43 @@ impl<T : ToString, U> Digraph<T,U> {
         distances
     }
 
+    pub fn floyd_warshall<F>(&self, weight : F) -> DMatrix<f64> 
+    where 
+        F : Fn(&U) -> f64
+    {
+        let n_nodes = self.nodes.len();
+        let mut distances = 
+            DMatrix::from_fn(n_nodes, n_nodes, |i,j| {
+                if i == j { 0.0 }
+                else { f64::INFINITY }
+            });
+        for (i,node) in self.nodes.iter().enumerate() {
+            for edge in node.out_edges.read().unwrap().iter() {
+                if !edge.has_target() {
+                    continue;
+                }
+                let j = edge.get_node_to().index;
+                distances[(i,j)] = weight(&edge.weight);
+            }
+        }
+        for k in 0..n_nodes {
+            for i in 0..n_nodes {
+                for j in 0..n_nodes {
+                    if distances[(i,k)] == f64::INFINITY || distances[(k,j)] == f64::INFINITY {
+                        continue;
+                    }
+                    let sum = distances[(i,k)] + distances[(k,j)];
+                    if sum < distances[(i,j)] {
+                        distances[(i,j)] = sum;
+                    }
+                }
+            }
+        }
+        distances
+    }
+
     pub fn shortest_digraph(&self) -> Self 
     where 
-        T : Clone,
         U : Add<Output = U> + Ord + Zero + Bounded + Scalar
     {
         let distances = self.shortest_paths();
@@ -142,7 +192,6 @@ impl<T : ToString, U> Digraph<T,U> {
 
     pub fn from_matrix(elements : Vec<T>, relations : DMatrix<U>) -> Self 
     where
-        T : Clone,
         U : Ord + Clone + Bounded + Zero
     {
         let mut graph = Self::from(elements);
@@ -173,7 +222,6 @@ impl<T : ToString, U> Digraph<T,U> {
 
     pub fn create_relations(&mut self, relations : DMatrix<U>) 
     where
-        T : Clone,
         U : Ord + Clone + Bounded + Zero
     {
         let n_nodes = self.nodes.len();
@@ -197,6 +245,17 @@ impl<T : ToString, U> Digraph<T,U> {
         }
     }
 
+}
+
+impl<T : ToString, U> From<Vec<T>> for Digraph<T,U> {
+    fn from(data : Vec<T>) -> Self {
+        let nodes : Vec<Arc<DataNode<T, U>>> = data.into_iter().enumerate().map(|(i,x)| {
+            let mut node = DataNode::from(x);
+            node.index = i;
+            Arc::new(node)
+        }).collect();
+        Digraph { nodes, ..Default::default() }
+    }
 }
 
 impl<T : ToString, U> Default for Digraph<T,U> {

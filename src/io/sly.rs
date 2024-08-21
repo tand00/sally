@@ -55,7 +55,7 @@ impl ModelLoader for SLYLoader {
         }
     }
 
-    fn load(&mut self, content : String) -> ModelLoadingResult {
+    fn load(&self, content : String) -> ModelLoadingResult {
         let parsed = serde_json::from_str::<Value>(&content)?;
 
         let Value::Object(mut map) = parsed else {
@@ -86,7 +86,7 @@ impl ModelWriter for SLYWriter {
         }
     }
 
-    fn write(&mut self, model : &dyn ModelObject) -> ModelWritingResult {
+    fn write(&self, model : &dyn ModelObject) -> ModelWritingResult {
         let model_tye = Value::String(model.get_model_meta().name.to_string());
         let value = Self::write_model(model)?;
         let mut map = Map::new();

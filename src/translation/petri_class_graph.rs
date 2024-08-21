@@ -61,5 +61,11 @@ impl Translation for PetriClassGraphTranslation {
             Some(cg) => cg
         }, &self.context, &self.initial_state)
     }
+    
+    fn make_instance(&self) -> Box<dyn Translation> {
+        Box::new(Self::new())
+    }
+
+    
 
 }

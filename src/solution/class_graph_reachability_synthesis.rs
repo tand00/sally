@@ -28,7 +28,7 @@ impl Solution for ClassGraphReachabilitySynthesis {
         (!query.condition.contains_clock_proposition()) && (query.condition.is_state_condition())
     }
 
-    fn solve(&mut self, _ : &dyn ModelObject, _ : &ModelContext, _ : &crate::verification::query::Query) -> SolverResult {
+    fn solve(&self, _ : &dyn ModelObject, _ : &ModelContext, _ : &crate::verification::query::Query) -> SolverResult {
         SolverResult::SolverError
     }
 

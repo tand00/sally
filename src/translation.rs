@@ -1,13 +1,13 @@
 mod petri_class_graph;
 mod petri_partial_observation;
-use std::{any::Any, fmt::Display};
+use std::fmt::Display;
 
 pub mod observation;
 
 pub use petri_class_graph::PetriClassGraphTranslation;
 pub use petri_partial_observation::PetriPartialObservation;
 
-use crate::models::{lbl, model_context::ModelContext, Label, Model, ModelObject, ModelState};
+use crate::models::{lbl, model_context::ModelContext, Label, ModelObject, ModelState};
 
 #[derive(Debug, Clone)]
 pub struct TranslationError(pub String);
@@ -62,6 +62,8 @@ pub trait Translation {
         let _ = state;
         None
     }
+
+    fn make_instance(&self) -> Box<dyn Translation>;
 
 }
 pub struct TranslationChain {
@@ -126,6 +128,12 @@ impl Translation for TranslationChain {
             };
         }
         Some(current_state)
+    }
+    
+    fn make_instance(&self) -> Box<dyn Translation> {
+        Box::new(TranslationChain {
+            translations : self.translations.iter().map(|t| t.make_instance()).collect()
+        })
     }
 
 }
