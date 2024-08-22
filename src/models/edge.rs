@@ -47,6 +47,18 @@ impl<T, U, V> Edge<T, U, V> {
         }
     }
 
+    pub fn reversed(&self) -> Edge<T, V, U>
+        where T : Clone
+    {
+        Edge {
+            from : self.to.clone(), 
+            to : self.from.clone(),
+            weight : self.weight.clone(),
+            ref_from : self.ref_to.clone(),
+            ref_to : self.ref_from.clone(),
+        }
+    }
+
     pub fn node_from(&self) -> Option<Arc<U>> {
         match &self.ref_from {
             None => None,

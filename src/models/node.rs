@@ -45,6 +45,26 @@ impl<T, U> DataNode<T, U> {
         res
     }
 
+    pub fn out_degree(&self) -> i32 {
+        self.out_edges.read().unwrap().len() as i32
+    }
+
+    pub fn in_degree(&self) -> i32 {
+        self.in_edges.read().unwrap().len() as i32
+    }
+
+    pub fn deg_diff(&self) -> i32 {
+        self.out_degree() - self.in_degree()
+    }
+
+    pub fn is_sink(&self) -> bool {
+        self.out_degree() == 0
+    }
+
+    pub fn is_source(&self) -> bool {
+        self.in_degree() == 0
+    }
+
     pub fn add_out_edge(&self, edge : &Arc<Edge<U, Self, Self>>) {
         self.out_edges.write().unwrap().push(Arc::clone(&edge));
     }
