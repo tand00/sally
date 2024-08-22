@@ -157,3 +157,19 @@ impl<T,U> GraphTraversal<GraphNode<T,U>, RandomSearch<GraphNode<T,U>>, DigraphNe
         Self::new(initial, RandomSearch::new(), DigraphNeighbors)
     }
 }
+
+impl<T,U> GraphTraversal<GraphNode<T,U>, BreadthFirst<GraphNode<T,U>>, UniqDigraphNeighbors> {
+    pub fn uniq_bfs(initial : GraphNode<T,U>) -> Self {
+        Self::new(initial, BreadthFirst::new(), UniqDigraphNeighbors::new())
+    }
+}
+impl<T,U> GraphTraversal<GraphNode<T,U>, DepthFirst<GraphNode<T,U>>, UniqDigraphNeighbors> {
+    pub fn uniq_dfs(initial : GraphNode<T,U>) -> Self {
+        Self::new(initial, DepthFirst::new(), UniqDigraphNeighbors::new())
+    }
+}
+impl<T,U> GraphTraversal<GraphNode<T,U>, RandomSearch<GraphNode<T,U>>, UniqDigraphNeighbors> {
+    pub fn uniq_random(initial : GraphNode<T,U>) -> Self {
+        Self::new(initial, RandomSearch::new(), UniqDigraphNeighbors::new())
+    }
+}
