@@ -1,20 +1,24 @@
-use std::{cmp::min, marker::PhantomData, ops::Add, sync::Arc, usize};
+use std::{ops::Add, sync::Arc, usize};
 
 use nalgebra::{DMatrix, Scalar};
 use num_traits::{Bounded, Zero};
+use search_strategy::GraphTraversal;
 
 use crate::computation::DBM;
 
-use super::{node::{Node, DataNode}, time::TimeBound, Edge, Label};
+use super::{node::{Node, DataNode}, time::TimeBound, Edge};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
-pub struct Digraph<T, U> {
-    pub nodes : Vec<Arc<DataNode<T, U>>>,
-    pub edges : Vec<Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>>,
-}
 
 pub type GraphNode<T,U> = Arc<DataNode<T,U>>;
 pub type GraphEdge<T,U> = Arc<Edge<U, DataNode<T,U>, DataNode<T,U>>>;
+
+pub mod search_strategy;
+
+pub struct Digraph<T, U> {
+    nodes : Vec<GraphNode<T,U>>,
+    edges : Vec<Option<GraphEdge<T,U>>>,
+}
 
 impl<T, U> Digraph<T,U> {
 
@@ -30,64 +34,85 @@ impl<T, U> Digraph<T,U> {
         node.index = self.nodes.len();
         let node = Arc::new(node);
         self.nodes.push(Arc::clone(&node));
+        self.edges.resize(self.nodes.len() * self.nodes.len(), None);
         node
     }
 
-    pub fn make_edge(&mut self, from : T, to : T, weight : U) -> GraphEdge<T,U>
+    pub fn n_nodes(&self) -> usize {
+        self.nodes.len()
+    }
+
+    pub fn node_at(&self, i : usize) -> GraphNode<T,U> {
+        Arc::clone(&self.nodes[i])
+    }
+
+    pub fn edge_at(&self, i : usize, j : usize) -> Option<GraphEdge<T,U>> {
+        let edge = &self.edges[i * self.nodes.len() + j];
+        edge.as_ref().map(Arc::clone)
+    }
+
+    pub fn has_edge(&self, i : usize, j : usize) -> bool {
+        self.edges[i * self.nodes.len() + j].is_some()
+    }
+
+    fn edge_index(&self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) -> usize {
+        (from.index * self.nodes.len()) + to.index
+    }
+
+    fn save_edge(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>, edge : GraphEdge<T,U>) -> Option<GraphEdge<T,U>> {
+        let index = self.edge_index(&from, &to);
+        if self.edges[index].is_some() {
+            return None;
+        }
+        from.add_out_edge(&edge);
+        to.add_in_edge(&edge);
+        self.edges[index] = Some(Arc::clone(&edge));
+        Some(edge)
+    }
+
+    pub fn make_edge(&mut self, from : &T, to : &T, weight : U) -> Option<GraphEdge<T,U>>
     where 
         T : PartialEq
     {
-        let mut e = Edge::new_weighted(
-            Label::new(), 
-            Label::new(), 
-            weight);
+        let mut e = Edge::orphan(weight);
         let mut node_from : Option<Arc<DataNode<T,U>>> = None;
         let mut node_to : Option<Arc<DataNode<T,U>>> = None;
         for node in self.nodes.iter() {
-            if node.element == from {
+            if node.element == *from {
                 e.set_node_from(node);
                 node_from = Some(Arc::clone(node));
             }
-            if node.element == to {
+            if node.element == *to {
                 e.set_node_to(node);
                 node_to = Some(Arc::clone(node));
             }
         }
+        if !e.is_connected() {
+            return None;
+        }
         let e = Arc::new(e);
-        if let Some(node_from) = node_from {
-            node_from.add_out_edge(&e);
-        }
-        if let Some(node_to) = node_to {
-            node_to.add_in_edge(&e);
-        }
-        self.edges.push(Arc::clone(&e));
-        e
+        self.save_edge(&node_from.unwrap(), &node_to.unwrap(), e)
     }
 
-    pub fn connect(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>, weight : U) -> GraphEdge<T,U>
-    {
+    pub fn connect(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>, weight : U) -> Option<GraphEdge<T,U>> {
         let e = Edge::data_edge(from, to, weight);
         let e = Arc::new(e);
         from.add_out_edge(&e);
         to.add_in_edge(&e);
-        self.edges.push(Arc::clone(&e));
-        e
+        self.save_edge(&from, &to, e)
+    }
+
+    pub fn are_connected(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) -> bool {
+        self.has_edge(from.index, to.index)
     }
 
     pub fn disconnect(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) {
-        let mut to_remove = None;
-        for (i, edge) in self.edges.iter().enumerate() {
-            if !edge.is_connected() {
-                continue;
-            }
-            if edge.get_node_from().index == from.index && edge.get_node_to().index == to.index {
-                to_remove = Some(i);
-                break;
-            }
+        let index = self.edge_index(from, to);
+        if self.edges[index].is_none() {
+            return;
         }
-        if let Some(i) = to_remove {
-            self.edges.remove(i);
-        }
+        self.edges[index] = None;
+
         let mut to_remove = None;
         for (i, edge) in from.out_edges.read().unwrap().iter().enumerate() {
             if !edge.has_target() {
@@ -116,6 +141,27 @@ impl<T, U> Digraph<T,U> {
         }
     }
 
+    pub fn remove_edge_at(&mut self, i : usize, j : usize) {
+        let from = Arc::clone(&self.nodes[i]);
+        let to = Arc::clone(&self.nodes[j]);
+        self.disconnect(&from, &to)
+    }
+
+    pub fn remove_node(&mut self, node : &GraphNode<T,U>) {
+        let n = self.n_nodes();
+        for j in 0..n {
+            self.remove_edge_at(node.index, j);
+            self.remove_edge_at(j, node.index);
+        }
+        let begin = node.index * n;
+        self.edges.drain(begin..(begin + n));
+        let mut j = node.index;
+        while j < self.edges.len() {
+            self.edges.remove(j);
+            j += (n - 1);
+        }
+    }
+
     pub fn make_edge_when<F>(&mut self, filter : F, weight : U) -> Vec<GraphEdge<T,U>>
     where 
         F : Fn (&T,&T) -> bool,
@@ -124,10 +170,14 @@ impl<T, U> Digraph<T,U> {
         let mut res = Vec::new();
         for from in self.nodes.iter() {
             for to in self.nodes.iter() {
+                let index = self.edge_index(&from, &to);
+                if self.edges[index].is_some() { continue };
                 if !filter(&from.element, &to.element) { continue };
                 let e = Edge::data_edge(from, to, weight.clone());
                 let e = Arc::new(e);
-                self.edges.push(Arc::clone(&e));
+                from.add_out_edge(&e);
+                to.add_in_edge(&e);
+                self.edges[index] = Some(Arc::clone(&e));
                 res.push(e);
             }
         }
@@ -157,15 +207,21 @@ impl<T, U> Digraph<T,U> {
         None
     }
 
+    pub fn get_node(&self, value : &T) -> Option<GraphNode<T,U>>
+        where T : PartialEq
+    {
+        self.find_first(|x| *x == *value)
+    }
+
     // Implementation of the Floyd-Warshall algorithm
-    pub fn shortest_paths(&self) -> DMatrix<U> 
+    pub fn all_shortest_paths(&self) -> DMatrix<U> 
     where 
-        U : Add<Output = U> + Ord + Zero + Bounded + Scalar
+        U : Add<Output = U> + PartialOrd + Zero + Bounded + Scalar
     {
         self.floyd_warshall(U::clone, U::max_value())
     }
 
-    pub fn shortest_float_paths<F>(&self, weight : F) -> DMatrix<f64> 
+    pub fn all_shortest_float_paths<F>(&self, weight : F) -> DMatrix<f64> 
     where 
         F : Fn(&U) -> f64
     {
@@ -197,34 +253,141 @@ impl<T, U> Digraph<T,U> {
 
     pub fn shortest_digraph(&self) -> Self 
     where 
-        U : Add<Output = U> + Ord + Zero + Bounded + Scalar
+        U : Add<Output = U> + PartialOrd + Zero + Bounded + Scalar
     {
-        let distances = self.shortest_paths();
+        let distances = self.all_shortest_paths();
         let mut res = Digraph {
             nodes : self.nodes.clone(),
-            ..Default::default()
+            edges : vec![None ; self.nodes.len() * self.nodes.len()]
         };
         res.create_relations(distances);
         res
     }
 
-    pub fn dijkstra<F,V>(
-        &self, from : &GraphNode<T,U>, to : &GraphNode<T,U>, 
+    pub fn shortest_path(&self, from : &GraphNode<T,U>, target : &GraphNode<T,U>) 
+        -> Option<(U, Vec<GraphEdge<T,U>>)> 
+    where 
+        U : Add<Output = U> + PartialOrd + Zero + Bounded + Scalar
+    {
+        self.shortest_weighted_path(from, target, U::clone, U::max_value())
+    }
+
+    pub fn shortest_paths_from(&self, from : &GraphNode<T,U>) 
+        -> (Vec<U>, Vec<Vec<GraphEdge<T,U>>>)
+    where 
+        U : Add<Output = U> + PartialOrd + Zero + Bounded + Scalar
+    {
+        self.shortest_weighted_paths_from(from, U::clone, U::max_value())
+    }
+
+    pub fn shortest_weighted_path<F,V>(
+        &self, from : &GraphNode<T,U>, target : &GraphNode<T,U>,
         weight : F, no_edge : V
-    ) -> (V, Vec<GraphEdge<T,U>>)
+    ) 
+        -> Option<(V, Vec<GraphEdge<T,U>>)>
+    where 
+        F : Fn(&U) -> V,
+        V : Add<Output = V> + PartialOrd + Zero + Scalar
+    {
+        let (mut dists, mut traces) = self.dijkstra(from, Some(target), weight, no_edge.clone());
+        if dists[target.index] < no_edge {
+            return Some((dists.remove(target.index), traces.remove(target.index)));
+        }
+        None
+    }
+
+    pub fn shortest_weighted_paths_from<F,V>(
+        &self, from : &GraphNode<T,U>, weight : F, no_edge : V
+    ) 
+        -> (Vec<V>, Vec<Vec<GraphEdge<T,U>>>)
+    where 
+        F : Fn(&U) -> V,
+        V : Add<Output = V> + PartialOrd + Zero + Scalar
+    {
+        self.dijkstra(from, None, weight, no_edge.clone())
+    }
+
+    pub fn dijkstra<F,V>(
+        &self, from : &GraphNode<T,U>, target : Option<&GraphNode<T,U>>,
+        weight : F, no_edge : V
+    ) 
+        -> (Vec<V>, Vec<Vec<GraphEdge<T,U>>>)
     where
         F : Fn(&U) -> V,
         V : Add<Output = V> + PartialOrd + Zero + Scalar
     {
-        //let mut seqs = Vec::new();
-        let mut dists = vec![no_edge.clone() ; self.nodes.len()];
-        let matrix = self.make_weight_matrix(weight, no_edge);
-        todo!()
+        let i = from.index;
+        let target = target.map(|t| t.index);
+        let n = self.n_nodes();
+        let mut dists = Vec::new();
+        let mut traces = vec![Vec::new() ; n];
+        let matrix = self.make_weight_matrix(weight, no_edge.clone());
+
+        let mut added = vec![false ; n];
+        added[i] = true;
+        let mut min_w = no_edge.clone();
+        let mut min_j = usize::MAX;
+        for j in 0..n {
+            if i == j { continue }
+            let value = matrix[(i,j)].clone();
+            if value < min_w {
+                min_w = value.clone();
+                min_j = j;
+            }
+            if let Some(e) = self.edge_at(i, j) {
+                traces[j].push(e);
+            }
+            dists.push(value);
+        }
+        
+        while min_j < usize::MAX && (target.is_none() || !added[target.unwrap()]){
+            added[min_j] = true;
+            let pre = min_j;
+            min_w = no_edge.clone();
+            min_j = usize::MAX;
+            for j in 0..n {
+                if added[j] { continue }
+                let new_arc = dists[pre].clone() + matrix[(pre,j)].clone();
+                if new_arc < dists[j] {
+                    dists[j] = new_arc;
+                    traces[j] = traces[pre].clone();
+                    traces[j].push(self.edge_at(i, j).unwrap());
+                }
+                if dists[j] < min_w {
+                    min_w = dists[j].clone();
+                    min_j = j;
+                }
+            }
+        }
+
+        (dists, traces)
+    }
+
+    pub fn is_positive(&self) -> bool 
+    where 
+        U : Zero + PartialOrd + Clone
+    {
+        self.is_positively_weighted(U::clone)
+    }
+    
+    pub fn is_positively_weighted<F,V>(&self, weight : F) -> bool 
+    where 
+        F : Fn(&U) -> V,
+        V : PartialOrd + Zero
+    {
+        for edge in self.edges.iter() {
+            if let Some(edge) = edge {
+                if weight(edge.data()) < V::zero() {
+                    return false;
+                }
+            }
+        }
+        true
     }
 
     pub fn from_matrix(elements : Vec<T>, relations : DMatrix<U>) -> Self 
     where
-        U : Ord + Clone + Bounded + Zero
+        U : PartialOrd + Clone + Bounded + Zero
     {
         let mut graph = Self::from(elements);
         graph.create_relations(relations);
@@ -248,46 +411,42 @@ impl<T, U> Digraph<T,U> {
     pub fn make_weight_matrix<F,V>(&self, weight : F, no_edge : V) -> DMatrix<V> 
     where 
         F : Fn(&U) -> V,
-        V : Scalar + Zero
+        V : Zero + Scalar
     {
         let n_nodes = self.nodes.len();
-        let mut res = DMatrix::from_fn(n_nodes, n_nodes, |i,j| {
+        DMatrix::from_fn(n_nodes, n_nodes, |i,j| {
             if i == j { V::zero() }
-            else { no_edge.clone() }
-        });
-        for (i, node) in self.nodes.iter().enumerate() {
-            for edge in node.out_edges.read().unwrap().iter() {
-                if !edge.has_target() {
-                    continue;
+            else { 
+                if let Some(edge) = &self.edges[i * n_nodes + j] {
+                    weight(&edge.weight)
+                } 
+                else { 
+                    no_edge.clone() 
                 }
-                let j = edge.get_node_to().index;
-                res[(i,j)] = weight(&edge.weight);
             }
-        }
-        res
+        })
     }
 
-    pub fn make_edges_matrix(&self) 
-        -> Vec<Vec<Option<GraphEdge<T,U>>>>
-    {
-        let n_nodes = self.nodes.len();
-        let res = vec![None ; n_nodes];
-        let mut res = vec![res ; n_nodes];
-        for (i, node) in self.nodes.iter().enumerate() {
-            for edge in node.out_edges.read().unwrap().iter() {
-                if !edge.has_target() {
-                    continue;
+    pub fn has_loop(&self) -> bool {
+        let mut seen = vec![false ; self.n_nodes()];
+        loop {
+            let next_index = seen.iter().position(|x| *x);
+            let Some(next_index) = next_index else { 
+                return true;
+            };
+            let traversal = GraphTraversal::dfs(self.nodes[next_index].clone());
+            for node in traversal {
+                if seen[node.index] {
+                    return true;
                 }
-                let j = edge.get_node_to().index;
-                res[i][j] = Some(Arc::clone(&edge));
+                seen[node.index] = true;
             }
         }
-        res
     }
 
     pub fn create_relations(&mut self, relations : DMatrix<U>) 
     where
-        U : Ord + Clone + Bounded + Zero
+        U : PartialOrd + Clone + Bounded + Zero
     {
         let n_nodes = self.nodes.len();
         for (n, w) in relations.iter().enumerate() {
@@ -296,12 +455,16 @@ impl<T, U> Digraph<T,U> {
             if *w >= U::max_value() || (w.is_zero() && i == j) { // Max length = INF, min length to self = no edge
                 continue;
             }
+            if self.edges[n].is_some() {
+                continue;
+            }
             let from = &self.nodes[i];
             let to = &self.nodes[j];
             let e = Edge::data_edge(from, to, w.clone());
             let e = Arc::new(e);
             from.add_out_edge(&e);
             to.add_in_edge(&e);
+            self.edges[n] = Some(e);
         }
     }
 
@@ -309,12 +472,13 @@ impl<T, U> Digraph<T,U> {
 
 impl<T, U> From<Vec<T>> for Digraph<T,U> {
     fn from(data : Vec<T>) -> Self {
+        let n = data.len();
         let nodes : Vec<Arc<DataNode<T, U>>> = data.into_iter().enumerate().map(|(i,x)| {
             let mut node = DataNode::from(x);
             node.index = i;
             Arc::new(node)
         }).collect();
-        Digraph { nodes, ..Default::default() }
+        Digraph { nodes, edges : vec![None ; n * n] }
     }
 }
 
@@ -326,27 +490,21 @@ impl<T : ToString, U> Digraph<T,U> {
         for node in self.nodes.iter() {
             node.clear_edges();
         }
-        let mut new_edges = Vec::new();
+        let mut new_edges = vec![None ; self.nodes.len() * self.nodes.len()];
         for edge in self.edges.iter() {
+            let Some(edge) = edge else { continue };
             let mut new_edge = Edge::orphan(edge.weight.clone());
-            if edge.has_source() {
-                let source = edge.get_node_from();
-                new_edge.set_node_from(&source);
-                new_edge.from = Some(source.get_label());                
-            }
-            if edge.has_target() {
-                let target = edge.get_node_to();
-                new_edge.set_node_to(&target);
-                new_edge.to = Some(target.get_label());
-            }
+            let source = edge.get_node_from();
+            new_edge.set_node_from(&source);
+            new_edge.from = Some(source.get_label());                
+            let target = edge.get_node_to();
+            new_edge.set_node_to(&target);
+            new_edge.to = Some(target.get_label());
             let new_edge = Arc::new(new_edge);
-            if new_edge.has_source() {
-                new_edge.get_node_from().add_out_edge(&new_edge);
-            }
-            if new_edge.has_target() {
-                new_edge.get_node_to().add_in_edge(&new_edge);
-            }
-            new_edges.push(new_edge);
+            source.add_out_edge(&new_edge);
+            target.add_in_edge(&new_edge);
+            let index = self.edge_index(&source, &target);
+            new_edges[index] = Some(new_edge);
         }
         self.edges = new_edges;
     }
@@ -367,7 +525,7 @@ impl From<DBM> for Digraph<usize, TimeBound> {
         }
         for i in 0..(matrix.vars_count() + 1) {
             for j in 0..(matrix.vars_count() + 1) {
-                graph.make_edge(i, j, matrix[(i,j)]);
+                graph.make_edge(&i, &j, matrix[(i,j)]);
             }
         }
         graph

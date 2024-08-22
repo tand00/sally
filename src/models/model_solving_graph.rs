@@ -41,8 +41,8 @@ pub struct ModelSolvingGraph {
 impl ModelSolvingGraph {
     
     pub fn new() -> Self {
-        let graph = Digraph::from(vec![SolverGraphNode::AnySemantics]);
-        let node_any = Arc::clone(&graph.nodes[0]);
+        let mut graph = Digraph::new();
+        let node_any = graph.make_node(SolverGraphNode::AnySemantics);
         ModelSolvingGraph {
             graph, node_any,
             semantics : Vec::new(),

@@ -205,10 +205,10 @@ fn _sample_digraph() -> Digraph<usize, i32> {
     g.make_node(4);
     g.make_node(2);
     g.make_node(1);
-    g.make_edge(3, 2, 1);
-    g.make_edge(3, 4, 3);
-    g.make_edge(2, 1, 5);
-    g.make_edge(4, 1, -1);
+    g.make_edge(&3,&2, 1);
+    g.make_edge(&3,&4, 3);
+    g.make_edge(&2,&1, 5);
+    g.make_edge(&4,&1, -1);
     g
 }
 
