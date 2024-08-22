@@ -45,6 +45,19 @@ impl<T, U> DataNode<T, U> {
         res
     }
 
+    pub fn add_out_edge(&self, edge : &Arc<Edge<U, Self, Self>>) {
+        self.out_edges.write().unwrap().push(Arc::clone(&edge));
+    }
+
+    pub fn add_in_edge(&self, edge : &Arc<Edge<U, Self, Self>>) {
+        self.in_edges.write().unwrap().push(Arc::clone(&edge));
+    }
+
+    pub fn clear_edges(&self) {
+        self.in_edges.write().unwrap().clear();
+        self.out_edges.write().unwrap().clear();
+    }
+
 }
 
 impl<T, U> From<T> for DataNode<T, U> {

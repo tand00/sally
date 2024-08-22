@@ -215,7 +215,6 @@ impl Model for ClassGraph {
         for class in self.classes.iter() {
             for (pred, action) in class.predecessors.read().unwrap().iter() {
                 let edge = Edge {
-                    label : Label::from(action.to_string()),
                     from : None,
                     to : None,
                     weight : action.clone(),

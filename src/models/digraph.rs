@@ -5,7 +5,7 @@ use num_traits::{Bounded, Zero};
 
 use crate::computation::DBM;
 
-use super::{node::DataNode, time::TimeBound, Edge, Label};
+use super::{node::{Node, DataNode}, time::TimeBound, Edge, Label};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
 pub struct Digraph<T : 'static, U> {
@@ -20,6 +20,37 @@ impl<T, U> Digraph<T,U> {
             nodes : Vec::new(),
             edges : Vec::new(),
         }
+    }
+
+    pub fn labelize(&mut self) 
+        where T : ToString, U : Clone
+    {
+        for node in self.nodes.iter() {
+            node.clear_edges();
+        }
+        let mut new_edges = Vec::new();
+        for edge in self.edges.iter() {
+            let mut new_edge = Edge::orphan(edge.weight.clone());
+            if edge.has_source() {
+                let source = edge.get_node_from();
+                new_edge.set_node_from(&source);
+                new_edge.from = Some(source.get_label());                
+            }
+            if edge.has_target() {
+                let target = edge.get_node_to();
+                new_edge.set_node_to(&target);
+                new_edge.to = Some(target.get_label());
+            }
+            let new_edge = Arc::new(new_edge);
+            if new_edge.has_source() {
+                new_edge.get_node_from().add_out_edge(&new_edge);
+            }
+            if new_edge.has_target() {
+                new_edge.get_node_to().add_in_edge(&new_edge);
+            }
+            new_edges.push(new_edge);
+        }
+        self.edges = new_edges;
     }
 
     pub fn make_node(&mut self, value : T) -> Arc<DataNode<T,U>> {
@@ -160,9 +191,6 @@ impl<T, U> Digraph<T,U> {
         for k in 0..n_nodes {
             for i in 0..n_nodes {
                 for j in 0..n_nodes {
-                    if distances[(i,k)] == f64::INFINITY || distances[(k,j)] == f64::INFINITY {
-                        continue;
-                    }
                     let sum = distances[(i,k)] + distances[(k,j)];
                     if sum < distances[(i,j)] {
                         distances[(i,j)] = sum;
@@ -195,7 +223,7 @@ impl<T, U> Digraph<T,U> {
         graph
     }
 
-    pub fn to_matrix(&self) -> DMatrix<U> 
+    pub fn get_matrix(&self) -> DMatrix<U> 
     where 
         U : Scalar + Zero + Bounded + PartialOrd
     {
@@ -255,9 +283,8 @@ impl<T, U> Default for Digraph<T,U> {
     }
 }
 
-impl Digraph<usize, TimeBound> {
-
-    pub fn from_dbm(matrix : DBM) -> Self {
+impl From<DBM> for Digraph<usize, TimeBound> {
+    fn from(matrix: DBM) -> Self {
         let mut graph = Digraph::new();
         for i in 0..(matrix.vars_count() + 1) {
             graph.make_node(i);
@@ -269,9 +296,10 @@ impl Digraph<usize, TimeBound> {
         }
         graph
     }
+}
 
-    pub fn to_dbm(&self) -> DBM {
-        DBM::from(self.to_matrix())
+impl From<Digraph<usize, TimeBound>> for DBM {
+    fn from(graph: Digraph<usize, TimeBound>) -> Self {
+        DBM::from(graph.get_matrix())
     }
-
 }

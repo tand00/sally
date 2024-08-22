@@ -6,7 +6,6 @@ use super::Label;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge<T, U, V> {
-    pub label : Label,
     pub from : Option<Label>,
     pub to : Option<Label>,
     pub weight : T,
@@ -18,9 +17,18 @@ pub struct Edge<T, U, V> {
 
 impl<T, U, V> Edge<T, U, V> {
 
+    pub fn orphan(data : T) -> Self {
+        Edge {
+            from : None,
+            to : None,
+            weight : data,
+            ref_from : None,
+            ref_to : None
+        }
+    }
+
     pub fn new_weighted(from : Label, to : Label, weight : T) -> Self {
         Edge {
-            label: Label::new(),
             from: Some(from), 
             to: Some(to),
             weight,
@@ -31,7 +39,6 @@ impl<T, U, V> Edge<T, U, V> {
 
     pub fn data_edge(from : &Arc<U>, to : &Arc<V>, weight : T) -> Self {
         Edge {
-            label: Label::new(),
             from: None, 
             to: None,
             weight,
