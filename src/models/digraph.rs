@@ -1,4 +1,4 @@
-use std::{cmp::min, marker::PhantomData, ops::Add, sync::Arc};
+use std::{cmp::min, marker::PhantomData, ops::Add, sync::Arc, usize};
 
 use nalgebra::{DMatrix, Scalar};
 use num_traits::{Bounded, Zero};
@@ -13,6 +13,9 @@ pub struct Digraph<T, U> {
     pub edges : Vec<Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>>,
 }
 
+pub type GraphNode<T,U> = Arc<DataNode<T,U>>;
+pub type GraphEdge<T,U> = Arc<Edge<U, DataNode<T,U>, DataNode<T,U>>>;
+
 impl<T, U> Digraph<T,U> {
 
     pub fn new() -> Self {
@@ -22,7 +25,7 @@ impl<T, U> Digraph<T,U> {
         }
     }
 
-    pub fn make_node(&mut self, value : T) -> Arc<DataNode<T,U>> {
+    pub fn make_node(&mut self, value : T) -> GraphNode<T,U> {
         let mut node = DataNode::from(value);
         node.index = self.nodes.len();
         let node = Arc::new(node);
@@ -30,7 +33,7 @@ impl<T, U> Digraph<T,U> {
         node
     }
 
-    pub fn make_edge(&mut self, from : T, to : T, weight : U) -> Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>
+    pub fn make_edge(&mut self, from : T, to : T, weight : U) -> GraphEdge<T,U>
     where 
         T : PartialEq
     {
@@ -61,7 +64,59 @@ impl<T, U> Digraph<T,U> {
         e
     }
 
-    pub fn make_edge_when<F>(&mut self, filter : F, weight : U) -> Vec<Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>>
+    pub fn connect(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>, weight : U) -> GraphEdge<T,U>
+    {
+        let e = Edge::data_edge(from, to, weight);
+        let e = Arc::new(e);
+        from.add_out_edge(&e);
+        to.add_in_edge(&e);
+        self.edges.push(Arc::clone(&e));
+        e
+    }
+
+    pub fn disconnect(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) {
+        let mut to_remove = None;
+        for (i, edge) in self.edges.iter().enumerate() {
+            if !edge.is_connected() {
+                continue;
+            }
+            if edge.get_node_from().index == from.index && edge.get_node_to().index == to.index {
+                to_remove = Some(i);
+                break;
+            }
+        }
+        if let Some(i) = to_remove {
+            self.edges.remove(i);
+        }
+        let mut to_remove = None;
+        for (i, edge) in from.out_edges.read().unwrap().iter().enumerate() {
+            if !edge.has_target() {
+                continue;
+            }
+            if edge.get_node_to().index == to.index {
+                to_remove = Some(i);
+                break;
+            }
+        }
+        if let Some(i) = to_remove {
+            from.out_edges.write().unwrap().remove(i);
+        }
+        let mut to_remove = None;
+        for (i, edge) in to.in_edges.read().unwrap().iter().enumerate() {
+            if !edge.has_source() {
+                continue;
+            }
+            if edge.get_node_from().index == from.index {
+                to_remove = Some(i);
+                break;
+            }
+        }
+        if let Some(i) = to_remove {
+            to.in_edges.write().unwrap().remove(i);
+        }
+    }
+
+    pub fn make_edge_when<F>(&mut self, filter : F, weight : U) -> Vec<GraphEdge<T,U>>
     where 
         F : Fn (&T,&T) -> bool,
         U : Clone
@@ -79,7 +134,7 @@ impl<T, U> Digraph<T,U> {
         res
     }
 
-    pub fn find<F>(&self, filter : F) -> Vec<Arc<DataNode<T,U>>> 
+    pub fn find<F>(&self, filter : F) -> Vec<GraphNode<T,U>> 
         where F : Fn(&T) -> bool
     {
         let mut res = Vec::new();
@@ -91,7 +146,7 @@ impl<T, U> Digraph<T,U> {
         res
     }
 
-    pub fn find_first<F>(&self, filter : F) -> Option<Arc<DataNode<T,U>>>
+    pub fn find_first<F>(&self, filter : F) -> Option<GraphNode<T,U>>
         where F : Fn(&T) -> bool
     {
         for node in self.nodes.iter() {
@@ -154,9 +209,9 @@ impl<T, U> Digraph<T,U> {
     }
 
     pub fn dijkstra<F,V>(
-        &self, from : &Arc<DataNode<T,U>>, to : &Arc<DataNode<T,U>>, 
+        &self, from : &GraphNode<T,U>, to : &GraphNode<T,U>, 
         weight : F, no_edge : V
-    ) -> (V, Vec<Arc<Edge<T,DataNode<T,U>, DataNode<T,U>>>>)
+    ) -> (V, Vec<GraphEdge<T,U>>)
     where
         F : Fn(&U) -> V,
         V : Add<Output = V> + PartialOrd + Zero + Scalar
@@ -213,7 +268,7 @@ impl<T, U> Digraph<T,U> {
     }
 
     pub fn make_edges_matrix(&self) 
-        -> Vec<Vec<Option<Arc<Edge<U,DataNode<T,U>,DataNode<T,U>>>>>>
+        -> Vec<Vec<Option<GraphEdge<T,U>>>>
     {
         let n_nodes = self.nodes.len();
         let res = vec![None ; n_nodes];

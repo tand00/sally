@@ -107,6 +107,10 @@ impl<T, U, V> Edge<T, U, V> {
         }
     }
 
+    pub fn is_connected(&self) -> bool {
+        self.has_source() && self.has_target()
+    }
+
 }
 
 impl<U, V> Edge<i32, U, V> {
