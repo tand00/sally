@@ -8,7 +8,7 @@ use crate::computation::DBM;
 use super::{node::{Node, DataNode}, time::TimeBound, Edge, Label};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
-pub struct Digraph<T : 'static, U> {
+pub struct Digraph<T, U> {
     pub nodes : Vec<Arc<DataNode<T, U>>>,
     pub edges : Vec<Arc<Edge<U, DataNode<T, U>, DataNode<T, U>>>>,
 }

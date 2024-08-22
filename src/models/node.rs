@@ -93,7 +93,7 @@ impl<T, U> From<T> for DataNode<T, U> {
 
 }
 
-impl<T : ToString + 'static, U> Node for DataNode<T, U> {
+impl<T : ToString, U> Node for DataNode<T, U> {
 
     fn get_label(&self) -> Label {
         Label::from(self.element.to_string())
