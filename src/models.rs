@@ -3,7 +3,7 @@ mod label;
 mod model_state;
 mod node;
 
-use std::{any::Any, collections::HashSet, rc::Rc};
+use std::{any::Any, collections::{HashMap, HashSet}, rc::Rc};
 
 pub use edge::Edge;
 pub use label::{lbl, Label};
@@ -32,7 +32,7 @@ pub mod run;
 pub mod tapn;
 pub mod time;
 
-use crate::verification::{smc::RandomRunIterator, VerificationBound};
+use crate::{computation::virtual_memory::EvaluationType, verification::{smc::RandomRunIterator, VerificationBound}};
 
 use self::{
     action::Action, model_characteristics::*, model_context::ModelContext, time::ClockValue,
@@ -41,6 +41,8 @@ use self::{
 #[derive(Debug, Clone)]
 pub struct CompilationError;
 pub type CompilationResult<T> = Result<T, CompilationError>;
+
+pub type InitialMarking = HashMap<Label, EvaluationType>;
 
 pub mod model_characteristics {
     use crate::flag;

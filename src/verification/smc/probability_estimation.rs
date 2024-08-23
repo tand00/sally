@@ -1,4 +1,4 @@
-use crate::{log::*, solution::SolverResult, verification::VerificationStatus};
+use crate::{log, solution::SolverResult, verification::VerificationStatus};
 
 use super::SMCQueryVerification;
 
@@ -42,14 +42,14 @@ impl ProbabilityEstimation {
 impl SMCQueryVerification for ProbabilityEstimation {
 
     fn prepare(&self) {
-        continue_info("Type : Probability estimation");
-        continue_info(format!("Confidence : {}%", self.confidence * 100.0));
-        continue_info(format!("Interval width : {}", self.interval_width));
-        continue_info(format!("Need to execute [{}] runs", self.runs_needed));
+        log::continue_info("Type : Probability estimation");
+        log::continue_info(format!("Confidence : {}%", self.confidence * 100.0));
+        log::continue_info(format!("Interval width : {}", self.interval_width));
+        log::continue_info(format!("Need to execute [{}] runs", self.runs_needed));
     }
 
     fn finish(&self) {
-        continue_info(format!("Valid runs : [{}]", self.valid_runs));
+        log::continue_info(format!("Valid runs : [{}]", self.valid_runs));
     }
 
     fn must_do_another_run(&self) -> bool {

@@ -66,6 +66,7 @@ pub trait Translation {
     fn make_instance(&self) -> Box<dyn Translation>;
 
 }
+
 pub struct TranslationChain {
     pub translations : Vec<Box<dyn Translation>>
 }

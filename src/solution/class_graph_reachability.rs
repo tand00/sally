@@ -3,7 +3,7 @@ use crate::{models::{class_graph::ClassGraph, lbl, model_context::ModelContext, 
 
 use super::{Solution, SolutionMeta, SolverResult, REACHABILITY};
 
-use crate::log::*;
+use crate::log;
 
 pub struct ClassGraphReachability;
 
@@ -32,7 +32,7 @@ impl Solution for ClassGraphReachability {
     }
 
     fn solve(&self, model : &dyn ModelObject, _ : &ModelContext, query : &crate::verification::query::Query) -> SolverResult {
-        pending("Solving reachability problem on Class graph...");
+        log::pending("Solving reachability problem on Class graph...");
         let cg : Option<&ClassGraph> = model.as_any().downcast_ref();
         if cg.is_none() {
             return SolverResult::SolverError;
@@ -41,11 +41,11 @@ impl Solution for ClassGraphReachability {
         for class in cg.classes.iter() {
             let (status, _) = query.condition.evaluate(class.as_verifiable());
             if status == VerificationStatus::Verified {
-                positive("Valid class found !");
+                log::positive("Valid class found !");
                 return SolverResult::BoolResult(true);
             }
         }
-        negative("No valid class found in the graph");
+        log::negative("No valid class found in the graph");
         SolverResult::BoolResult(false)
     }
 

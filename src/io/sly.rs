@@ -7,6 +7,10 @@ use super::{deserialize_structure, serialize_structure, InitialMarking, ModelIOE
 pub struct SLYLoader;
 pub struct SLYWriter;
 
+const MODEL_TYPE_KEY : &str = "model-type";
+const MODEL_KEY : &str = "model";
+const INITIAL_STATE_KEY : &str = "initial-state";
+
 impl SLYLoader {
 
     pub fn load_model(model_type : Label, serialized : Value) -> Result<Box<dyn ModelObject>, ModelIOError> {
@@ -60,15 +64,15 @@ impl ModelLoader for SLYLoader {
         let Value::Object(mut map) = parsed else {
             return Err(ModelIOError)
         };
-        let Value::String(model_type) = map["model-type"].clone() else {
+        let Value::String(model_type) = map[MODEL_TYPE_KEY].clone() else {
             return Err(ModelIOError)
         };
         
         let model_type = Label::from(model_type);
-        let Some(serialized) = map.remove("model") else {
+        let Some(serialized) = map.remove(MODEL_KEY) else {
             return Err(ModelIOError)
         };
-        let initial = map.remove("initial-state");
+        let initial = map.remove(INITIAL_STATE_KEY);
 
         let initial = if initial.is_some() {
             Some(serde_json::from_value(initial.unwrap())?)
@@ -94,14 +98,16 @@ impl ModelWriter for SLYWriter {
         }
     }
 
-    fn write(&self, model : &dyn ModelObject, initial : InitialMarking) -> ModelWritingResult {
+    fn write(&self, model : &dyn ModelObject, initial : Option<InitialMarking>) -> ModelWritingResult {
         let model_type = Value::String(model.get_model_meta().name.to_string());
         let value = Self::write_model(model)?;
-        let initial = serde_json::to_value(initial)?;
         let mut map = Map::new();
-        map.insert("model-type".to_owned(), model_type);
-        map.insert("model".to_owned(), value);
-        map.insert("initial-state".to_owned(), initial);
+        map.insert(MODEL_TYPE_KEY.to_owned(), model_type);
+        map.insert(MODEL_KEY.to_owned(), value);
+        if let Some(initial) = initial {
+            let initial = serde_json::to_value(initial)?;
+            map.insert(INITIAL_STATE_KEY.to_owned(), initial);
+        }
         Ok(serde_json::to_string(&map)?)
     }
 

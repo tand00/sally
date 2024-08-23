@@ -1,8 +1,8 @@
-use std::{fmt::Display, sync::Arc};
+use std::{collections::HashMap, fmt::Display, sync::Arc};
 
-use digraph::Digraph;
+use digraph::{search_strategy::{BreadthFirst, GraphTraversal, UniqFilteredNeighbors}, Digraph};
 
-use crate::{io::{ModelLoader, ModelWriter}, models::*, solution::{Solution, SolverResult}, translation::Translation, verification::query::Query};
+use crate::{io::{ModelIOError, ModelLoader, ModelLoadingResult, ModelWriter, ModelWritingResult}, log, models::*, solution::{Solution, SolverResult}, translation::Translation, verification::query::Query};
 
 use self::node::DataNode;
 
@@ -10,14 +10,15 @@ pub enum SolverGraphNode {
     AnySemantics,
     Semantics(ModelMeta),
     Solution(Box<dyn Solution>),
-    Loader(Box<dyn ModelLoader>),
-    Writer(Box<dyn ModelWriter>)
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SolverGraphEdge {
-    Translation(Box<dyn Translation>),
+    Translation,
     Feature
 }
+
+pub struct TranslationsSet(pub Vec<Box<dyn Translation>>);
 
 impl Display for SolverGraphNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -26,14 +27,14 @@ impl Display for SolverGraphNode {
 }
 
 pub type ModelSolvingGraphNode = Arc<DataNode<SolverGraphNode, SolverGraphEdge>>;
-pub type ModelSolvingGraphEdge = Arc<Edge<ModelSolvingGraphNode, SolverGraphEdge, ModelSolvingGraphNode>>;
+pub type ModelSolvingGraphEdge = Arc<Edge<SolverGraphEdge, DataNode<SolverGraphNode, SolverGraphEdge>, DataNode<SolverGraphNode, SolverGraphEdge>>>;
 
 pub struct ModelSolvingGraph {
     pub node_any : ModelSolvingGraphNode,
-    pub semantics : Vec<ModelSolvingGraphNode>,
+    pub semantics : HashMap<Label, ModelSolvingGraphNode>,
     pub solutions : Vec<ModelSolvingGraphNode>,
-    pub writers : Vec<ModelSolvingGraphNode>,
-    pub loaders : Vec<ModelSolvingGraphNode>,
+    pub writers : HashMap<Label, Box<dyn ModelWriter>>,
+    pub loaders : HashMap<Label, Box<dyn ModelLoader>>,
     pub translations : Vec<ModelSolvingGraphEdge>,
     pub graph : Digraph<SolverGraphNode, SolverGraphEdge>
 }
@@ -45,20 +46,25 @@ impl ModelSolvingGraph {
         let node_any = graph.make_node(SolverGraphNode::AnySemantics);
         ModelSolvingGraph {
             graph, node_any,
-            semantics : Vec::new(),
+            semantics : HashMap::new(),
             solutions : Vec::new(),
-            writers : Vec::new(),
-            loaders : Vec::new(),
+            writers : HashMap::new(),
+            loaders : HashMap::new(),
             translations : Vec::new(),
         }
     }
 
     pub fn register_model(&mut self, meta : ModelMeta) {
-        self.semantics.push(self.graph.make_node(SolverGraphNode::Semantics(meta)));
+        let label = meta.name.clone();
+        let node = self.graph.make_node(SolverGraphNode::Semantics(meta));
+        self.semantics.insert(label, node);
     }
 
     pub fn register_translation(&mut self, translation : Box<dyn Translation>) {
-        
+        let meta = translation.get_meta();
+        let node_in = self.semantics.get(&meta.input).unwrap_or(&self.node_any);
+        let node_out = self.semantics.get(&meta.output).unwrap_or(&self.node_any);
+
     }
 
     pub fn register_solution(&mut self, solution : Box<dyn Solution>) {
@@ -66,48 +72,65 @@ impl ModelSolvingGraph {
     }
 
     pub fn register_loader(&mut self, loader : Box<dyn ModelLoader>) {
-        self.loaders.push(self.graph.make_node(SolverGraphNode::Loader(loader)));
+        let ext = loader.get_meta().ext;
+        self.loaders.insert(ext, loader);
     }
 
     pub fn register_writer(&mut self, writer : Box<dyn ModelWriter>) {
-        self.writers.push(self.graph.make_node(SolverGraphNode::Writer(writer)));
+        let ext = writer.get_meta().ext;
+        self.writers.insert(ext, writer);
+    }
+
+    pub fn load_file(&self, path : String) -> ModelLoadingResult {
+        let ext : Vec<&str> = path.split('.').collect();
+        let Some(ext) = ext.last() else { return Err(ModelIOError) };
+        let ext = Label::from(ext.to_owned());
+        log::pending(format!("Loading file [{path}]"));
+        log::continue_info(format!("File extension is [{ext}]"));
+        let Some(loader) = self.loaders.get(&ext) else {
+            log::error("No loader registered for this extension !");
+            return Err(ModelIOError)
+        };
+        log::continue_info(format!("Using loader [{}]", loader.get_meta().name));
+        loader.load_file(path)
+    }
+
+    pub fn write_file(&self, path : String, model : &dyn ModelObject, initial : Option<InitialMarking>) -> ModelWritingResult {
+        let ext : Vec<&str> = path.split('.').collect();
+        let Some(ext) = ext.last() else { return Err(ModelIOError) };
+        let ext = Label::from(ext.to_owned());
+        log::pending(format!("Writing model to file [{path}]"));
+        log::continue_info(format!("File extension is [{ext}]"));
+        let Some(writer) = self.writers.get(&ext) else {
+            log::error("No writer registered for this extension !");
+            return Err(ModelIOError)
+        };
+        let writer_meta = writer.get_meta();
+        log::continue_info(format!("Using writer [{}]", writer_meta.name));
+        if writer_meta.name != lbl("any") && writer_meta.name != model.get_model_meta().name {
+            log::error("The writer seems to be incompatible with the model type !");
+            return Err(ModelIOError);
+        }
+        writer.write_file(path, model, initial)
     }
 
     pub fn find_semantics(&self, model : &dyn ModelObject) -> Option<ModelSolvingGraphNode> {
-        for node in self.semantics.iter() {
-            let SolverGraphNode::Semantics(s) = &node.element else {
-                return None;
-            };
-            if s.name == model.get_model_meta().name {
-                return Some(Arc::clone(node));
-            }
-        }
-        None
+        self.semantics.get(&model.get_model_meta().name).map(Arc::clone)
     }
 
     pub fn solve(&mut self, model : &dyn ModelObject, query : &Query) -> SolverResult {  
         let Some(node) = self.find_semantics(model) else {
             return SolverResult::SolverError;
         };
-
-        let mut available_solutions = Vec::new();
-        let mut available_translations = Vec::new();
-
-        for edge in node.out_edges.read().unwrap().iter() {
-            let edge_data = edge.data();
-            if let SolverGraphEdge::Translation(t) = edge_data {
-                available_translations.push(t);
-                continue;
-            };
-            if !edge.has_target() {
-                continue;
-            }
-            let target = edge.get_node_to();
-            if let SolverGraphNode::Solution(_) = &target.element {
-                available_solutions.push(target);
-            }
+        let filter = UniqFilteredNeighbors::new(|e : &ModelSolvingGraphEdge| {
+            e.weight == SolverGraphEdge::Translation
+        });
+        let traversal = GraphTraversal::new(
+            node, BreadthFirst::new(), filter
+        );
+        for next_node in traversal {
+            
         }
-
         SolverResult::BoolResult(true)
     }
 

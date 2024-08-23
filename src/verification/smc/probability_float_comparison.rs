@@ -4,7 +4,7 @@ use super::SMCQueryVerification;
 
 use VerificationStatus::*;
 
-use crate::log::*;
+use crate::log;
 
 #[derive(Debug, Clone)]
 pub struct ProbabilityFloatComparison {
@@ -51,15 +51,15 @@ impl ProbabilityFloatComparison {
 impl SMCQueryVerification for ProbabilityFloatComparison {
 
     fn prepare(&self) {
-        continue_info("Type : Probability comparison");
-        continue_info(format!("Comparing : P >= {}", self.target_probability));
-        continue_info(format!("Allowed false positives : {}%", self.false_positives * 100.0));
-        continue_info(format!("Allowed false negatives : {}%", self.false_negatives * 100.0));
-        continue_info(format!("Indifference region : [{},{}]", self.p1, self.p0));
+        log::continue_info("Type : Probability comparison");
+        log::continue_info(format!("Comparing : P >= {}", self.target_probability));
+        log::continue_info(format!("Allowed false positives : {}%", self.false_positives * 100.0));
+        log::continue_info(format!("Allowed false negatives : {}%", self.false_negatives * 100.0));
+        log::continue_info(format!("Indifference region : [{},{}]", self.p1, self.p0));
     }
 
     fn finish(&self) {
-        continue_info(format!("Runs executed : [{}]", self.runs_executed));
+        log::continue_info(format!("Runs executed : [{}]", self.runs_executed));
     }
 
     fn handle_run_result(&mut self, result : VerificationStatus) {

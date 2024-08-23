@@ -1,9 +1,9 @@
-use std::{collections::HashMap, fs, io};
+use std::{fs, io};
 
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 
-use crate::{computation::virtual_memory::EvaluationType, models::{Label, ModelObject}};
+use crate::models::{InitialMarking, Label, ModelObject};
 
 pub mod pnml;
 pub mod tapn;
@@ -17,7 +17,6 @@ impl<T : ModelIOErrorVariant> From<T> for ModelIOError {
     fn from(_ : T) -> Self { Self }
 }
 
-pub type InitialMarking = HashMap<Label, EvaluationType>;
 pub type LoadedModel = (Box<dyn ModelObject>, Option<InitialMarking>);
 
 pub type ModelLoadingResult = Result<LoadedModel, ModelIOError>;
@@ -54,9 +53,9 @@ pub trait ModelWriter {
 
     fn get_meta(&self) -> ModelWriterMeta;
 
-    fn write(&self, model : &dyn ModelObject, initial : InitialMarking) -> ModelWritingResult;
+    fn write(&self, model : &dyn ModelObject, initial : Option<InitialMarking>) -> ModelWritingResult;
 
-    fn write_file(&self, path : String, model : &dyn ModelObject, initial : InitialMarking) -> ModelWritingResult {
+    fn write_file(&self, path : String, model : &dyn ModelObject, initial : Option<InitialMarking>) -> ModelWritingResult {
         let content = self.write(model, initial)?;
         fs::write(path, content.clone())?;
         Ok(content)

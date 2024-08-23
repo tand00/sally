@@ -2,7 +2,7 @@ use std::{collections::VecDeque, marker::PhantomData};
 
 use rand::{thread_rng, Rng};
 
-use super::GraphNode;
+use super::{GraphEdge, GraphNode};
 
 pub trait SearchStrategy<T> {
 
@@ -131,6 +131,33 @@ impl UniqDigraphNeighbors {
 impl<T,U> NeighborsFinder<GraphNode<T,U>> for UniqDigraphNeighbors {
     fn neighbors(&mut self, x : &GraphNode<T,U>) -> Vec<GraphNode<T,U>> {
         x.out_edges.read().unwrap().iter().filter_map(|e| {
+            let node = e.get_node_to();
+            if self.seen[node.index] {
+                None
+            } else {
+                self.seen[node.index] = true;
+                Some(node)
+            }
+        }).collect()
+    }
+}
+
+pub struct UniqFilteredNeighbors<F : Fn(&T) -> bool, T> {
+    pub seen : Vec<bool>,
+    pub filter_fun : F,
+    phantom : PhantomData<T>
+}
+impl<F : Fn(&T) -> bool, T> UniqFilteredNeighbors<F, T> {
+    pub fn new(f : F) -> Self {
+        Self { seen : Vec::new(), filter_fun : f, phantom : PhantomData }
+    }
+}
+impl<F : Fn(&GraphEdge<T,U>) -> bool,T,U> NeighborsFinder<GraphNode<T,U>> for UniqFilteredNeighbors<F,GraphEdge<T,U>> {
+    fn neighbors(&mut self, x : &GraphNode<T,U>) -> Vec<GraphNode<T,U>> {
+        x.out_edges.read().unwrap().iter().filter_map(|e| {
+            if !((self.filter_fun)(e)) {
+                return None
+            }
             let node = e.get_node_to();
             if self.seen[node.index] {
                 None

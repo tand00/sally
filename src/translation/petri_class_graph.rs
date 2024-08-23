@@ -4,7 +4,7 @@ use crate::models::{class_graph::ClassGraph, lbl, model_context::ModelContext, p
 
 use super::{Translation, TranslationError, TranslationMeta, TranslationResult, TranslationType::SymbolicSpace};
 
-use crate::log::*;
+use crate::log;
 
 pub struct PetriClassGraphTranslation {
     pub initial_state : ModelState,
@@ -35,19 +35,19 @@ impl Translation for PetriClassGraphTranslation {
     }
 
     fn translate(&mut self, base : &dyn ModelObject, ctx : &ModelContext, initial_state : &ModelState) -> TranslationResult {
-        pending("Computing Petri net Class graph...");
+        log::pending("Computing Petri net Class graph...");
         self.context = ctx.clone();
         let petri: Option<&PetriNet> = base.as_any().downcast_ref::<PetriNet>();
         let Some(petri) = petri else {
-            error("Unable to compute Class graph !");
+            log::error("Unable to compute Class graph !");
             return Err(TranslationError(String::from("Cannot parse a Petri net from input parameter")));
         };
         let mut graph = ClassGraph::compute(petri, initial_state);
         if graph.compile(&mut self.context).is_err() {
-            error("Unable to compile Class graph !");
+            log::error("Unable to compile Class graph !");
             return Err(TranslationError(String::from("Cannot compile Petri net class graph")));
         }
-        positive("Class graph computed !");
+        log::positive("Class graph computed !");
         let mut initial_state = graph.classes[0].generate_image_state();
         initial_state.discrete.size_delta(graph.current_class.size());
         self.initial_state = initial_state;
