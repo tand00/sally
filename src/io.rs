@@ -1,9 +1,9 @@
-use std::{fs, io};
+use std::{collections::HashMap, fs, io};
 
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 
-use crate::models::{Label, ModelObject};
+use crate::{computation::virtual_memory::EvaluationType, models::{Label, ModelObject}};
 
 pub mod pnml;
 pub mod tapn;
@@ -17,7 +17,10 @@ impl<T : ModelIOErrorVariant> From<T> for ModelIOError {
     fn from(_ : T) -> Self { Self }
 }
 
-pub type ModelLoadingResult = Result<Box<dyn ModelObject>, ModelIOError>;
+pub type InitialMarking = HashMap<Label, EvaluationType>;
+pub type LoadedModel = (Box<dyn ModelObject>, Option<InitialMarking>);
+
+pub type ModelLoadingResult = Result<LoadedModel, ModelIOError>;
 pub type ModelWritingResult = Result<String, ModelIOError>;
 
 pub struct ModelLoaderMeta {
@@ -51,17 +54,17 @@ pub trait ModelWriter {
 
     fn get_meta(&self) -> ModelWriterMeta;
 
-    fn write(&self, model : &dyn ModelObject) -> ModelWritingResult;
+    fn write(&self, model : &dyn ModelObject, initial : InitialMarking) -> ModelWritingResult;
 
-    fn write_file(&self, path : String, model : &dyn ModelObject) -> ModelWritingResult {
-        let content = self.write(model)?;
+    fn write_file(&self, path : String, model : &dyn ModelObject, initial : InitialMarking) -> ModelWritingResult {
+        let content = self.write(model, initial)?;
         fs::write(path, content.clone())?;
         Ok(content)
     }
 
 }
 
-pub fn deserialize_structure<T, U>(serialized : Value) -> ModelLoadingResult 
+pub fn deserialize_structure<T, U>(serialized : Value) -> Result<Box<dyn ModelObject>, ModelIOError> 
     where 
         T : DeserializeOwned,
         U : ModelObject + From<T>
