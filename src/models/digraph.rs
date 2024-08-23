@@ -42,6 +42,14 @@ impl<T, U> Digraph<T,U> {
         self.nodes.len()
     }
 
+    pub fn nodes_iter(&self) -> impl Iterator<Item = &GraphNode<T,U>> {
+        self.nodes.iter()
+    }
+
+    pub fn edges_iter(&self) -> impl Iterator<Item = &GraphEdge<T,U>> {
+        self.edges.iter().filter_map(|x| x.as_ref())
+    }
+
     pub fn node_at(&self, i : usize) -> GraphNode<T,U> {
         Arc::clone(&self.nodes[i])
     }
@@ -106,6 +114,11 @@ impl<T, U> Digraph<T,U> {
         self.has_edge(from.index, to.index)
     }
 
+    pub fn get_connection(&self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) -> Option<GraphEdge<T,U>> {
+        let edge = &self.edges[self.edge_index(from, to)];
+        edge.as_ref().map(Arc::clone)
+    }
+
     pub fn disconnect(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) {
         let index = self.edge_index(from, to);
         if self.edges[index].is_none() {
@@ -158,7 +171,7 @@ impl<T, U> Digraph<T,U> {
         let mut j = node.index;
         while j < self.edges.len() {
             self.edges.remove(j);
-            j += (n - 1);
+            j += n - 1;
         }
     }
 
@@ -213,7 +226,8 @@ impl<T, U> Digraph<T,U> {
         self.find_first(|x| *x == *value)
     }
 
-    // Implementation of the Floyd-Warshall algorithm
+    // Implementation of the Floyd-Warshall algorithm ----------------------------------
+
     pub fn all_shortest_paths(&self) -> DMatrix<U> 
     where 
         U : Add<Output = U> + PartialOrd + Zero + Bounded + Scalar
@@ -263,6 +277,10 @@ impl<T, U> Digraph<T,U> {
         res.create_relations(distances);
         res
     }
+
+    // ---------------------------------------------------------------------------------
+
+    // Implementation of the Dijkstra algorithm ----------------------------------------
 
     pub fn shortest_path(&self, from : &GraphNode<T,U>, target : &GraphNode<T,U>) 
         -> Option<(U, Vec<GraphEdge<T,U>>)> 
@@ -363,6 +381,8 @@ impl<T, U> Digraph<T,U> {
         (dists, traces)
     }
 
+    // ---------------------------------------------------------------------------------
+
     pub fn is_positive(&self) -> bool 
     where 
         U : Zero + PartialOrd + Clone
@@ -430,9 +450,9 @@ impl<T, U> Digraph<T,U> {
     pub fn has_loop(&self) -> bool {
         let mut seen = vec![false ; self.n_nodes()];
         loop {
-            let next_index = seen.iter().position(|x| *x);
+            let next_index = seen.iter().position(|x| !*x);
             let Some(next_index) = next_index else { 
-                return true;
+                return false;
             };
             let traversal = GraphTraversal::dfs(self.nodes[next_index].clone());
             for node in traversal {

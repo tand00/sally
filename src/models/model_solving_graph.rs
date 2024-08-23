@@ -1,4 +1,4 @@
-use std::{fmt::Display, sync::{Arc, Mutex}};
+use std::{fmt::Display, sync::Arc};
 
 use digraph::Digraph;
 
