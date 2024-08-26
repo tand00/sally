@@ -93,7 +93,10 @@ impl ModelSolvingGraph {
             return Err(ModelIOError)
         };
         log::continue_info(format!("Using loader [{}]", loader.get_meta().name));
-        let res = loader.load_file(path)?;
+        let Ok(res) = loader.load_file(path) else {
+            log::error("Unable to load file !");
+            return Err(ModelIOError)
+        };
         log::positive("Loaded file !");
         Ok(res)
     }

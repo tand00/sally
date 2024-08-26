@@ -24,7 +24,7 @@ pub struct PetriTransition {
     pub interval: TimeInterval,
     pub controllable : bool,
 
-    #[serde(skip_serializing_if="Condition::is_default")]
+    #[serde(skip_serializing_if="Condition::is_default", default)]
     pub guard : Condition,
 
     #[serde(skip)]
