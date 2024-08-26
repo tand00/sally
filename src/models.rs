@@ -197,6 +197,10 @@ pub trait Model : Any {
 
     fn get_id(&self) -> usize;
 
+    fn is_compiled(&self) -> bool {
+        self.get_id() != usize::MAX
+    }
+
 }
 
 pub trait ModelObject : Model + Send + Sync {

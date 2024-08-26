@@ -80,6 +80,24 @@ impl PetriNet {
             .collect()
     }
 
+    pub fn disable_transitions(&self, new_state : &mut ModelState, changed_places: &HashSet<usize>) {
+        let mut transition_seen = vec![false; self.transitions.len()];
+        for place_index in changed_places {
+            let place: &Arc<PetriPlace> = &self.places[*place_index];
+            for transition in place.get_downstream_transitions().iter() {
+                let transi_index = transition.index;
+                if transition_seen[transi_index] {
+                    continue;
+                }
+                transition_seen[transi_index] = true;
+                let clock = transition.get_clock();
+                if !transition.is_enabled(new_state) {
+                    new_state.disable_clock(clock);
+                }
+            }
+        }
+    }
+
     pub fn compute_new_actions(&self, new_state: &mut ModelState, changed_places: &HashSet<usize>) 
         -> (HashSet<usize>, HashSet<usize>) 
     {
@@ -95,11 +113,12 @@ impl PetriNet {
                 }
                 transition_seen[transi_index] = true;
                 let clock = transition.get_clock();
-                new_state.disable_clock(clock);
-                pers.remove(&transi_index);
                 if transition.is_enabled(new_state) {
                     new_state.enable_clock(clock, ClockValue::zero());
                     newen.insert(transi_index);
+                } else {
+                    new_state.disable_clock(clock);
+                    pers.remove(&transi_index);
                 }
             }
         }
@@ -111,6 +130,7 @@ impl PetriNet {
     {
         let transi = &self.transitions[transi];
         let mut changed_places: HashSet<usize> = HashSet::new();
+        state.disable_clock(transi.get_clock());
         for edge in transi.get_inputs().iter() {
             let place_ptr = edge.get_node_from();
             let place_var = place_ptr.get_var();
@@ -118,6 +138,7 @@ impl PetriNet {
             state.unmark(place_var, edge.weight);
             changed_places.insert(place_index);
         }
+        self.disable_transitions(&mut state, &changed_places);
         for edge in transi.get_outputs().iter() {
             let place_ptr = edge.get_node_to();
             let place_var = place_ptr.get_var();
@@ -125,7 +146,11 @@ impl PetriNet {
             state.mark(place_var, edge.weight);
             changed_places.insert(place_index);
         }
-        let (newen, pers) = self.compute_new_actions(&mut state, &changed_places);
+        let (mut newen, pers) = self.compute_new_actions(&mut state, &changed_places);
+        if !transi.has_preset() {
+            state.enable_clock(transi.get_clock(), ClockValue::zero());
+            newen.insert(transi.index);
+        }
         (state, newen, pers)
     }
 

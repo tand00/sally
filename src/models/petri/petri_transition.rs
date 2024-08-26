@@ -113,9 +113,6 @@ impl PetriTransition {
 
     pub fn is_enabled(&self, marking : &ModelState) -> bool {
         for edge in self.get_inputs().iter() {
-            if !edge.has_source() {
-                panic!("Every transition edge should have a source");
-            }
             if edge.get_node_from().tokens(marking) < edge.weight {
                 return false
             }
@@ -145,6 +142,14 @@ impl PetriTransition {
             res += e.weight;
         }
         res
+    }
+
+    pub fn has_preset(&self) -> bool {
+        !self.input_edges.get().unwrap().is_empty()
+    }
+
+    pub fn has_postset(&self) -> bool {
+        !self.output_edges.get().unwrap().is_empty()
     }
 
     #[inline]
