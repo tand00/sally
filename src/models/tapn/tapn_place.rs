@@ -1,10 +1,10 @@
-use std::{cmp::max, fmt, sync::{Arc, RwLock}};
+use std::{fmt, sync::{Arc, OnceLock}};
 
 use num_traits::Zero;
 use serde::{Serialize, Deserialize};
 
-use crate::models::{model_context::ModelContext, model_storage::ModelStorage, model_var::{ModelVar, VarType}, time::{Bound, ClockValue, RealTimeBound, TimeBound}, CompilationResult, Label, ModelState, Node};
-use super::{tapn_transition::TAPNTransition, TAPNTokenList, TAPNTokenListWriter, TAPNTokenListReader};
+use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, time::{RealTimeBound, TimeBound}, CompilationResult, Label, ModelState, Node};
+use super::{tapn_transition::TAPNTransition, TAPNTokenListReader};
 
 const TAPN_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 
@@ -18,10 +18,10 @@ pub struct TAPNPlace {
     pub index : usize,
 
     #[serde(skip)]
-    in_transitions : RwLock<Vec<Arc<TAPNTransition>>>,
+    pub in_transitions : OnceLock<Vec<Arc<TAPNTransition>>>,
 
     #[serde(skip)]
-    out_transitions : RwLock<Vec<Arc<TAPNTransition>>>,
+    pub out_transitions : OnceLock<Vec<Arc<TAPNTransition>>>,
 
     #[serde(skip)]
     data_variable : ModelVar
@@ -34,8 +34,8 @@ impl TAPNPlace {
             name : lbl,
             invariant : TimeBound::Infinite,
             index : 0,
-            in_transitions : RwLock::new(Vec::new()),
-            out_transitions : RwLock::new(Vec::new()),
+            in_transitions : OnceLock::new(),
+            out_transitions : OnceLock::new(),
             data_variable : Default::default()
         }
     }
@@ -45,34 +45,26 @@ impl TAPNPlace {
             name : lbl,
             invariant : inv,
             index : 0,
-            in_transitions : RwLock::new(Vec::new()),
-            out_transitions : RwLock::new(Vec::new()),
+            in_transitions : OnceLock::new(),
+            out_transitions : OnceLock::new(),
             data_variable : Default::default()
         }
     }
 
-    pub fn add_upstream_transition(&self, transi : &Arc<TAPNTransition>) {
-        self.in_transitions.write().unwrap().push(Arc::clone(transi))
+    pub fn clear_upstream_transitions(&mut self) {
+        self.in_transitions = OnceLock::new()
     }
 
-    pub fn clear_upstream_transitions(&self) {
-        self.in_transitions.write().unwrap().clear()
+    pub fn get_upstream_transitions(&self) -> &Vec<Arc<TAPNTransition>> {
+        self.in_transitions.get().unwrap()
     }
 
-    pub fn get_upstream_transitions(&self) -> Vec<Arc<TAPNTransition>> {
-        self.in_transitions.read().unwrap().clone()
+    pub fn clear_downstream_transitions(&mut self) {
+        self.out_transitions = OnceLock::new()
     }
 
-    pub fn add_downstream_transition(&self, transi : &Arc<TAPNTransition>) {
-        self.out_transitions.write().unwrap().push(Arc::clone(transi))
-    }
-
-    pub fn clear_downstream_transitions(&self) {
-        self.out_transitions.write().unwrap().clear()
-    }
-
-    pub fn get_downstream_transitions(&self) -> Vec<Arc<TAPNTransition>> {
-        self.out_transitions.read().unwrap().clone()
+    pub fn get_downstream_transitions(&self) -> &Vec<Arc<TAPNTransition>> {
+        self.out_transitions.get().unwrap()
     }
 
     pub fn set_var(&mut self, var : ModelVar) {

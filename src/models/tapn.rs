@@ -99,14 +99,17 @@ impl TAPN {
         (state, intermed)
     }
 
-    pub fn create_transition_edges(&self, transition : &Arc<TAPNTransition>) {
+    pub fn create_transition_edges(
+        &self, transition : &Arc<TAPNTransition>, 
+        places_down : &mut Vec<Vec<Arc<TAPNTransition>>>, places_up : &mut Vec<Vec<Arc<TAPNTransition>>>
+    ) {
         let mut input_edges = Vec::new();
         for (place, data) in transition.from.iter() {
             let place_index = self.places_dic[place];
             let place = &self.places[place_index];
             let edge = Edge::data_edge(place, transition, *data);
             input_edges.push(edge);
-            place.add_downstream_transition(transition);
+            places_down[place_index].push(Arc::clone(transition));
         }
         transition.input_edges.set(input_edges).unwrap();
         let mut output_edges = Vec::new();
@@ -115,7 +118,7 @@ impl TAPN {
             let place = &self.places[place_index];
             let edge = Edge::data_edge(transition, place, *weight);
             output_edges.push(edge);
-            place.add_upstream_transition(transition);
+            places_up[place_index].push(Arc::clone(transition));
         }
         transition.output_edges.set(output_edges).unwrap();
         let mut inhibs = Vec::new();
@@ -124,7 +127,7 @@ impl TAPN {
             let place = &self.places[place_index];
             let edge = Edge::data_edge(place, transition, *data);
             inhibs.push(edge);
-            place.add_downstream_transition(transition);
+            places_down[place_index].push(Arc::clone(transition));
         }
         transition.inhibitor_edges.set(inhibs).unwrap();
         let mut transports = Vec::new();
@@ -135,8 +138,8 @@ impl TAPN {
             let target_place = &self.places[target_index];
             let edge = Edge::data_edge(source_place, target_place, *data);
             transports.push(edge);
-            source_place.add_downstream_transition(transition);
-            target_place.add_upstream_transition(transition);
+            places_down[source_index].push(Arc::clone(transition));
+            places_up[target_index].push(Arc::clone(transition));
         }
         transition.transport_edges.set(transports).unwrap();
     }
@@ -257,6 +260,8 @@ impl Model for TAPN {
         self.id = context.new_model();
         self.tokens_storage = context.add_storage();
         let mut compiled_places = Vec::new();
+        let mut places_down = vec![Vec::new() ; self.places.len()];
+        let mut places_up = vec![Vec::new() ; self.places.len()];
         for place in self.places.iter() {
             let mut compiled_place = TAPNPlace::clone(&place);
             compiled_place.index = compiled_places.len();
@@ -272,10 +277,14 @@ impl Model for TAPN {
             compiled_transition.compile(context)?;
             self.actions_dic.insert(compiled_transition.get_action(), compiled_transition.index);
             let transition = Arc::new(compiled_transition);
-            self.create_transition_edges(&transition);
+            self.create_transition_edges(&transition, &mut places_down, &mut places_up);
             compiled_transitions.push(transition);
         }
         self.transitions = compiled_transitions;
+        for place in self.places.iter() {
+            place.out_transitions.set(places_down[place.index].clone()).unwrap();
+            place.in_transitions.set(places_up[place.index].clone()).unwrap();
+        }
         Ok(())
     }
 
