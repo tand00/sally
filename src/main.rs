@@ -78,6 +78,11 @@ fn main() {
     }
 
     solver.write_file("test_petri.sly".to_owned(), &*net, None).unwrap();
+
+    let q = parse_query("A F !(P3 && (P2 || P1 || P4)) || (P4 - P3 && !false || (P3 && (P2 && (P1 || V))))".to_owned()).unwrap();
+    println!("{}", q.condition.disjunctive_normal());
+    println!("{}", q.condition.conjunctive_normal());
+    println!("{}", q.condition.distribute_not());
 }
 
 fn build_solver() -> ModelSolvingGraph {

@@ -1,3 +1,5 @@
+use std::clone;
+use std::fmt::Display;
 use std::{collections::HashSet, hash::Hash, ops::Not};
 
 use crate::verification::query::{Query, QueryVisitor};
@@ -10,6 +12,34 @@ use VerificationStatus::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PropositionType {
     EQ, NE, LE, GE, LS, GS
+}
+
+impl Display for PropositionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EQ => write!(f, "=="),
+            NE => write!(f, "!="),
+            LE => write!(f, "<="),
+            GE => write!(f, ">="),
+            LS => write!(f, "<"),
+            GS => write!(f, ">"),
+        }
+    }
+}
+
+impl Not for PropositionType {
+    type Output = PropositionType;
+
+    fn not(self) -> Self::Output {
+        match self {
+            EQ => NE,
+            NE => EQ,
+            LE => GS,
+            GE => LS,
+            LS => GE,
+            GS => LE
+        }
+    }
 }
 
 use PropositionType::*;
@@ -106,6 +136,22 @@ impl Expr {
         }
     }
 
+}
+
+impl Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Var(v) => v.fmt(f),
+            Constant(i) => i.fmt(f),
+            ClockComparison(op, c, i) => write!(f, "({c} {op} {i})"),
+            Plus(a, b) => write!(f, "({a} + {b})"),
+            Minus(a, b) => write!(f, "({a} - {b})"),
+            Multiply(a, b) => write!(f, "({a} * {b})"),
+            Negative(x) => write!(f, "-{x}"),
+            Modulo(a, b) => write!(f, "({a} % {b})"),
+            Pow(a, b) => write!(f, "({a} ^ {b})"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -341,6 +387,145 @@ impl Condition {
         }
     }
 
+    pub fn distribute_not(&self) -> Condition {
+        match self { //prop
+            Not(c) => {
+                let sub = Condition::clone(c);
+                match sub {
+                    True => False,
+                    False => True,
+                    Proposition(op, e1, e2) => Proposition(!op, e1, e2),
+                    And(c1, c2) => Or(
+                        Box::new(Not(c1).distribute_not()),
+                        Box::new(Not(c2).distribute_not())
+                    ),
+                    Or(c1, c2) => And(
+                        Box::new(Not(c1).distribute_not()),
+                        Box::new(Not(c2).distribute_not())
+                    ),
+                    Next(sub) => Next(Box::new(Not(sub).distribute_not())),
+                    Implies(c1, c2) => And(
+                        Box::new(c1.distribute_not()),
+                        Box::new(Not(c2).distribute_not())
+                    ),
+                    Not(sub) => sub.distribute_not(),
+                    //Until ?
+                    _ => Not(Box::new(sub.distribute_not()))
+                }
+            },
+            And(c1,c2) => And(
+                Box::new(c1.distribute_not()),
+                Box::new(c2.distribute_not())
+            ),
+            Or(c1, c2) => Or(
+                Box::new(c1.distribute_not()),
+                Box::new(c2.distribute_not())
+            ),
+            Until(c1, c2) => Until(
+                Box::new(c1.distribute_not()),
+                Box::new(c2.distribute_not())
+            ),
+            Implies(c1, c2) => Implies(
+                Box::new(c1.distribute_not()),
+                Box::new(c2.distribute_not())
+            ),
+            Next(c) => Next(Box::new(c.distribute_not())),
+            _ => self.clone()
+        }
+    }
+
+    pub fn disjunctive_normal(&self) -> Condition {
+        match self {
+            Not(c) => {
+                let sub = Condition::clone(c);
+                match sub {
+                    Not(c1) => c1.disjunctive_normal(),
+                    And(c1, c2) => Or(
+                        Box::new(Not(c1).disjunctive_normal()), 
+                        Box::new(Not(c2).disjunctive_normal())
+                    ),
+                    Or(c1, c2) => And(
+                        Box::new(Not(c1)), 
+                        Box::new(Not(c2))
+                    ).disjunctive_normal(),
+                    Implies(c1, c2) => And(
+                        c1, Box::new(Not(c2))
+                    ).disjunctive_normal(),
+                    Next(c) => Next(Box::new(Not(c))).disjunctive_normal(),
+                    Until(a,b) => Not(Box::new(Until(
+                        Box::new(a.disjunctive_normal()),
+                        Box::new(b.disjunctive_normal())
+                    ))),
+                    _ => Not(c.clone()).distribute_not()
+                }
+            }
+            Or(c1, c2) => Or(
+                Box::new(c1.disjunctive_normal()), 
+                Box::new(c2.disjunctive_normal())
+            ),
+            Implies(c1, c2) => Or(
+                Box::new(Not(c1.clone()).disjunctive_normal()), 
+                Box::new(c2.disjunctive_normal())
+            ),
+            And(c1, c2) => {
+                let c1 = c1.disjunctive_normal();
+                let c2 = c2.disjunctive_normal();
+                match (c1, c2) {
+                    (Or(a,b), Or(c,d)) => Or(
+                        Box::new(Or(
+                            Box::new(And(a.clone(), c.clone()).disjunctive_normal()),
+                            Box::new(And(a, d.clone()).disjunctive_normal())
+                        )),
+                        Box::new(Or(
+                            Box::new(And(b.clone(), c).disjunctive_normal()),
+                            Box::new(And(b, d).disjunctive_normal())
+                        )),
+                    ),
+                    (Or(a,b), c2) => Or(
+                        Box::new(And(
+                            a, Box::new(c2.clone())
+                        ).disjunctive_normal()),
+                        Box::new(And(
+                            b, Box::new(c2)
+                        ).disjunctive_normal()),
+                    ),
+                    (c1, Or(c,d)) => Or(
+                        Box::new(And(
+                            c, Box::new(c1.clone())
+                        ).disjunctive_normal()),
+                        Box::new(And(
+                            d, Box::new(c1)
+                        ).disjunctive_normal()),
+                    ),
+                    (c1,c2) => And(Box::new(c1), Box::new(c2)),
+                }
+            },
+            Next(sub) => {
+                let sub = sub.disjunctive_normal();
+                match sub {
+                    Or(a,b) => Or( 
+                        Box::new(Next(a).disjunctive_normal()), 
+                        Box::new(Next(b).disjunctive_normal()) 
+                    ),
+                    And(a,b) => And( 
+                        Box::new(Next(a).disjunctive_normal()), 
+                        Box::new(Next(b).disjunctive_normal()) 
+                    ),
+                    _ => Next(Box::new(sub)) // sub cannot be implies
+                }
+            },
+            Until(a, b) => Until(
+                Box::new(a.disjunctive_normal()), 
+                Box::new(b.disjunctive_normal())
+            ),
+            _ => self.clone()
+        }
+    }
+
+    pub fn conjunctive_normal(&self) -> Condition {
+        (!self.disjunctive_normal()).distribute_not()
+    }
+
     pub fn is_true(&self, state : &impl Verifiable) -> bool {
         self.evaluate(state).0.good()
     }
@@ -367,6 +552,24 @@ impl Not for Condition {
     type Output = Self;
     fn not(self) -> Self::Output {
         Not(Box::new(self))
+    }
+}
+
+impl Display for Condition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            True => write!(f, "true"),
+            False => write!(f, "false"),
+            Deadlock => write!(f, "deadlock"),
+            Evaluation(e) => e.fmt(f),
+            Proposition(op, a, b) => write!(f, "({a} {op} {b})"),
+            And(a, b) => write!(f, "({a} && {b})"),
+            Or(a, b) => write!(f, "({a} || {b})"),
+            Not(x) => write!(f, "!{x}"),
+            Implies(a, b) => write!(f, "({a} => {b})"),
+            Next(x) => write!(f, "(X{x})"),
+            Until(a, b) => write!(f, "({a} U {b})"),
+        }
     }
 }
 

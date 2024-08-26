@@ -139,6 +139,12 @@ impl ModelVar {
 
 }
 
+impl Display for ModelVar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name.fmt(f)
+    }
+}
+
 impl<T : Into<String>> From<T> for ModelVar {
     fn from(value: T) -> Self {
         ModelVar::name(Label::from(value))

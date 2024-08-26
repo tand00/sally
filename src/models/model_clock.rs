@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 
 use super::Label;
@@ -34,6 +36,12 @@ impl ModelClock {
         self.index != usize::MAX
     }
 
+}
+
+impl Display for ModelClock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name.fmt(f)
+    }
 }
 
 impl Default for ModelClock {
