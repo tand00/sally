@@ -90,6 +90,9 @@ impl PetriNet {
                     continue;
                 }
                 transition_seen[transi_index] = true;
+                if !new_state.is_enabled(transition.get_clock()) {
+                    continue;
+                }
                 let clock = transition.get_clock();
                 if !transition.is_enabled(new_state) {
                     new_state.disable_clock(clock);
@@ -114,8 +117,10 @@ impl PetriNet {
                 transition_seen[transi_index] = true;
                 let clock = transition.get_clock();
                 if transition.is_enabled(new_state) {
-                    new_state.enable_clock(clock, ClockValue::zero());
-                    newen.insert(transi_index);
+                    if !new_state.is_enabled(clock) {
+                        new_state.enable_clock(clock, ClockValue::zero());
+                        newen.insert(transi_index);
+                    }
                 } else {
                     new_state.disable_clock(clock);
                     pers.remove(&transi_index);

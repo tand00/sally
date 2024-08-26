@@ -71,6 +71,12 @@ fn main() {
     let mut prob_est = ProbabilityEstimation::fixed_runs(1000000, 0.95);
     prob_est.parallel_verify(&*net, &initial_state, &query);
 
+    let p_net = net.as_any().downcast_ref::<PetriNet>().unwrap();
+    let cg = ClassGraph::compute(p_net, &initial_state);
+    for class in cg.classes.iter() {
+        println!("{}", class);
+    }
+
     solver.write_file("test_petri.sly".to_owned(), &*net, None).unwrap();
 }
 
