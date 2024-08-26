@@ -1,4 +1,4 @@
-use std::{fmt, sync::{Arc, RwLock}};
+use std::{fmt, sync::{Arc, OnceLock, RwLock}};
 
 use serde::{Serialize, Deserialize};
 
@@ -16,10 +16,10 @@ pub struct PetriPlace {
     pub index : usize,
 
     #[serde(skip)]
-    pub in_transitions : RwLock<Vec<Arc<PetriTransition>>>,
+    pub in_transitions : OnceLock<Vec<Arc<PetriTransition>>>,
 
     #[serde(skip)]
-    pub out_transitions : RwLock<Vec<Arc<PetriTransition>>>,
+    pub out_transitions : OnceLock<Vec<Arc<PetriTransition>>>,
 
     #[serde(skip)]
     data_variable : ModelVar
@@ -31,34 +31,25 @@ impl PetriPlace {
         PetriPlace {
             name: lbl,
             index : 0,
-            in_transitions : RwLock::new(Vec::new()),
-            out_transitions : RwLock::new(Vec::new()),
+            in_transitions : OnceLock::new(),
+            out_transitions : OnceLock::new(),
             data_variable: Default::default()
         }
     }
-
-    pub fn add_upstream_transition(&self, transi : &Arc<PetriTransition>) {
-        self.in_transitions.write().unwrap().push(Arc::clone(transi))
+    pub fn clear_upstream_transitions(&mut self) {
+        self.in_transitions = OnceLock::new()
     }
 
-    pub fn clear_upstream_transitions(&self) {
-        self.in_transitions.write().unwrap().clear()
+    pub fn get_upstream_transitions(&self) -> &Vec<Arc<PetriTransition>> {
+        self.in_transitions.get().unwrap()
     }
 
-    pub fn get_upstream_transitions(&self) -> Vec<Arc<PetriTransition>> {
-        self.in_transitions.read().unwrap().clone()
+    pub fn clear_downstream_transitions(&mut self) {
+        self.out_transitions = OnceLock::new()
     }
 
-    pub fn add_downstream_transition(&self, transi : &Arc<PetriTransition>) {
-        self.out_transitions.write().unwrap().push(Arc::clone(transi))
-    }
-
-    pub fn clear_downstream_transitions(&self) {
-        self.out_transitions.write().unwrap().clear()
-    }
-
-    pub fn get_downstream_transitions(&self) -> Vec<Arc<PetriTransition>> {
-        self.out_transitions.read().unwrap().clone()
+    pub fn get_downstream_transitions(&self) -> &Vec<Arc<PetriTransition>> {
+        self.out_transitions.get().unwrap()
     }
 
     pub fn set_var(&mut self, var : ModelVar) {

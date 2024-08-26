@@ -1,6 +1,6 @@
 use std::{cmp::max, sync::Mutex, thread, time::Instant};
 
-use crate::{models::{model_context::ModelContext, Model, ModelState}, solution::SolverResult, verification::VerificationBound};
+use crate::{models::{model_context::ModelContext, Model, ModelObject, ModelState}, solution::SolverResult, verification::VerificationBound};
 use crate::log::*;
 
 #[derive(Debug, Clone)]
@@ -16,7 +16,7 @@ impl SMCMaxSeen {
         }
     }
 
-    pub fn estimate_max(&self, model : &dyn Model, ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
+    pub fn estimate_max(&self, model : &dyn ModelObject, ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
         info("Estimating max tokens using SMC...");
         continue_info(format!("Runs to be executed : {}", self.runs_needed));
         pending("Starting...");
@@ -39,7 +39,7 @@ impl SMCMaxSeen {
         SolverResult::IntResult(max_seen)
     }
 
-    pub fn parallel_estimate_max(&self, model : &(dyn Model + Send + Sync), ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
+    pub fn parallel_estimate_max(&self, model : &dyn ModelObject, ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
         info("Estimating max tokens using SMC...");
         
         let threads = thread::available_parallelism().unwrap().get();

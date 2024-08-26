@@ -64,7 +64,7 @@ fn main() {
     println!("{}", net.get_model_meta());
     lf();
     
-    let mut query = parse_query("P F p5".to_owned()).unwrap();
+    let mut query = parse_query("F p5".to_owned()).unwrap();
     query.apply_to(&ctx).unwrap();
     let initial_state = ctx.make_initial_state(&*net, HashMap::from([(lbl("p0"), 1)]));
     
@@ -149,12 +149,4 @@ fn sample_markov() -> MarkovChain {
         (lbl("m3"), 1.0)
     ]);
     MarkovChain::new(vec![m1,m2,m3])
-}
-
-fn sample_query() -> Query {
-    let condition = Condition::And(
-        Box::new(Condition::Evaluation(Expr::Var(var("p5")))),
-        Box::new(Condition::Deadlock)
-    );
-    Query::new(Quantifier::Exists, StateLogic::Finally, condition)
 }

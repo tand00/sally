@@ -12,11 +12,7 @@ pub enum SolverGraphNode {
     Solution(Box<dyn Solution>),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum SolverGraphEdge {
-    Translation,
-    Feature
-}
+pub type SolverGraphEdge = (Label, Label);
 
 pub struct TranslationsSet(pub Vec<Box<dyn Translation>>);
 
@@ -130,12 +126,7 @@ impl ModelSolvingGraph {
         let Some(node) = self.find_semantics(model) else {
             return SolverResult::SolverError;
         };
-        let filter = UniqFilteredNeighbors::new(|e : &ModelSolvingGraphEdge| {
-            e.weight == SolverGraphEdge::Translation
-        });
-        let traversal = GraphTraversal::new(
-            node, BreadthFirst::new(), filter
-        );
+        let traversal = GraphTraversal::uniq_bfs(node);
         for next_node in traversal {
             
         }
