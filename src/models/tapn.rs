@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, sync::Arc, usize};
+use std::{collections::{HashMap, HashSet}, rc::Rc, sync::Arc, usize};
 
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
@@ -6,6 +6,8 @@ use tapn_place::TAPNPlace;
 use tapn_run_generator::TAPNRunGenerator;
 use tapn_token::*;
 use tapn_transition::TAPNTransition;
+
+use crate::verification::VerificationBound;
 
 use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, TIMED};
 
@@ -216,10 +218,10 @@ impl Model for TAPN {
         min_delay
     }
 
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : crate::verification::VerificationBound) 
-        -> impl Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)>
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
+        -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
     {
-        TAPNRunGenerator::generate(self, initial, bound)
+        Box::new(TAPNRunGenerator::generate(self, initial, bound))
     }
 
     fn get_id(&self) -> usize {

@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display, sync::Arc};
 
 use digraph::{search_strategy::{BreadthFirst, GraphTraversal, UniqFilteredNeighbors}, Digraph};
 
-use crate::{io::{ModelIOError, ModelLoader, ModelLoadingResult, ModelWriter, ModelWritingResult}, log, models::*, solution::{Solution, SolverResult}, translation::Translation, verification::query::Query};
+use crate::{io::{ModelIOError, ModelLoader, ModelLoadingResult, ModelWriter, ModelWritingResult}, log, models::*, solution::{self, Solution, SolverResult}, translation::Translation, verification::query::Query};
 
 use self::node::DataNode;
 
@@ -60,25 +60,26 @@ impl ModelSolvingGraph {
         self.semantics.insert(label, node);
     }
 
-    pub fn register_translation(&mut self, translation : Box<dyn Translation>) {
+    pub fn register_translation(&mut self, translation : impl Translation + 'static) {
         let meta = translation.get_meta();
         let node_in = self.semantics.get(&meta.input).unwrap_or(&self.node_any);
         let node_out = self.semantics.get(&meta.output).unwrap_or(&self.node_any);
 
     }
 
-    pub fn register_solution(&mut self, solution : Box<dyn Solution>) {
+    pub fn register_solution(&mut self, solution : impl Solution + 'static) {
+        let solution = Box::new(solution);
         self.solutions.push(self.graph.make_node(SolverGraphNode::Solution(solution)));
     }
 
-    pub fn register_loader(&mut self, loader : Box<dyn ModelLoader>) {
+    pub fn register_loader(&mut self, loader : impl ModelLoader + 'static) {
         let ext = loader.get_meta().ext;
-        self.loaders.insert(ext, loader);
+        self.loaders.insert(ext, Box::new(loader));
     }
 
-    pub fn register_writer(&mut self, writer : Box<dyn ModelWriter>) {
+    pub fn register_writer(&mut self, writer : impl ModelWriter + 'static) {
         let ext = writer.get_meta().ext;
-        self.writers.insert(ext, writer);
+        self.writers.insert(ext, Box::new(writer));
     }
 
     pub fn load_file(&self, path : String) -> ModelLoadingResult {
@@ -92,7 +93,9 @@ impl ModelSolvingGraph {
             return Err(ModelIOError)
         };
         log::continue_info(format!("Using loader [{}]", loader.get_meta().name));
-        loader.load_file(path)
+        let res = loader.load_file(path)?;
+        log::positive("Loaded file !");
+        Ok(res)
     }
 
     pub fn write_file(&self, path : String, model : &dyn ModelObject, initial : Option<InitialMarking>) -> ModelWritingResult {
@@ -107,11 +110,13 @@ impl ModelSolvingGraph {
         };
         let writer_meta = writer.get_meta();
         log::continue_info(format!("Using writer [{}]", writer_meta.name));
-        if writer_meta.name != lbl("any") && writer_meta.name != model.get_model_meta().name {
+        if writer_meta.input != lbl("any") && writer_meta.input != model.get_model_meta().name {
             log::error("The writer seems to be incompatible with the model type !");
             return Err(ModelIOError);
         }
-        writer.write_file(path, model, initial)
+        let res = writer.write_file(path, model, initial)?;
+        log::positive("Written model to file !");
+        Ok(res)
     }
 
     pub fn find_semantics(&self, model : &dyn ModelObject) -> Option<ModelSolvingGraphNode> {

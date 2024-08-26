@@ -4,6 +4,8 @@ use std::{
     sync::Arc,
 };
 
+use crate::verification::{smc::RandomRunIterator, VerificationBound};
+
 use super::{
     action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::{ClockValue, RealTimeBound},
     CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node,
@@ -290,6 +292,12 @@ impl Model for PetriNet {
         }
         self.transitions = compiled_transitions;
         Ok(())
+    }
+
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+    {
+        Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
     fn get_id(&self) -> usize {

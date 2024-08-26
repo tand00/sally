@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use crate::computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory};
 
-use super::{action::Action, model_clock::ModelClock, model_storage::ModelStorage, model_var::{ModelVar, VarType}, Label, Model, ModelState};
+use super::{action::Action, model_clock::ModelClock, model_storage::ModelStorage, model_var::{ModelVar, VarType}, Label, Model, ModelObject, ModelState};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ModelContext {
@@ -259,7 +259,7 @@ impl ModelContext {
         }
     }
 
-    pub fn make_initial_state(&self, model : &impl Model, marking : HashMap<Label, EvaluationType>) -> ModelState {
+    pub fn make_initial_state(&self, model : &dyn ModelObject, marking : HashMap<Label, EvaluationType>) -> ModelState {
         let mut state = ModelState::new(self.memory_size(), self.n_clocks());
         state.storages.resize(self.n_storages(), ModelStorage::EmptyStorage);
         for (k,v) in marking.iter() {

@@ -9,6 +9,7 @@ pub mod pnml;
 pub mod tapn;
 pub mod sly;
 
+#[derive(Debug)]
 pub struct ModelIOError;
 trait ModelIOErrorVariant {}
 impl ModelIOErrorVariant for serde_json::Error {}

@@ -23,6 +23,8 @@ pub struct PetriTransition {
     pub to: Vec<(Label, i32)>,
     pub interval: TimeInterval,
     pub controllable : bool,
+
+    #[serde(skip_serializing_if="Condition::is_default")]
     pub guard : Condition,
 
     #[serde(skip)]

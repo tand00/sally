@@ -3,8 +3,6 @@ use std::{cmp::max, sync::Mutex, thread, time::Instant};
 use crate::{models::{model_context::ModelContext, Model, ModelState}, solution::SolverResult, verification::VerificationBound};
 use crate::log::*;
 
-use super::RandomRunIterator;
-
 #[derive(Debug, Clone)]
 pub struct SMCMaxSeen {
     pub runs_needed : usize,
@@ -18,7 +16,7 @@ impl SMCMaxSeen {
         }
     }
 
-    pub fn estimate_max(&self, model : &impl Model, ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
+    pub fn estimate_max(&self, model : &dyn Model, ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
         info("Estimating max tokens using SMC...");
         continue_info(format!("Runs to be executed : {}", self.runs_needed));
         pending("Starting...");
@@ -27,7 +25,7 @@ impl SMCMaxSeen {
         let mut max_seen = 0;
         let vars = ctx.get_vars();
         for _ in 0..self.runs_needed {
-            let iterator = RandomRunIterator::generate(model, initial, bound.clone());
+            let iterator = model.random_run(initial, bound.clone());
             for (state, _, _) in iterator {
                 let tokens = state.marking_sum(vars.iter());
                 if tokens > max_seen {
@@ -41,7 +39,7 @@ impl SMCMaxSeen {
         SolverResult::IntResult(max_seen)
     }
 
-    pub fn parallel_estimate_max(&self, model : &(impl Model + Send + Sync), ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
+    pub fn parallel_estimate_max(&self, model : &(dyn Model + Send + Sync), ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
         info("Estimating max tokens using SMC...");
         
         let threads = thread::available_parallelism().unwrap().get();
@@ -62,7 +60,7 @@ impl SMCMaxSeen {
                     let mut runs = *runs_done.lock().unwrap();
                     let mut local_max = 0;
                     while runs < self.runs_needed {
-                        let iterator = RandomRunIterator::generate(model, initial, bound.clone());
+                        let iterator = model.random_run(initial, bound.clone());
                         for (state, _, _) in iterator {
                             let tokens = state.marking_sum(vars.iter());
                             if tokens > local_max {

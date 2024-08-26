@@ -9,7 +9,8 @@ use num_traits::Zero;
 
 use crate::computation::virtual_memory::EvaluationType;
 use crate::computation::DBM;
-use crate::verification::Verifiable;
+use crate::verification::smc::RandomRunIterator;
+use crate::verification::{Verifiable, VerificationBound};
 
 use super::action::Action;
 use super::model_context::ModelContext;
@@ -226,6 +227,12 @@ impl Model for ClassGraph {
         }
         self.current_class = context.add_var(self.current_class.name.clone(), self.current_class.get_type());
         Ok(())
+    }
+
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+    {
+        Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
     fn get_id(&self) -> usize {

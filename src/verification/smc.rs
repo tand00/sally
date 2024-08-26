@@ -10,7 +10,7 @@ pub use probability_estimation::ProbabilityEstimation;
 pub use probability_float_comparison::ProbabilityFloatComparison;
 pub use smc_max_seen::SMCMaxSeen;
 
-use crate::{models::{Model, ModelState}, solution::SolverResult};
+use crate::{models::{Model, ModelObject, ModelState}, solution::SolverResult};
 
 use super::{query::Query, Verifiable, VerificationStatus};
 
@@ -28,7 +28,7 @@ pub trait SMCQueryVerification {
     fn finish(&self) { }
 
     // Default implementations
-    fn verify(&mut self, model : &impl Model, initial_state : &ModelState, query : &Query) -> SolverResult {
+    fn verify(&mut self, model : &dyn ModelObject, initial_state : &ModelState, query : &Query) -> SolverResult {
         info("SMC verification");
         self.prepare();
         pending("Starting...");
@@ -45,7 +45,7 @@ pub trait SMCQueryVerification {
         self.get_result()
     }
 
-    fn execute_run(model : &impl Model, initial_state : &ModelState, query : &mut Query) -> VerificationStatus {
+    fn execute_run(model : &dyn ModelObject, initial_state : &ModelState, query : &mut Query) -> VerificationStatus {
         let run_gen = model.random_run(initial_state, query.run_bound.clone());
         for (state, _, _) in run_gen {
             query.verify_state(state.as_verifiable());
@@ -59,7 +59,7 @@ pub trait SMCQueryVerification {
         result
     }
 
-    fn parallel_verify(&mut self, model : &(impl Model + Send + Sync), initial_state : &ModelState, query : &Query) -> SolverResult {
+    fn parallel_verify(&mut self, model : &dyn ModelObject, initial_state : &ModelState, query : &Query) -> SolverResult {
         info("SMC verification");
         let threads = thread::available_parallelism().unwrap().get();
         continue_info(format!("Parallel mode [Threads : {}]", threads));

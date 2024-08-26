@@ -2,6 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use num_traits::Zero;
 
+use crate::verification::{smc::RandomRunIterator, VerificationBound};
+
 use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound}, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState, NONE};
 
 pub struct ModelNetwork {
@@ -106,6 +108,12 @@ impl Model for ModelNetwork {
             context.parent();
         }
         Ok(())
+    }
+
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+    {
+        Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
     fn get_id(&self) -> usize {

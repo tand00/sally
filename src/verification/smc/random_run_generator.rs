@@ -4,17 +4,17 @@ use num_traits::Zero;
 
 use crate::{models::{action::Action, run::RunStatus, time::ClockValue, Model, ModelState}, verification::VerificationBound};
 
-pub struct RandomRunIterator<'a> {
-    pub model : &'a dyn Model,
+pub struct RandomRunIterator<'a, T : Model> {
+    pub model : &'a T,
     pub initial_state : &'a ModelState,
     pub run_status : RunStatus,
     pub bound : VerificationBound,
     pub started : bool,
 }
 
-impl<'a> RandomRunIterator<'a> {
+impl<'a, T : Model> RandomRunIterator<'a, T> {
 
-    pub fn generate(model : &'a dyn Model, initial : &'a ModelState, bound : VerificationBound) -> Self {
+    pub fn generate(model : &'a T, initial : &'a ModelState, bound : VerificationBound) -> Self {
         RandomRunIterator {
             model,
             initial_state : initial,
@@ -41,7 +41,7 @@ impl<'a> RandomRunIterator<'a> {
 
 }
 
-impl<'a> Iterator for RandomRunIterator<'a> {
+impl<'a, T : Model> Iterator for RandomRunIterator<'a, T> {
 
     type Item = (Rc<ModelState>, ClockValue, Option<Action>);
 

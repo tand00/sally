@@ -114,7 +114,7 @@ impl std::fmt::Display for ModelMeta {
 }
 
 /// Generic trait that should be implemented by all Timed Transition Systems
-pub trait Model: Any {
+pub trait Model : Any {
     // Given a state and an action, returns a state and actions available
     fn next(&self, state: ModelState, action: Action) -> Option<ModelState>;
 
@@ -185,11 +185,7 @@ pub trait Model: Any {
     }
 
     fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
-        -> impl Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)>
-        where Self : Sized
-    {
-        RandomRunIterator::generate(self, initial, bound)
-    }
+        -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>;
 
     fn compile(&mut self, context: &mut ModelContext) -> CompilationResult<()>;
 
@@ -203,14 +199,14 @@ pub trait Model: Any {
 
 }
 
-pub trait ModelObject : Model {
+pub trait ModelObject : Model + Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
     fn get_model_meta(&self) -> ModelMeta;
     fn into_any(self) -> Box<dyn Any>;
 }
 
-impl<T : Model> ModelObject for T {
+impl<T : Model + Send + Sync> ModelObject for T {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -223,7 +219,6 @@ impl<T : Model> ModelObject for T {
     fn into_any(self) -> Box<dyn Any> {
         Box::new(self)
     }
-    
 }
 
 // Trait that should implement Send and Sync, to be shared amongst threads and do parallel verification by creating local models

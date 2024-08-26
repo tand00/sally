@@ -345,6 +345,10 @@ impl Condition {
         self.evaluate(state).0.good()
     }
 
+    pub fn is_default(&self) -> bool {
+        *self == True
+    }
+
     pub fn get_objects(&self) -> ObjectsScannerVisitor {
         let mut visitor = ObjectsScannerVisitor::new();
         self.accept(&mut visitor);

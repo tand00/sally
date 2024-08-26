@@ -1,6 +1,6 @@
 use std::{any::Any, cmp::max, collections::{HashMap, HashSet}};
 
-use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState}, verification::Verifiable};
+use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
 use crate::log;
 
 use serde::{Deserialize, Serialize};
@@ -176,10 +176,16 @@ impl<T : Model> Model for PartialObservation<T> {
     fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
         Err(CompilationError)
     }
+    
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+    {
+        Box::new(RandomRunIterator::generate(self, initial, bound))
+    }
 
 }
 
-impl<T : Model + Clone> Translation for PartialObservation<T> {
+impl<T : ModelObject + Clone> Translation for PartialObservation<T> {
     
     fn get_meta(&self) -> TranslationMeta {
         TranslationMeta {
