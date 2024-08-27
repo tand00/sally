@@ -31,8 +31,9 @@ pub mod program;
 pub mod run;
 pub mod tapn;
 pub mod time;
+pub mod model_project;
 
-use crate::{computation::virtual_memory::EvaluationType, verification::{smc::RandomRunIterator, VerificationBound}};
+use crate::{computation::virtual_memory::EvaluationType, verification::VerificationBound};
 
 use self::{
     action::Action, model_characteristics::*, model_context::ModelContext, time::ClockValue,
@@ -208,6 +209,7 @@ pub trait ModelObject : Model + Send + Sync {
     fn as_any_mut(&mut self) -> &mut dyn Any;
     fn get_model_meta(&self) -> ModelMeta;
     fn into_any(self) -> Box<dyn Any>;
+    fn model_object(&self) -> &dyn ModelObject;
 }
 
 impl<T : Model + Send + Sync> ModelObject for T {
@@ -222,6 +224,9 @@ impl<T : Model + Send + Sync> ModelObject for T {
     }
     fn into_any(self) -> Box<dyn Any> {
         Box::new(self)
+    }
+    fn model_object(&self) -> &dyn ModelObject {
+        self
     }
 }
 

@@ -14,6 +14,7 @@ use computation::intervals::Convex;
 use io::sly::{SLYLoader, SLYWriter};
 use models::digraph::Digraph;
 use models::expressions::{Condition, Expr};
+use models::model_project::ModelProject;
 use models::{lbl, ModelObject};
 use models::markov::markov_chain::MarkovChain;
 use models::markov::markov_node::MarkovNode;
@@ -55,21 +56,22 @@ fn main() {
     continue_info(format!("Translations : \t[{}]", solver.translations.len()));
     lf();
 
-    let mut net = solver.load_file("test_petri.sly".to_owned())
-        .map(|x| x.0)
-        .unwrap_or(Box::new(sample_petri()));
+    let mut project = solver.load_file("test_petri.sly".to_owned())
+        .unwrap_or(sample_petri());
 
-    let ctx = net.singleton();
-    println!("{}", ctx);
+    println!("{project}");
+
+    project.compile().unwrap();
+
+    let net = &mut project.model;
     println!("{}", net.get_model_meta());
     lf();
-    
-    let mut query = parse_query("F p5".to_owned()).unwrap();
-    query.apply_to(&ctx).unwrap();
-    let initial_state = ctx.make_initial_state(&*net, HashMap::from([(lbl("p0"), 1)]));
+
+    let query = project.queries.first().unwrap();
+    let initial_state = project.initial_state.clone().unwrap();
     
     let mut prob_est = ProbabilityEstimation::fixed_runs(1000000, 0.95);
-    prob_est.parallel_verify(&*net, &initial_state, &query);
+    prob_est.parallel_verify(net.model_object(), &initial_state, &query);
 
     let p_net = net.as_any().downcast_ref::<PetriNet>().unwrap();
     let cg = ClassGraph::compute(p_net, &initial_state);
@@ -77,12 +79,11 @@ fn main() {
         println!("{}", class);
     }
 
-    solver.write_file("test_petri.sly".to_owned(), &*net, None).unwrap();
+    solver.write_file("test_petri.sly".to_owned(), &project).unwrap();
 
     let q = parse_query("A F !(P3 && (P2 || P1 || P4)) || (P4 - P3 && !false || (P3 && (P2 && (P1 || V))))".to_owned()).unwrap();
     println!("{}", q.condition.disjunctive_normal());
     println!("{}", q.condition.conjunctive_normal());
-    println!("{}", q.condition.distribute_not());
 }
 
 fn build_solver() -> ModelSolvingGraph {
@@ -98,7 +99,7 @@ fn build_solver() -> ModelSolvingGraph {
     solver
 }
 
-fn sample_petri() -> PetriNet {
+fn sample_petri() -> ModelProject {
     let p0 = PetriPlace::new(lbl("p0"));
     let p1 = PetriPlace::new(lbl("p1"));
     let p2 = PetriPlace::new(lbl("p2"));
@@ -133,7 +134,9 @@ fn sample_petri() -> PetriNet {
         vec![p0, p1, p2, p3, p4, p5],
         vec![t0, a, b, c]
     );
-    net
+    let query = parse_query("F p5".to_owned()).unwrap();
+    let marking = HashMap::from([(lbl("p0"), 1)]);
+    ModelProject::new(Box::new(net), vec![query], marking)
 }
 
 fn _sample_digraph() -> Digraph<usize, i32> {

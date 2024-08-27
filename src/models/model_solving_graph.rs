@@ -1,8 +1,9 @@
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 
-use digraph::{search_strategy::{BreadthFirst, GraphTraversal, UniqFilteredNeighbors}, Digraph};
+use digraph::{search_strategy::GraphTraversal, Digraph};
+use model_project::ModelProject;
 
-use crate::{io::{ModelIOError, ModelLoader, ModelLoadingResult, ModelWriter, ModelWritingResult}, log, models::*, solution::{self, Solution, SolverResult}, translation::Translation, verification::query::Query};
+use crate::{io::{ModelIOError, ModelLoader, ModelLoadingResult, ModelWriter, ModelWritingResult}, log, models::*, solution::{Solution, SolverResult}, translation::Translation, verification::query::Query};
 
 use self::node::DataNode;
 
@@ -97,7 +98,7 @@ impl ModelSolvingGraph {
         Ok(res)
     }
 
-    pub fn write_file(&self, path : String, model : &dyn ModelObject, initial : Option<InitialMarking>) -> ModelWritingResult {
+    pub fn write_file(&self, path : String, project : &ModelProject) -> ModelWritingResult {
         let ext : Vec<&str> = path.split('.').collect();
         let Some(ext) = ext.last() else { return Err(ModelIOError) };
         let ext = Label::from(ext.to_owned());
@@ -109,13 +110,18 @@ impl ModelSolvingGraph {
         };
         let writer_meta = writer.get_meta();
         log::continue_info(format!("Using writer [{}]", writer_meta.name));
-        if writer_meta.input != lbl("any") && writer_meta.input != model.get_model_meta().name {
+        if writer_meta.input != lbl("any") && writer_meta.input != project.model.get_model_meta().name {
             log::error("The writer seems to be incompatible with the model type !");
             return Err(ModelIOError);
         }
-        let res = writer.write_file(path, model, initial)?;
+        let res = writer.write_file(path, project)?;
         log::positive("Written model to file !");
         Ok(res)
+    }
+
+    pub fn write_model_file(&self, path : String, model : Box<dyn ModelObject>) -> ModelWritingResult {
+        let project = ModelProject::only_model(model);
+        self.write_file(path, &project)
     }
 
     pub fn find_semantics(&self, model : &dyn ModelObject) -> Option<ModelSolvingGraphNode> {

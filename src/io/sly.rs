@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use serde_json::{Map, Value};
 
-use crate::models::{lbl, markov::markov_chain::MarkovChain, petri::{PetriNet, PetriStructure}, tapn::{TAPNStructure, TAPN}, Label, Model, ModelObject};
+use crate::models::{lbl, markov::markov_chain::MarkovChain, model_project::ModelProject, petri::{PetriNet, PetriStructure}, tapn::{TAPNStructure, TAPN}, Label, Model, ModelObject};
 
-use super::{deserialize_structure, serialize_structure, InitialMarking, ModelIOError, ModelLoader, ModelLoaderMeta, ModelLoadingResult, ModelWriter, ModelWriterMeta, ModelWritingResult};
+use super::{deserialize_structure, serialize_structure, ModelIOError, ModelLoader, ModelLoaderMeta, ModelLoadingResult, ModelWriter, ModelWriterMeta, ModelWritingResult};
 
 pub struct SLYLoader;
 pub struct SLYWriter;
@@ -10,6 +12,7 @@ pub struct SLYWriter;
 const MODEL_TYPE_KEY : &str = "model-type";
 const MODEL_KEY : &str = "model";
 const INITIAL_STATE_KEY : &str = "initial-state";
+const QUERIES_KEY : &str = "queries";
 
 impl SLYLoader {
 
@@ -72,17 +75,26 @@ impl ModelLoader for SLYLoader {
         let Some(serialized) = map.remove(MODEL_KEY) else {
             return Err(ModelIOError)
         };
-        let initial = map.remove(INITIAL_STATE_KEY);
 
+        let initial = map.remove(INITIAL_STATE_KEY);
         let initial = if initial.is_some() {
-            Some(serde_json::from_value(initial.unwrap())?)
+            serde_json::from_value(initial.unwrap())?
         } else {
-            None
+            HashMap::new()
+        };
+
+        let queries = map.remove(QUERIES_KEY);
+        let queries = if queries.is_some() {
+            serde_json::from_value(queries.unwrap())?
+        } else {
+            Vec::new()
         };
 
         let model = SLYLoader::load_model(model_type, serialized)?;
 
-        Ok((model, initial))
+        Ok(ModelProject::new(
+            model, queries, initial
+        ))
     }
 
 }
@@ -98,15 +110,19 @@ impl ModelWriter for SLYWriter {
         }
     }
 
-    fn write(&self, model : &dyn ModelObject, initial : Option<InitialMarking>) -> ModelWritingResult {
-        let model_type = Value::String(model.get_model_meta().name.to_string());
-        let value = Self::write_model(model)?;
+    fn write(&self, project : &ModelProject) -> ModelWritingResult {
+        let model_type = Value::String(project.model.get_model_meta().name.to_string());
+        let value = Self::write_model(&*project.model)?;
         let mut map = Map::new();
         map.insert(MODEL_TYPE_KEY.to_owned(), model_type);
         map.insert(MODEL_KEY.to_owned(), value);
-        if let Some(initial) = initial {
-            let initial = serde_json::to_value(initial)?;
+        if !project.initial_marking.is_empty() {
+            let initial = serde_json::to_value(project.initial_marking.clone())?;
             map.insert(INITIAL_STATE_KEY.to_owned(), initial);
+        }
+        if !project.queries.is_empty() {
+            let queries = serde_json::to_value(project.queries.clone())?;
+            map.insert(QUERIES_KEY.to_owned(), queries);
         }
         Ok(serde_json::to_string(&map)?)
     }

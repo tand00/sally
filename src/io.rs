@@ -3,7 +3,7 @@ use std::{fs, io};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 
-use crate::models::{InitialMarking, Label, ModelObject};
+use crate::models::{model_project::ModelProject, Label, ModelObject};
 
 pub mod pnml;
 pub mod tapn;
@@ -18,9 +18,7 @@ impl<T : ModelIOErrorVariant> From<T> for ModelIOError {
     fn from(_ : T) -> Self { Self }
 }
 
-pub type LoadedModel = (Box<dyn ModelObject>, Option<InitialMarking>);
-
-pub type ModelLoadingResult = Result<LoadedModel, ModelIOError>;
+pub type ModelLoadingResult = Result<ModelProject, ModelIOError>;
 pub type ModelWritingResult = Result<String, ModelIOError>;
 
 pub struct ModelLoaderMeta {
@@ -54,10 +52,10 @@ pub trait ModelWriter {
 
     fn get_meta(&self) -> ModelWriterMeta;
 
-    fn write(&self, model : &dyn ModelObject, initial : Option<InitialMarking>) -> ModelWritingResult;
+    fn write(&self, project : &ModelProject) -> ModelWritingResult;
 
-    fn write_file(&self, path : String, model : &dyn ModelObject, initial : Option<InitialMarking>) -> ModelWritingResult {
-        let content = self.write(model, initial)?;
+    fn write_file(&self, path : String, model : &ModelProject) -> ModelWritingResult {
+        let content = self.write(model)?;
         fs::write(path, content.clone())?;
         Ok(content)
     }

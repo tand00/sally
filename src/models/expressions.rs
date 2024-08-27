@@ -1,4 +1,3 @@
-use std::clone;
 use std::fmt::Display;
 use std::{collections::HashSet, hash::Hash, ops::Not};
 
@@ -524,6 +523,81 @@ impl Condition {
 
     pub fn conjunctive_normal(&self) -> Condition {
         (!self.disjunctive_normal()).distribute_not()
+    }
+
+    pub fn conjunctions(&self) -> Vec<Condition> {
+        match self {
+            Or(a, b) => {
+                let mut conjs = a.conjunctions();
+                conjs.append(&mut b.conjunctions());
+                conjs
+            },
+            _ => vec![self.clone()]
+        }
+    }
+
+    pub fn to_greater_eq(&self) -> Condition {
+        match self { //prop
+            Not(c) => Not(Box::new(c.to_greater_eq())),
+            And(c1,c2) => And(
+                Box::new(c1.to_greater_eq()),
+                Box::new(c2.to_greater_eq())
+            ),
+            Or(c1, c2) => Or(
+                Box::new(c1.to_greater_eq()),
+                Box::new(c2.to_greater_eq())
+            ),
+            Until(c1, c2) => Until(
+                Box::new(c1.to_greater_eq()),
+                Box::new(c2.to_greater_eq())
+            ),
+            Implies(c1, c2) => Implies(
+                Box::new(c1.to_greater_eq()),
+                Box::new(c2.to_greater_eq())
+            ),
+            Next(c) => Next(Box::new(c.to_greater_eq())),
+            Proposition(op, e1, e2) => {
+                match op {
+                    EQ | NE | GE | GS => Proposition(*op, e1.clone(), e2.clone()),
+                    LS => Proposition(GS, e2.clone(), e1.clone()),
+                    LE => Proposition(GE, e2.clone(), e1.clone())
+                }
+            },
+            Evaluation(e) => Evaluation(e.clone()),
+            _ => self.clone()
+        }
+    }
+
+    pub fn to_lesser_eq(&self) -> Condition {
+        match self { //prop
+            Not(c) => Not(Box::new(c.to_lesser_eq())),
+            And(c1,c2) => And(
+                Box::new(c1.to_lesser_eq()),
+                Box::new(c2.to_lesser_eq())
+            ),
+            Or(c1, c2) => Or(
+                Box::new(c1.to_lesser_eq()),
+                Box::new(c2.to_lesser_eq())
+            ),
+            Until(c1, c2) => Until(
+                Box::new(c1.to_lesser_eq()),
+                Box::new(c2.to_lesser_eq())
+            ),
+            Implies(c1, c2) => Implies(
+                Box::new(c1.to_lesser_eq()),
+                Box::new(c2.to_lesser_eq())
+            ),
+            Next(c) => Next(Box::new(c.to_lesser_eq())),
+            Proposition(op, e1, e2) => {
+                match op {
+                    EQ | NE | LE | LS => Proposition(*op, e1.clone(), e2.clone()),
+                    GS => Proposition(LS, e2.clone(), e1.clone()),
+                    GE => Proposition(LE, e2.clone(), e1.clone())
+                }
+            },
+            Evaluation(e) => Evaluation(e.clone()),
+            _ => self.clone()
+        }
     }
 
     pub fn is_true(&self, state : &impl Verifiable) -> bool {
