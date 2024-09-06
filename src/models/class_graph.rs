@@ -26,7 +26,6 @@ pub struct ClassGraph {
     pub id : usize,
     pub classes : Vec<Arc<StateClass>>,
     pub edges : Vec<Edge<Action, StateClass, StateClass>>,
-    pub places_dic : HashMap<Label, usize>,
     pub current_class : ModelVar,
     pub transitions : Vec<Arc<PetriTransition>>
 }
@@ -38,7 +37,6 @@ impl ClassGraph {
             id : usize::MAX,
             classes : Vec::new(),
             edges : Vec::new(),
-            places_dic : p_net.places_dic.clone(),
             current_class : ModelVar::name(lbl("CurrentClass")),
             transitions : p_net.transitions.clone()
         };

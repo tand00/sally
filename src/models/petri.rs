@@ -369,7 +369,7 @@ impl ModelMaker<PetriNet> for PetriMaker {
 
     fn make(&self) -> (PetriNet, ModelContext) {
         let mut new_net = PetriNet::from(self.structure.clone());
-        let ctx = new_net.singleton();
+        let ctx = new_net.singleton().unwrap();
         (new_net, ctx)
     }
 }

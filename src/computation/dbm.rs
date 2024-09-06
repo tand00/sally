@@ -8,11 +8,14 @@ use nalgebra::DMatrix;
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
-use crate::models::time::{TimeBound, TimeInterval};
+use crate::models::time::{Bound, Interval};
+
+pub type IntBound = Bound<i32>;
+pub type IntInterval = Interval<i32>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DBM {
-    constraints: DMatrix<TimeBound>,
+    constraints: DMatrix<IntBound>,
 }
 
 // We add an imaginary variable, always equal to zero, at the beginning of the matrix. That way, we can encode rectangular constraints
@@ -21,15 +24,15 @@ impl DBM {
         DBM {
             constraints: DMatrix::from_fn(vars + 1, vars + 1, |i, j| {
                 if i == j {
-                    TimeBound::zero()
+                    IntBound::zero()
                 } else {
-                    TimeBound::Infinite
+                    IntBound::Infinite
                 }
             }),
         }
     }
 
-    pub fn from(constraints: DMatrix<TimeBound>) -> Self {
+    pub fn from(constraints: DMatrix<IntBound>) -> Self {
         if !constraints.is_square() {
             panic!("Constraints matrix not square, can't construct DBM !");
         }
@@ -40,20 +43,20 @@ impl DBM {
 
     pub fn empty(vars: usize) -> Self {
         DBM {
-            constraints: DMatrix::from_element(vars + 1, vars + 1, TimeBound::MinusInfinite),
+            constraints: DMatrix::from_element(vars + 1, vars + 1, IntBound::MinusInfinite),
         }
     }
 
-    pub fn at(&self, i: usize, j: usize) -> TimeBound {
+    pub fn at(&self, i: usize, j: usize) -> IntBound {
         self[(i, j)]
     }
 
-    pub fn rectangulars(&self, i: usize) -> TimeInterval {
-        TimeInterval::new(-self.constraints[(0, i)], self.constraints[(i, 0)])
+    pub fn rectangulars(&self, i: usize) -> IntInterval {
+        IntInterval::new(-self.constraints[(0, i)], self.constraints[(i, 0)])
     }
 
-    pub fn diagonals(&self, i: usize, j: usize) -> TimeInterval {
-        TimeInterval::new(-self.constraints[(j, i)], self.constraints[(i, j)])
+    pub fn diagonals(&self, i: usize, j: usize) -> IntInterval {
+        IntInterval::new(-self.constraints[(j, i)], self.constraints[(i, j)])
     }
 
     pub fn intersection(&self, other: &DBM) -> Self {
@@ -79,7 +82,7 @@ impl DBM {
         canonical
     }
 
-    pub fn set_bound(&mut self, var_i: usize, bound: TimeBound) {
+    pub fn set_bound(&mut self, var_i: usize, bound: IntBound) {
         self.add(var_i, 0, bound)
     }
 
@@ -89,13 +92,13 @@ impl DBM {
                 continue;
             }
             self.constraints[(i, var_i)] = self.constraints[(i, 0)];
-            self.constraints[(var_i, i)] = TimeBound::Infinite;
+            self.constraints[(var_i, i)] = IntBound::Infinite;
         }
     }
 
-    pub fn add(&mut self, var_i: usize, var_j: usize, constraint: TimeBound) {
+    pub fn add(&mut self, var_i: usize, var_j: usize, constraint: IntBound) {
         let current = &mut self.constraints[(var_i, var_j)];
-        if *current + constraint < TimeBound::zero() {
+        if *current + constraint < IntBound::zero() {
             *self = Self::empty(self.vars_count());
         } else if constraint < *current {
             *current = constraint;
@@ -133,7 +136,7 @@ impl DBM {
                         self.constraints[(i, j)],
                         self.constraints[(i, k)] + self.constraints[(k, j)],
                     );
-                    if i == j && self.constraints[(i, j)] < TimeBound::zero() {
+                    if i == j && self.constraints[(i, j)] < IntBound::zero() {
                         *self = Self::empty(self.vars_count());
                         return;
                     }
@@ -143,10 +146,10 @@ impl DBM {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.constraints[(0, 0)] < TimeBound::zero()
+        self.constraints[(0, 0)] < IntBound::zero()
     }
 
-    pub fn delta(&mut self, delta: TimeBound) {
+    pub fn delta(&mut self, delta: IntBound) {
         for i in 1..(self.vars_count() + 1) {
             self.constraints[(i, 0)] += delta;
             self.constraints[(0, i)] -= delta;
@@ -157,14 +160,14 @@ impl DBM {
         let mut res = self.clone();
         let max_delta = self.constraints.column(0).iter().min().unwrap().clone();
         for i in 1..(self.vars_count() + 1) {
-            res.constraints[(0, i)] = min(TimeBound::zero(), self.constraints[(0, i)] + max_delta);
+            res.constraints[(0, i)] = min(IntBound::zero(), self.constraints[(0, i)] + max_delta);
         }
         res
     }
 }
 
 impl Index<(usize, usize)> for DBM {
-    type Output = TimeBound;
+    type Output = IntBound;
     fn index(&self, index: (usize, usize)) -> &Self::Output {
         &self.constraints[index] // Index + 1 because virtual var at 0
     }

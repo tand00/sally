@@ -302,7 +302,7 @@ impl<'a> TAPNPlaceListWriter<'a> {
 
     pub fn delta(&mut self, dt : ClockValue) {
         for place in self.places.iter_mut() {
-            let mut token_list = TAPNPlaceListWriter::from(place);
+            let mut token_list = TAPNTokenListWriter::from(place);
             token_list.delta(dt)
         }
     }

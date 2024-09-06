@@ -90,7 +90,7 @@ impl TAPN {
         for edge in transi.get_outputs().iter() {
             let target = edge.get_node_to();
             vars_updates.push((target.clone(), edge.weight));
-            let mut target_tokens =places_tokens.place(target.index);
+            let mut target_tokens = places_tokens.place(target.index);
             target_tokens.insert(TAPNToken { count: edge.weight, age: ClockValue::zero() });
         }
         for (place, delta) in vars_updates {

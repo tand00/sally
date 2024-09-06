@@ -24,7 +24,7 @@ impl ModelProject {
 
     pub fn only_model(model : Box<dyn ModelObject>) -> ModelProject {
         ModelProject {
-            model : model,
+            model,
             queries : Vec::new(),
             initial_marking : HashMap::new(),
             initial_state : None
@@ -32,7 +32,7 @@ impl ModelProject {
     }
 
     pub fn compile(&mut self) -> CompilationResult<ModelContext> {
-        let mut ctx = self.model.singleton();
+        let mut ctx = self.model.singleton()?;
         for query in self.queries.iter_mut() {
             if query.apply_to(&mut ctx).is_err() {
                 return Err(CompilationError);
@@ -47,7 +47,7 @@ impl ModelProject {
 impl Display for ModelProject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, " [.] Model Project :\n")?;
-        write!(f, " | Model type : {}\n", self.model.get_model_meta().name)?;
-        write!(f, " | Queries : [{}]", self.queries.len())
+        write!(f, " | - Model type : {}\n", self.model.get_model_meta().name)?;
+        write!(f, " | - Queries : [{}]", self.queries.len())
     }
 }

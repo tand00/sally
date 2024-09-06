@@ -7,6 +7,7 @@ pub enum ModelStorage {
     EmptyStorage,
     Integer(i32),
     Float(f64),
+    Bin(u64),
     Vector(Vec<ModelStorage>),
     Tuple(Box<ModelStorage>, Box<ModelStorage>)
 }
@@ -31,6 +32,15 @@ impl ModelStorage {
         match self {
             Float(f) => f,
             Integer(i) => i as f64,
+            _ => panic!("Incorrect storage structure")
+        }
+    }
+
+    pub fn bin(self) -> u64 {
+        match self {
+            Float(f) => f.to_bits(),
+            Integer(i) => i as u64,
+            Bin(u) => u, 
             _ => panic!("Incorrect storage structure")
         }
     }
@@ -64,6 +74,13 @@ impl ModelStorage {
         }
     }
 
+    pub fn mut_bin(&mut self) -> &mut u64 {
+        match self {
+            Bin(u) => u,
+            _ => panic!("Incorrect storage structure")
+        }
+    }
+
     pub fn mut_tuple(&mut self) -> (&mut ModelStorage, &mut ModelStorage) {
         match self {
             Tuple(a,b) => (a, b),
@@ -92,6 +109,13 @@ impl ModelStorage {
         }
     }
 
+    pub fn ref_bin(&self) -> &u64 {
+        match self {
+            Bin(u) => u,
+            _ => panic!("Incorrect storage structure")
+        }
+    }
+
     pub fn ref_tuple(&self) -> (&ModelStorage, &ModelStorage) {
         match self {
             Tuple(a,b) => (a, b),
@@ -116,6 +140,13 @@ impl ModelStorage {
     pub fn is_float(&self) -> bool {
         match self {
             Float(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn is_bin(&self) -> bool {
+        match self {
+            Bin(_) => true,
             _ => false
         }
     }
@@ -154,6 +185,12 @@ impl From<f64> for ModelStorage {
     }
 }
 
+impl From<u64> for ModelStorage {
+    fn from(value: u64) -> Self {
+        Bin(value)
+    }
+}
+
 impl From<(ModelStorage, ModelStorage)> for ModelStorage {
     fn from(value: (ModelStorage, ModelStorage)) -> Self {
         Tuple(Box::new(value.0), Box::new(value.1))
@@ -178,13 +215,17 @@ impl Hash for ModelStorage {
                 state.write_u8(2);
                 ((*f * 100_000_000.0) as u64).hash(state);
             },
+            Bin(u) => {
+                state.write_u8(5);
+                u.hash(state);
+            },
             Tuple(a, b) => {
-                state.write_u8(3);
+                state.write_u8(4);
                 a.hash(state);
                 b.hash(state);
             },
             Vector(v) => {
-                state.write_u8(4);
+                state.write_u8(5);
                 v.hash(state);
             },
             
@@ -199,6 +240,7 @@ impl PartialEq for ModelStorage {
             (Integer(i1), Integer(i2)) => i1 == i2,
             (Float(f1), Float(f2)) => 
                 (f1 == f2) || (f1.is_nan() && f2.is_nan()),
+            (Bin(u1), Bin(u2)) => u1 == u2,
             (Vector(v1), Vector(v2)) => v1 == v2,
             (Tuple(a,b), Tuple(c,d)) => (a,b) == (c,d),
             _ => false

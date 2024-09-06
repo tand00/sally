@@ -147,7 +147,7 @@ impl ModelMaker<MarkovChain> for MarkovChainMaker {
 
     fn make(&self) -> (MarkovChain, ModelContext) {
         let mut chain = MarkovChain::new(self.structure.clone());
-        let ctx = chain.singleton();
+        let ctx = chain.singleton().unwrap();
         (chain, ctx)
     }
 

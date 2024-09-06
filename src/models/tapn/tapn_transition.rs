@@ -1,16 +1,16 @@
 use std::cmp::min;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::fmt;
 use std::sync::OnceLock;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::computation::combinatory::{CartesianProduct, KInVec};
-use crate::computation::intervals::{ContinuousSet, Convex};
+use crate::computation::intervals::{ContinuousSet, Convex, Delta, ToPositive};
 use crate::computation::probability::RealDistribution;
 use crate::models::action::Action;
 use crate::models::model_context::ModelContext;
-use crate::models::time::{ClockValue, RealTimeInterval, TimeInterval};
+use crate::models::time::{Bound, ClockValue, RealTimeInterval, TimeInterval};
 use crate::models::{CompilationResult, Label, Node};
 
 use super::{tapn_edge::*, TAPNPlaceList, TAPNPlaceListReader, TAPNTokenList, TAPNTokenListReader};
@@ -206,13 +206,28 @@ impl TAPNTransition {
     }
 
     fn arc_dates(interval : &TimeInterval, weight : usize, token_list : TAPNTokenListReader) -> ContinuousSet<ClockValue, RealTimeInterval> {
+        if weight == 0 {
+            return ContinuousSet::full();
+        }
         let mut dates = ContinuousSet::EmptySet;
-        let mut first_index : usize = 0;
-        let mut consumed : usize = 0;
-        let list_len = token_list.list_len();
-        while first_index < list_len {
-            let i = first_index;
-
+        let tokens = token_list.tokens();
+        let mut ages : VecDeque<ClockValue> = VecDeque::new();
+        for token in tokens {
+            for _ in 0..(*token.count) {
+                ages.push_back(token.get_age());
+                if ages.len() > weight {
+                    ages.pop_front();
+                }
+                if ages.len() == weight {
+                    let mut set_dates = ContinuousSet::full();
+                    for age in ages.iter() {
+                        let mut shifted = interval.real();
+                        shifted.delta(-*age);
+                        set_dates = set_dates.intersection(shifted.positive());
+                    }
+                    dates = dates.union(set_dates);
+                }
+            }
         }
         dates
     }

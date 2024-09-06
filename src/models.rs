@@ -106,7 +106,7 @@ impl std::fmt::Display for ModelMeta {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            " [.] Model ({})\n | Description : \n | {}\n | Characteristics : {}",
+            " [.] Model ({})\n | - Description : \n | {}\n | - Characteristics : {}",
             self.name,
             self.description,
             characteristics_label(self.characteristics)
@@ -190,10 +190,10 @@ pub trait Model : Any {
 
     fn compile(&mut self, context: &mut ModelContext) -> CompilationResult<()>;
 
-    fn singleton(&mut self) -> ModelContext {
+    fn singleton(&mut self) -> CompilationResult<ModelContext> {
         let mut ctx = ModelContext::new();
-        self.compile(&mut ctx).unwrap();
-        ctx
+        self.compile(&mut ctx)?;
+        Ok(ctx)
     }
 
     fn get_id(&self) -> usize;
@@ -204,6 +204,7 @@ pub trait Model : Any {
 
 }
 
+// Blanket implementation to add downgrading capabilities and calls to statics for each object implementing Model
 pub trait ModelObject : Model + Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;

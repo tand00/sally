@@ -110,11 +110,13 @@ impl<'a> TAPNRunGenerator<'a> {
     }
 
     pub fn oldest_token_set(&self, transition : &TAPNTransition, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
-        todo!()
+        let mut token_sets = transition.fireable_tokens(&place_list);
+        token_sets.pop().unwrap()
     }
 
     pub fn youngest_token_set(&self, transition : &TAPNTransition, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
-        todo!()
+        let mut token_sets = transition.fireable_tokens(&place_list);
+        token_sets.swap_remove(0)
     }
 
     pub fn random_token_set(&mut self, transition : &TAPNTransition, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
