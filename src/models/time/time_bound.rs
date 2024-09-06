@@ -63,6 +63,14 @@ impl<T : TimeType> Bound<T> {
             MinusInfinite => true,
         }
     }
+    pub fn clock_value(&self) -> ClockValue {
+        match self {
+            Infinite => ClockValue::infinity(),
+            Strict(x) => (*x).into(),
+            Large(x) => (*x).into(),
+            MinusInfinite => ClockValue::neg_infinity(),
+        }
+    }
 }
 
 impl<T> Bound<T> {

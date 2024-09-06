@@ -69,6 +69,18 @@ impl<T> Interval<T> {
         Interval(Bound::zero(), bound)
     }
 
+    pub fn lower(&self) -> Bound<T> 
+        where T : Copy
+    {
+        self.0
+    }
+
+    pub fn upper(&self) -> Bound<T> 
+        where T : Copy
+    {
+        self.1
+    }
+
 }
 
 impl<T : TimeType + Scalar + PartialOrd + Bounded> Mul for Interval<T>  { // Intersection

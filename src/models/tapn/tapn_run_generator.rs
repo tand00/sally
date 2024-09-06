@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use num_traits::Zero;
 
-use crate::{computation::intervals::{ContinuousSet, Delta, ToPositive}, models::{action::Action, run::RunStatus, time::{ClockValue, RealTimeInterval}, Model, ModelState}, verification::VerificationBound};
+use crate::{computation::{intervals::{ContinuousSet, Delta, ToPositive}, probability::ProbabilisticChoice}, models::{action::Action, run::RunStatus, time::{ClockValue, RealTimeInterval}, Model, ModelState}, verification::VerificationBound};
 
 use super::{tapn_transition::{FiringMode, TAPNTransition}, TAPNPlaceList, TAPNPlaceListReader, TAPN};
 
@@ -72,20 +72,30 @@ impl<'a> TAPNRunGenerator<'a> {
 
     pub fn get_winner_and_delay(&mut self) -> (Option<usize>, ClockValue) {
         let mut delay = ClockValue::infinity(); 
-        let mut candidates : Vec<usize> = Vec::new();
-        for i in 0..self.intervals.len() {
+        let mut candidates : Vec<(usize, f64)> = Vec::new();
+        let mut infinite_weights : Vec<usize> = Vec::new();
+        let mut null_weights : Vec<usize> = Vec::new();
+        for t in self.tapn.transitions.iter() {
+            let i = t.index;
             let dates = &self.intervals[i];
             let firing = &self.firing_dates[i];
             if dates.is_empty() {
                 continue;
             }
-            let first = dates.convexs().next().unwrap();
-            let a = ClockValue::from(first.0);
-            let b = ClockValue::from(first.1);
-            let mut date =  if a > ClockValue::zero() { a } 
-                        else if b > ClockValue::zero() { b }
-                        else { ClockValue::infinity() };
-            if firing.is_enabled() && *firing < date && first.1.greater_than(firing) {
+            let mut date = ClockValue::infinity();
+            for convex in dates.convexs() {
+                let a = convex.0.clock_value();
+                let b = convex.1.clock_value();
+                if a > ClockValue::zero() {
+                    date = a;
+                    break;
+                }
+                if b > ClockValue::zero() {
+                    date = b;
+                    break;
+                }
+            }
+            if firing.is_enabled() && *firing < date {
                 date = *firing;
             }
             if date < delay {
@@ -93,10 +103,24 @@ impl<'a> TAPNRunGenerator<'a> {
                 candidates.clear();
             }
             if *firing == delay {
-                candidates.push(i);
+                if t.weight.is_infinite() {
+                    infinite_weights.push(i);
+                } else if t.weight.is_zero() {
+                    null_weights.push(i);
+                } else {
+                    candidates.push((i, t.weight));
+                }
             }
         }
-        let winner = candidates.choose(&mut self.rng).map(|i| *i);
+        let winner = match (candidates.is_empty(), infinite_weights.is_empty(), null_weights.is_empty()) {
+            (true, true, true) => None,
+            (_, false, _) => infinite_weights.choose(&mut self.rng).map(|i| *i),
+            (true, true, false) => null_weights.choose(&mut self.rng).map(|i| *i),
+            (false, true, _) => {
+                let choice = ProbabilisticChoice::new(candidates);
+                Some(*choice.sample(&mut self.rng))
+            }
+        };
         (winner, delay)
     }
 
