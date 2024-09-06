@@ -81,14 +81,47 @@ impl Run {
         for elem in self.elements.iter() {
             match elem {
                 Step(a) => if !a.is_epsilon() {
-                    res.add(Step(a.clone()))
+                    res.add(Step(a.clone()));
                 },
+                Delay(d) => {
+                    if let Some(Delay(d_old)) = res.elements.last().clone() {
+                        *res.elements.last_mut().unwrap() = Delay(*d + *d_old);
+                    } else {
+                        res.add(Delay(*d));
+                    }
+                }
                 _ => ()
             }
         }
         res.maximal = self.maximal;
         res.time = self.time;
+        res.steps = self.steps;
         res
+    }
+
+    pub fn status(&self) -> Option<RunStatus> {
+        if let Some(s) = self.last_state() {
+            Some(RunStatus { 
+                current_state: s,
+                steps: self.steps, 
+                time: self.time, 
+                maximal: self.maximal
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn is_under(&self, bound : &VerificationBound) -> bool {
+        match bound {
+            TimeRunBound(t) => self.time < ClockValue::from(*t as f64),
+            StepsRunBound(s) => self.steps < *s,
+            VarRunBound(v, x) => match self.last_state() {
+                Some(s) => s.evaluate_var(v) < *x,
+                None => true
+            },
+            NoRunBound => true
+        }
     }
 
 }

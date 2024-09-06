@@ -195,9 +195,9 @@ impl<'a> Iterator for TAPNRunGenerator<'a> {
         if let Some(winner) = winner {
             let place_list = TAPNPlaceListReader::from(next_state.storage(&self.tapn.tokens_storage));
             let in_tokens = self.select_token_set(winner, place_list);
-            let (next_state, intermed) = self.tapn.fire(next_state, winner, in_tokens);
+            let next_state = self.tapn.fire(next_state, winner, in_tokens);
             self.firing_dates[winner] = ClockValue::disabled();
-            self.disable_transitions(&TAPNPlaceListReader::from(&intermed));
+            // self.disable_transitions(&TAPNPlaceListReader::from(&intermed));
             self.refresh_intervals();
             self.run_status.steps += 1;
             self.run_status.current_state = Rc::new(next_state);

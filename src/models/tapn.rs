@@ -57,7 +57,7 @@ impl TAPN {
         &self.transitions[self.actions_dic[action]]
     }
 
-    pub fn fire(&self, mut state : ModelState, transi : usize, in_tokens : TAPNPlaceList) -> (ModelState, ModelStorage) {
+    pub fn fire(&self, mut state : ModelState, transi : usize, in_tokens : TAPNPlaceList) -> ModelState {
         let mut places_tokens = TAPNPlaceListWriter::from(state.mut_storage(&self.tokens_storage));
         let transi = &(self.transitions[transi]);
         let mut vars_updates = Vec::new();
@@ -68,7 +68,6 @@ impl TAPN {
             let input_tokens = &in_tokens.places[place.index];
             state_tokens.remove_set(input_tokens);
         }
-        let mut to_create : Vec<(usize, TAPNToken)> = Vec::new();
         for edge in transi.get_transports().iter() {
             let place = edge.get_node_from();
             let target = edge.get_node_to();
@@ -77,15 +76,10 @@ impl TAPN {
             let mut state_tokens = places_tokens.place(place.index);
             let input_tokens = &in_tokens.places[place.index];
             state_tokens.remove_set(input_tokens);
+            let mut target_tokens = places_tokens.place(target.index);
             for token in input_tokens.iter() {
-                to_create.push((target.index, token.clone()))
+                target_tokens.insert(token.clone());
             }
-        }
-        let intermed = state.storage(&self.tokens_storage).clone();
-        let mut places_tokens = TAPNPlaceListWriter::from(state.mut_storage(&self.tokens_storage));
-        for (index, token) in to_create {
-            let mut target_tokens = places_tokens.place(index);
-            target_tokens.insert(token);
         }
         for edge in transi.get_outputs().iter() {
             let target = edge.get_node_to();
@@ -96,7 +90,7 @@ impl TAPN {
         for (place, delta) in vars_updates {
             state.mark(place.get_var(), delta);
         }
-        (state, intermed)
+        state
     }
 
     pub fn create_transition_edges(
@@ -179,7 +173,7 @@ impl Model for TAPN {
         };
         let in_tokens = TAPNPlaceList::from(data);
         let transi = self.actions_dic[&action];
-        let (next_state, _) = self.fire(state, transi, in_tokens);
+        let next_state = self.fire(state, transi, in_tokens);
         Some(next_state)
     }
 
