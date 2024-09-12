@@ -84,7 +84,7 @@ impl Run {
                     res.add(Step(a.clone()));
                 },
                 Delay(d) => {
-                    if let Some(Delay(d_old)) = res.elements.last().clone() {
+                    if let Some(Delay(d_old)) = res.elements.last() {
                         *res.elements.last_mut().unwrap() = Delay(*d + *d_old);
                     } else {
                         res.add(Delay(*d));
