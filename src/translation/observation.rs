@@ -1,4 +1,4 @@
-use std::{any::Any, cmp::max, collections::{HashMap, HashSet}};
+use std::{cmp::max, collections::{HashMap, HashSet}};
 
 use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
 use crate::log;

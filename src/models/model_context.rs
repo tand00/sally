@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use crate::computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory};
 
-use super::{action::Action, model_clock::ModelClock, model_storage::ModelStorage, model_var::{ModelVar, VarType}, Label, Model, ModelObject, ModelState};
+use super::{action::Action, model_clock::ModelClock, model_storage::ModelStorage, model_var::{ModelVar, VarType}, Label, ModelObject, ModelState};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ModelContext {

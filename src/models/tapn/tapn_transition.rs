@@ -10,7 +10,7 @@ use crate::computation::intervals::{ContinuousSet, Convex, Delta, ToPositive};
 use crate::computation::probability::RealDistribution;
 use crate::models::action::Action;
 use crate::models::model_context::ModelContext;
-use crate::models::time::{Bound, ClockValue, RealTimeInterval, TimeInterval};
+use crate::models::time::{ClockValue, RealTimeInterval, TimeInterval};
 use crate::models::{CompilationResult, Label, Node};
 
 use super::{tapn_edge::*, TAPNPlaceList, TAPNPlaceListReader, TAPNTokenList, TAPNTokenListReader};

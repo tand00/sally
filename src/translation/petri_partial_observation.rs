@@ -1,6 +1,4 @@
-use std::any::Any;
-
-use crate::models::{lbl, model_context::ModelContext, Model, ModelObject, ModelState};
+use crate::models::{lbl, model_context::ModelContext, ModelObject, ModelState};
 
 use super::{Translation, TranslationMeta, TranslationResult, TranslationType::Observation};
 

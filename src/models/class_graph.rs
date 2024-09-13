@@ -16,7 +16,7 @@ use super::action::Action;
 use super::model_context::ModelContext;
 use super::model_var::{ModelVar, VarType};
 use super::time::ClockValue;
-use super::{lbl, Edge, Label, Model, ModelMeta, ModelState, CONTROLLABLE, SYMBOLIC, TIMED};
+use super::{lbl, Edge, Model, ModelMeta, ModelState, CONTROLLABLE, SYMBOLIC, TIMED};
 use super::petri::{PetriNet, PetriTransition};
 
 const CLASS_LIMIT : usize = u16::MAX as usize;

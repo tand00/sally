@@ -61,7 +61,7 @@ impl<'a> TAPNRunGenerator<'a> {
             let dates = transition.firing_dates(&place_list).intersection(avail_delay.clone());
             let enabled = dates.contains(&ClockValue::zero());
             let newly_enabled = enabled && self.firing_dates[transition.index].is_disabled();
-            let reached_upper = enabled && dates.convexs().next().unwrap().1.clock_value() == ClockValue::zero();
+            let reached_upper = enabled && dates.convexs().next().unwrap().1.clock_value().is_zero();
             self.intervals[transition.index] = dates;
             if !enabled {
                 self.firing_dates[transition.index] = ClockValue::disabled();

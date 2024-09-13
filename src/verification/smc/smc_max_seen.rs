@@ -1,6 +1,6 @@
 use std::{cmp::max, sync::Mutex, thread, time::Instant};
 
-use crate::{models::{model_context::ModelContext, Model, ModelObject, ModelState}, solution::SolverResult, verification::VerificationBound};
+use crate::{models::{model_context::ModelContext, ModelObject, ModelState}, solution::SolverResult, verification::VerificationBound};
 use crate::log::*;
 
 #[derive(Debug, Clone)]
