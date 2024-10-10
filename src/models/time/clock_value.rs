@@ -34,6 +34,10 @@ impl ClockValue {
         !self.0.is_nan()
     }
 
+    pub fn disable(&mut self) {
+        self.0 = f64::NAN
+    }
+
     pub fn float(&self) -> f64 {
         self.0
     }

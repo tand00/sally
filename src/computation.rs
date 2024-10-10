@@ -5,6 +5,7 @@ pub mod virtual_memory;
 pub mod combinatory;
 pub mod intervals;
 pub mod probability;
+pub mod fix_point;
 
 pub use bit_set::BitSet;
 pub use dbm::DBM;

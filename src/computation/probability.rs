@@ -2,7 +2,7 @@ use num_traits::Zero;
 use rand::{distributions::{Distribution, WeightedIndex}, Rng};
 use serde::{Deserialize, Serialize};
 
-use rand_distr::{Exp, Gamma, Normal, Uniform};
+use rand_distr::{Exp, Gamma, Geometric, Normal, Uniform};
 
 use crate::models::time::ClockValue;
 
@@ -42,6 +42,7 @@ pub enum RealDistribution {
     Erlang(i32, f64),
     Normal(f64, f64),
     UniformInt(i32, i32),
+    Geometric(f64)
 }
 
 impl RealDistribution {
@@ -59,6 +60,7 @@ impl RealDistribution {
             Self::Erlang(shape, scale) => Gamma::new(*shape as f64, *scale).unwrap().sample(rng),
             Self::Normal(mean, std_dev) => Normal::new(*mean, *std_dev).unwrap().sample(rng),
             Self::UniformInt(a, b) => Uniform::new(*a,* b).sample(rng) as f64, 
+            Self::Geometric(r) => Geometric::new(*r).unwrap().sample(rng) as f64
         }
     }
 

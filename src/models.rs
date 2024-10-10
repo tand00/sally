@@ -29,6 +29,7 @@ pub mod model_const;
 pub mod petri;
 pub mod program;
 pub mod run;
+pub mod word;
 pub mod tapn;
 pub mod time;
 pub mod model_project;

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::verification::{VerificationBound, Verifiable};
 
-use super::{action::Action, time::ClockValue, ModelState};
+use super::{action::Action, time::ClockValue, word::Word, ModelState};
 
 use num_traits::Zero;
 use VerificationBound::*;
@@ -96,6 +96,30 @@ impl Run {
         res.maximal = self.maximal;
         res.time = self.time;
         res.steps = self.steps;
+        res
+    }
+
+    pub fn actions(&self) -> Vec<Action> {
+        let mut res = Vec::new();
+        for elem in self.elements.iter() {
+            if let Step(a) = elem {
+                if !a.is_epsilon() {
+                    res.push(a.clone());
+                }
+            }
+        }
+        res
+    }
+
+    pub fn word(&self) -> Word {
+        let mut res = Word::new();
+        for elem in self.elements.iter() {
+            if let Step(a) = elem {
+                if !a.is_epsilon() {
+                    res.add_letter(a.get_id());
+                }
+            }
+        }
         res
     }
 

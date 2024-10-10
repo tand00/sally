@@ -6,13 +6,14 @@ use super::{clock_value::TimeType, ClockValue};
 use Bound::{Strict, Large, Infinite, MinusInfinite};
 
 /// Integer / Infinite time bound, represents a "</<=" integer constraint
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Deserialize, Serialize, Default)]
 pub enum Bound<T> {
     #[serde(rename="<")]
     Strict(T),
     #[serde(rename="<=")]
     Large(T),
     #[serde(rename="+inf")]
+    #[default]
     Infinite,
     #[serde(rename="-inf")]
     MinusInfinite,
@@ -235,12 +236,6 @@ impl<T : fmt::Display> fmt::Display for Bound<T> {
             MinusInfinite => "-INF".to_string(),
         };
         write!(f, "{}", to_print)
-    }
-}
-
-impl Default for TimeBound {
-    fn default() -> Self {
-        Infinite
     }
 }
 

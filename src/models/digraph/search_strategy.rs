@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, marker::PhantomData};
 
-use rand::{thread_rng, Rng};
+use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 use super::{GraphEdge, GraphNode};
 
@@ -31,11 +31,12 @@ impl<T> DepthFirst<T> {
 }
 
 pub struct RandomSearch<T> {
-    vec : Vec<T>
+    vec : Vec<T>,
+    rng : ThreadRng
 }
 impl<T> RandomSearch<T> {
     pub fn new() -> Self {
-        Self { vec : Vec::new() }
+        Self { vec : Vec::new(), rng : thread_rng() }
     }
 }
 
@@ -66,8 +67,7 @@ impl<T> SearchStrategy<T> for RandomSearch<T> {
         if self.vec.is_empty() {
             return None;
         }
-        let mut rng = thread_rng();
-        let index = rng.gen_range(0..self.vec.len());
+        let index = self.rng.gen_range(0..self.vec.len());
         Some(self.vec.remove(index))
     }
 }

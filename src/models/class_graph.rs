@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock, Weak};
 
 use num_traits::Zero;
 
+use crate::computation::intervals::Convex;
 use crate::computation::virtual_memory::EvaluationType;
 use crate::computation::DBM;
 use crate::verification::smc::RandomRunIterator;

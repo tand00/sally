@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::verification::Verifiable;
+use crate::{computation::virtual_memory::EvaluationType, verification::Verifiable};
 
 use super::{model_context::ModelContext, Label};
 use std::fmt::Display;
@@ -118,7 +118,7 @@ impl ModelVar {
         }
     }
 
-    pub fn evaluate(&self, state : &impl Verifiable) -> i32 {
+    pub fn evaluate(&self, state : &impl Verifiable) -> EvaluationType {
         if self.address.is_none() {
             panic!("Can't evaluate unmapped var !");
         }

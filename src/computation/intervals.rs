@@ -515,6 +515,29 @@ impl<T: Scalar, U: Convex<T>> ContinuousSet<T, U> {
         }
     }
 
+    pub fn apply_fn<F>(&mut self, func : F) 
+        where F : Fn(&mut U)
+    {
+        match self {
+            ConvexSet(c) => { 
+                func(c);
+                if c.is_empty() {
+                    *self = EmptySet
+                }
+            },
+            DisjointSet(d) => {
+                d.intervals.retain_mut(|c| {
+                    func(c);
+                    !c.is_empty()
+                });
+                if d.is_empty() {
+                    *self = EmptySet
+                }
+            },
+            EmptySet => (),
+        }
+    }
+
 }
 
 impl<T: Scalar, U: Convex<T>> From<U> for ContinuousSet<T, U> {

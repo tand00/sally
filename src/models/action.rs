@@ -11,7 +11,7 @@ use super::model_storage::ModelStorage;
 pub enum Action {
     #[serde(rename = "_")]
     Epsilon,
-    Internal(usize),
+    Base(usize),
     Sync(usize, Box<Action>, Box<Action>),
     WithData(usize, ModelStorage)
 }
@@ -21,7 +21,7 @@ impl Action {
     pub fn get_id(&self) -> usize {
         match self {
             Self::Epsilon => usize::MAX,
-            Self::Internal(i) => *i,
+            Self::Base(i) => *i,
             Self::Sync(i, _, _) => *i,
             Self::WithData(i, _) => *i
         }
@@ -34,8 +34,8 @@ impl Action {
     pub fn base(&self) -> Action {
         match self {
             Self::Epsilon => Self::Epsilon,
-            Self::Internal(_) => self.clone(),
-            _ => Self::Internal(self.get_id())
+            Self::Base(_) => self.clone(),
+            _ => Self::Base(self.get_id())
         }
     }
 
@@ -45,7 +45,7 @@ impl Action {
 
     pub fn extract_data(self) -> Option<(Action, ModelStorage)> {
         match self {
-            Self::WithData(i, d) => Some((Self::Internal(i), d)),
+            Self::WithData(i, d) => Some((Self::Base(i), d)),
             _ => None
         }
     }
@@ -80,7 +80,7 @@ impl Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Epsilon => write!(f, "_"),
-            Self::Internal(i) => write!(f, "Action({})", i),
+            Self::Base(i) => write!(f, "Action({})", i),
             Self::Sync(id, i, j) => write!(f, "Sync({},{},{})", id, i, j),
             Self::WithData(i, _) => write!(f, "WithData({})", i)
         }
@@ -115,7 +115,8 @@ impl ActionPairs {
             let base = action.base();
             if self.0.contains(&base) {
                 inputs.insert(action.clone());
-            } else if self.1.contains(&base) {
+            } 
+            if self.1.contains(&base) {
                 outputs.insert(action.clone());
             }
         }

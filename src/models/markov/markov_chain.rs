@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::probability::ProbabilisticChoice, models::{action::Action, lbl, model_context::ModelContext, model_var::ModelVar, time::ClockValue, CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC}, verification::{smc::RandomRunIterator, VerificationBound}};
+use crate::{computation::probability::ProbabilisticChoice, models::{action::Action, lbl, model_context::ModelContext, model_var::{ModelVar, VarType}, time::ClockValue, CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
 
 use super::markov_node::MarkovNode;
 
@@ -12,7 +12,9 @@ pub struct MarkovChain {
     #[serde(skip)]
     pub nodes_dic : HashMap<Label, usize>,
     #[serde(skip)]
-    pub id : usize
+    pub id : usize,
+    #[serde(skip)]
+    pub current_node : ModelVar
 }
 
 impl MarkovChain {
@@ -21,16 +23,17 @@ impl MarkovChain {
         MarkovChain {
             nodes,
             nodes_dic : HashMap::new(),
-            id : usize::MAX
+            id : usize::MAX,
+            current_node : ModelVar::new()
         }
     }
 
     pub fn get_vars(&self) -> impl Iterator<Item = &ModelVar> {
-        self.nodes.iter().map(|n| n.get_var() )
+        self.nodes.iter().map(MarkovNode::get_var)
     }
 
     pub fn get_current_node(&self, state : &ModelState) -> &MarkovNode {
-        let node_index = state.argmax(self.get_vars());
+        let node_index = state.evaluate_var(&self.current_node) as usize;
         &self.nodes[node_index]
     }
 
@@ -69,7 +72,7 @@ impl MarkovChain {
 
 impl Model for MarkovChain {
 
-    fn next(&self,mut state : ModelState, action : Action) -> Option<ModelState> {
+    fn next(&self, mut state : ModelState, action : Action) -> Option<ModelState> {
         let node = self.get_current_node(&state);
         let next_index = node.act(action);
         if next_index == None {
@@ -80,6 +83,7 @@ impl Model for MarkovChain {
         let actions = next_node.available_actions();
         state.unmark(node.get_var(), 1);
         state.mark(next_node.get_var(), 1);
+        state.set_var(&self.current_node, next_index as i32);
         state.deadlocked = actions.len() == 0;
         Some(state)
     }
@@ -118,6 +122,7 @@ impl Model for MarkovChain {
             self.build_node_outputs(context, node);
         }
         self.nodes = nodes;
+        self.current_node = context.add_var(lbl("CurrentNode"), VarType::VarU16);
         Ok(())
     }
 

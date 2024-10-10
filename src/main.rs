@@ -21,7 +21,7 @@ use models::tapn::tapn_edge::TAPNEdgeData;
 use models::tapn::tapn_place::TAPNPlace;
 use models::tapn::tapn_transition::TAPNTransition;
 use models::tapn::TAPN;
-use models::time::{Bound::{self, *}, TimeInterval};
+use models::time::{Bound::*, TimeInterval};
 use solution::ClassGraphReachability;
 
 use crate::models::class_graph::ClassGraph;

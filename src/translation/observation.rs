@@ -126,7 +126,7 @@ impl<T : Model> PartialObservation<T> {
         let result = self.actions_link[&base].clone();
         match action {
             Action::Epsilon => Action::Epsilon,
-            Action::Internal(_) => result,
+            Action::Base(_) => result,
             Action::Sync(_, a, b) => result.sync(Action::clone(a), Action::clone(b)),
             Action::WithData(_, d) => result.with_data(d.clone())
         }
