@@ -1,5 +1,6 @@
 pub mod models;
 pub mod computation;
+pub mod electronics;
 pub mod game;
 pub mod learning;
 pub mod translation;
