@@ -1,4 +1,6 @@
-use crate::models::program;
+use crate::models::{model_context::ModelContext, program::Program};
+
+use super::IOContext;
 
 pub trait CodeTranslator {
 
@@ -6,4 +8,22 @@ pub trait CodeTranslator {
 
     fn export(&mut self, program : &Program) -> String;
 
+}
+
+pub struct ArduinoExporter {
+
+
+
+}
+
+impl CodeTranslator for ArduinoExporter {
+
+    fn setup(&mut self, ctx : &ModelContext, io_ctx : &IOContext) {
+        todo!()
+    }
+
+    fn export(&mut self, program : &Program) -> String {
+        todo!()
+    }
+    
 }
