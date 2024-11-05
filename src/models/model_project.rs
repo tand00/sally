@@ -8,7 +8,8 @@ pub struct ModelProject {
     pub model : Box<dyn ModelObject>,
     pub queries : Vec<Query>,
     pub initial_marking : InitialMarking,
-    pub initial_state : Option<ModelState>
+    pub initial_state : Option<ModelState>,
+    pub context : Option<ModelContext>
 }
 
 impl ModelProject {
@@ -18,7 +19,8 @@ impl ModelProject {
             model,
             queries,
             initial_marking,
-            initial_state : None
+            initial_state : None,
+            context : None
         }
     }
 
@@ -27,11 +29,13 @@ impl ModelProject {
             model,
             queries : Vec::new(),
             initial_marking : HashMap::new(),
-            initial_state : None
+            initial_state : None,
+            context : None
         }
     }
 
-    pub fn compile(&mut self) -> CompilationResult<ModelContext> {
+    pub fn compile(&mut self) -> CompilationResult<&ModelContext> {
+        self.context = None;
         let mut ctx = self.model.singleton()?;
         for query in self.queries.iter_mut() {
             if query.apply_to(&mut ctx).is_err() {
@@ -39,7 +43,12 @@ impl ModelProject {
             }
         }
         self.initial_state = Some(ctx.make_initial_state(&*self.model, self.initial_marking.clone()));
-        Ok(ctx)
+        self.context = Some(ctx);
+        Ok(&self.context.as_ref().unwrap())
+    }
+
+    pub fn is_compiled(&self) -> bool {
+        self.context.is_some()
     }
 
 }

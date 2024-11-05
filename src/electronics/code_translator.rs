@@ -4,7 +4,7 @@ use super::IOContext;
 
 pub trait CodeTranslator {
 
-    fn setup(&mut self, ctx : &ModelContext, io_ctx : &IOContext);
+    fn setup(&mut self, ctx : &ModelContext, io_ctx : &IOContext, hz_rate : f64);
 
     fn export(&mut self, program : &Program) -> String;
 
@@ -18,7 +18,7 @@ pub struct ArduinoExporter {
 
 impl CodeTranslator for ArduinoExporter {
 
-    fn setup(&mut self, ctx : &ModelContext, io_ctx : &IOContext) {
+    fn setup(&mut self, ctx : &ModelContext, io_ctx : &IOContext, hz_rate : f64) {
         todo!()
     }
 

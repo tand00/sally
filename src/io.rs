@@ -35,7 +35,7 @@ pub struct ModelWriterMeta {
     pub input : Label
 }
 
-pub trait ModelLoader {
+pub trait ModelLoader : Send + Sync {
 
     fn get_meta(&self) -> ModelLoaderMeta;
 
@@ -48,7 +48,7 @@ pub trait ModelLoader {
 
 }
 
-pub trait ModelWriter {
+pub trait ModelWriter : Send + Sync {
 
     fn get_meta(&self) -> ModelWriterMeta;
 

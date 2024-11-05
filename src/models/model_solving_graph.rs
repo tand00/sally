@@ -128,7 +128,7 @@ impl ModelSolvingGraph {
         self.semantics.get(&model.get_model_meta().name).map(Arc::clone)
     }
 
-    pub fn solve(&mut self, model : &dyn ModelObject, query : &Query) -> SolverResult {  
+    pub fn solve(&self, model : &dyn ModelObject, query : &Query) -> SolverResult {  
         let Some(node) = self.find_semantics(model) else {
             return SolverResult::SolverError;
         };

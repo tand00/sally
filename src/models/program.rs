@@ -1,4 +1,4 @@
-use super::{expressions::{Condition, Expr}, model_var::ModelVar, ModelState};
+use super::{action::Action, expressions::{Condition, Expr}, model_var::ModelVar, ModelState};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -6,11 +6,15 @@ pub enum Program {
     Nop,
     Update(ModelVar, Expr),
     IfElse(Condition, Box<Program>, Box<Program>),
+    Switch(Vec<(Condition, Program)>),
     While(Condition, Box<Program>),
     DoWhile(Condition, Box<Program>),
     For(Box<Program>, Condition, Box<Program>, Box<Program>),
     Block(Vec<Program>),
-    //Definition(ModelVar, VarType)
+    // Listener is a special instruction that listens for an incoming Action and executes the associated code block
+    Listener(Vec<(Action, Program)>),
+    // Definition is used to define variables, useful to manage scopes
+    Definition(ModelVar)
 }
 
 use Program::*;
@@ -19,7 +23,6 @@ impl Program {
 
     pub fn execute(&self, mut state : ModelState) -> ModelState {
         match self {
-            Nop => state,
             Update(var, expr) => {
                 let res = expr.evaluate(&state);
                 //var.set(&mut state, res);
@@ -62,6 +65,40 @@ impl Program {
                 }
                 state
             }
+            Switch(conds) => {
+                for (cond, prog) in conds.iter() {
+                    if cond.is_true(&state) {
+                        state = prog.execute(state);
+                        break;
+                    }
+                }
+                state
+            },
+            Listener(_) => { // Listener cannot be instantaneously executed
+                state.deadlocked = true;
+                state
+            },
+            Definition(_) => state,
+            Nop => state,
+        }
+    }
+
+    pub fn has_listeners(&self) -> bool {
+        match self {
+            Nop => false,
+            Update(_, _) => false,
+            IfElse(_, program1, program2) => 
+                program1.has_listeners() || program2.has_listeners(),
+            Switch(vec) => 
+                vec.iter().any(|x| x.1.has_listeners()),
+            While(_, program) => program.has_listeners(),
+            DoWhile(_, program) => program.has_listeners(),
+            For(program, _, program1, program2) => 
+                program.has_listeners() || program1.has_listeners() || program2.has_listeners(),
+            Block(vec) => 
+                vec.iter().any(Program::has_listeners),
+            Listener(_) => true,
+            Definition(_) => false,
         }
     }
 

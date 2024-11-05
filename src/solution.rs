@@ -83,7 +83,7 @@ pub struct SolutionMeta {
     pub result_type : Label,
 }
 
-pub trait Solution {
+pub trait Solution : Send + Sync {
 
     fn get_meta(&self) -> SolutionMeta;
 
