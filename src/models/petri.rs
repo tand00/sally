@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::verification::{smc::RandomRunIterator, VerificationBound};
+use crate::{models::{class_graph::StateClassGenerator, digraph::search_strategy::BreadthFirst}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
 
 use super::{
     action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::{ClockValue, RealTimeBound},
@@ -221,6 +221,22 @@ impl PetriNet {
         untimed_net.timed = false;
         untimed_net
     }
+
+    pub fn is_safe(&self, k : i32, initial : &ModelState) -> bool {
+        for class in StateClassGenerator::classes(BreadthFirst::new(), self, initial) {
+            for place in self.places.iter() {
+                if class.evaluate_var(place.get_var()) > k {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    pub fn is_1safe(&self, initial : &ModelState) -> bool {
+        self.is_safe(1, initial)
+    }
+
 }
 
 impl Model for PetriNet {

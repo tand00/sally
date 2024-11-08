@@ -117,6 +117,7 @@ impl PartialEq for StateClass {
         (self.discrete == other.discrete) && (self.dbm == other.dbm)
     }
 }
+impl Eq for StateClass { }
 
 impl fmt::Display for StateClass {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

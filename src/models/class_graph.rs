@@ -14,6 +14,7 @@ use crate::verification::smc::RandomRunIterator;
 use crate::verification::{Verifiable, VerificationBound};
 
 use super::action::Action;
+use super::digraph::search_strategy::{GraphTraversal, NeighborsFinder, SearchStrategy};
 use super::model_context::ModelContext;
 use super::model_var::{ModelVar, VarType};
 use super::time::ClockValue;
@@ -236,6 +237,55 @@ impl Model for ClassGraph {
 
     fn get_id(&self) -> usize {
         self.id
+    }
+
+}
+
+pub struct StateClassGenerator<'a> {
+    net : &'a PetriNet,
+    seen : HashSet<u64>
+}
+
+impl<'a> StateClassGenerator<'a> {
+
+    pub fn classes<S : SearchStrategy<Arc<StateClass>>>(strategy : S, net : &'a PetriNet, initial_state : &ModelState) 
+        -> GraphTraversal<Arc<StateClass>, S, Self> 
+    {
+        let mut gen = Self::from(net);
+        let initial = Arc::new(StateClass::compute_class(net, initial_state));
+        let hash = initial.get_hash();
+        gen.seen.insert(hash);
+        GraphTraversal::new(initial, strategy, gen)
+    }
+
+}
+
+impl<'a> From<&'a PetriNet> for StateClassGenerator<'a> {
+
+    fn from(net: &'a PetriNet) -> Self {
+        StateClassGenerator { net, seen : HashSet::new() }
+    }
+
+}
+
+impl<'a> NeighborsFinder<Arc<StateClass>> for StateClassGenerator<'a> {
+
+    fn neighbors(&mut self, x : &Arc<StateClass>) -> Vec<Arc<StateClass>> {
+        let clocks = x.enabled_clocks();
+        let mut found = vec![];
+        for t_index in clocks {
+            let next_class = ClassGraph::successor(&self.net, x, t_index);
+            let Some(next_class) = next_class else {
+                continue;
+            };
+            let new_hash = next_class.get_hash();
+            if self.seen.contains(&new_hash) {
+                continue;
+            }
+            self.seen.insert(new_hash);
+            found.push(Arc::new(next_class));
+        }
+        found
     }
 
 }
