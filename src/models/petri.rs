@@ -224,6 +224,18 @@ impl PetriNet {
 
     pub fn is_safe(&self, k : i32, initial : &ModelState) -> bool {
         for class in StateClassGenerator::classes(BreadthFirst::new(), self, initial) {
+            let preds = class.predecessors.read().unwrap();
+            if !preds.is_empty() {
+                let transi = self.actions_dic[&preds[0].1];
+                let transi = &self.transitions[transi];
+                for edge in transi.output_edges.get().unwrap().iter() {
+                    let place = edge.get_node_to();
+                    if class.evaluate_var(place.get_var()) > k {
+                        return false;
+                    }
+                }
+                return true;
+            }
             for place in self.places.iter() {
                 if class.evaluate_var(place.get_var()) > k {
                     return false;
