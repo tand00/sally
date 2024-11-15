@@ -26,6 +26,7 @@ pub mod model_solving_graph;
 pub mod model_storage;
 pub mod model_var;
 pub mod model_const;
+pub mod computation_tree;
 pub mod petri;
 pub mod program;
 pub mod run;

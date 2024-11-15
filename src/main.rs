@@ -23,6 +23,7 @@ use models::tapn::tapn_place::TAPNPlace;
 use models::tapn::tapn_transition::TAPNTransition;
 use models::tapn::TAPN;
 use models::time::{Bound::*, TimeInterval};
+use nalgebra::{DVector, Vector3};
 use solution::ClassGraphReachability;
 
 use crate::models::class_graph::ClassGraph;

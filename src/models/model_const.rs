@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::{Arc, Mutex}};
 
-use super::{time::{Bound, ClockValue}, Label};
+use super::{time::{ClockValue, Interval}, Label};
 
 pub enum ConstValue {
     Int(i32),
