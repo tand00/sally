@@ -33,7 +33,6 @@ pub struct TAPNTransition {
     pub to : Vec<(Label, i32)>,
     pub transports : Vec<(Label, Label, TAPNEdgeData)>,
     pub inhibitors : Vec<(Label, TAPNEdgeData)>,
-    pub controllable : bool,
     pub weight : f64,
     pub distribution : RealDistribution,
     pub firing_mode : FiringMode,
@@ -74,7 +73,6 @@ impl TAPNTransition {
         TAPNTransition {
             label,
             from, to, transports, inhibitors,
-            controllable : true,
             ..Default::default()
         }
     }
@@ -348,7 +346,6 @@ impl Clone for TAPNTransition {
             to: self.to.clone(),
             inhibitors : self.inhibitors.clone(),
             transports : self.transports.clone(),
-            controllable : self.controllable.clone(),
             weight : self.weight.clone(),
             distribution : self.distribution.clone(),
             firing_mode : self.firing_mode.clone(),

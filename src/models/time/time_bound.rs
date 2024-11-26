@@ -124,22 +124,33 @@ impl<T : Add<Output = T>> Add for Bound<T> {
     }
 }
 
-impl<T : Add<Output = T> + TimeType> AddAssign for Bound<T> {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs
-    }
-}
-
-impl<T : Neg<Output = T> + Add<Output = T>> Sub for Bound<T> {
+impl<T : Sub<Output = T>> Sub for Bound<T> {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
-        self + (-rhs)
+        match (self, rhs) {
+            (Infinite, Infinite) |
+                (MinusInfinite, MinusInfinite) => panic!("Indeterminate sum !"),
+            (MinusInfinite, _) | (_, Infinite) => MinusInfinite,
+            (Infinite, _) | (_, MinusInfinite) => Infinite,
+            (Large(x), Strict(y)) |
+                (Strict(x), Large(y)) |
+                (Strict(x), Strict(y)) => Strict(x - y),
+            (Large(x), Large(y)) => Large(x - y)
+        }
     }
 }
 
-impl<T : Neg<Output = T> + Add<Output = T> + TimeType> SubAssign for Bound<T> {
+impl<T : Add<Output = T>> AddAssign for Bound<T> {
+    fn add_assign(&mut self, rhs: Self) {
+        let x = std::mem::take(self);
+        *self = x + rhs
+    }
+}
+
+impl<T : Sub<Output = T>> SubAssign for Bound<T> {
     fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs
+        let x = std::mem::take(self);
+        *self = x - rhs
     }
 }
 
@@ -147,6 +158,30 @@ impl<T : PartialOrd> Mul for Bound<T> {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         self.intersection(rhs)
+    }
+}
+
+impl<T : PartialOrd + Mul<Output = T> + Zero> Mul<T> for Bound<T> {
+    type Output = Self;
+    fn mul(self, rhs: T) -> Self::Output {
+        match self {
+            Strict(x) => Strict(x * rhs),
+            Large(x) => Large(x * rhs),
+            Infinite => if rhs.is_zero() {
+                Large(T::zero())
+            } else if rhs < T::zero() {
+                MinusInfinite
+            } else {
+                Infinite
+            },
+            MinusInfinite => if rhs.is_zero() {
+                Large(T::zero())
+            } else if rhs < T::zero() {
+                Infinite
+            } else {
+                MinusInfinite
+            },
+        }
     }
 }
 

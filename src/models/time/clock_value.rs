@@ -72,6 +72,7 @@ impl From<i32> for ClockValue {
     }
 }
 impl TimeType for i32 {}
+impl TimeType for f64 {}
 
 impl Add for ClockValue {
     type Output = ClockValue;

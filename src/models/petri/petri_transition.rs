@@ -22,7 +22,6 @@ pub struct PetriTransition {
     pub from: Vec<(Label, i32)>,
     pub to: Vec<(Label, i32)>,
     pub interval: TimeInterval,
-    pub controllable : bool,
 
     #[serde(skip_serializing_if="Condition::is_default", default)]
     pub guard : Condition,
@@ -61,7 +60,6 @@ impl PetriTransition {
             label,
             from, to,
             interval,
-            controllable : true,
             guard : Condition::True,
             ..Default::default()
         }
@@ -73,7 +71,6 @@ impl PetriTransition {
             from : from.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(), 
             to : to.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(),
             interval,
-            controllable : true,
             guard : Condition::True,
             ..Default::default()
         }
@@ -83,7 +80,6 @@ impl PetriTransition {
         PetriTransition {
             label,
             from, to,
-            controllable : true,
             interval : TimeInterval::full(),
             guard : Condition::True,
             ..Default::default()
@@ -95,7 +91,6 @@ impl PetriTransition {
             label,
             from, to,
             interval,
-            controllable : false,
             guard : Condition::True,
             ..Default::default()
         }
@@ -181,7 +176,6 @@ impl PetriTransition {
             from: self.from.clone(),
             to: self.to.clone(),
             interval: TimeInterval::full(),
-            controllable : self.controllable.clone(),
             guard : self.guard.clone(),
             index : self.index,
             ..Default::default()
@@ -194,7 +188,6 @@ impl PetriTransition {
             from: self.to.clone(),
             to: self.from.clone(),
             interval: self.interval.clone(),
-            controllable : self.controllable.clone(),
             guard : self.guard.clone(),
             index : self.index,
             ..Default::default()
@@ -202,13 +195,10 @@ impl PetriTransition {
     }
 
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {
-        let res = self.guard.apply_to(ctx);
-        match res {
-            Ok(c) => {
-                self.compiled_guard = c
-            },
-            Err(_) => return Err(CompilationError)
+        let Ok(c) = self.guard.apply_to(ctx) else {
+            return Err(CompilationError);
         };
+        self.compiled_guard = c;
         self.set_action(ctx.add_action(self.get_label()));
         self.set_clock(ctx.add_clock(self.get_label()));
         Ok(())
@@ -238,7 +228,6 @@ impl Clone for PetriTransition {
             from: self.from.clone(),
             to: self.to.clone(),
             interval: self.interval.clone(),
-            controllable : self.controllable.clone(),
             guard : self.guard.clone(),
             index : self.index,
             ..Default::default()

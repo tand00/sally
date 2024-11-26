@@ -1,4 +1,4 @@
-use std::{fmt::{self, Display}, ops::Mul};
+use std::{fmt::{self, Display}, ops::{Add, Mul, Neg, Sub}};
 use nalgebra::Scalar;
 use num_traits::{Bounded, One, Zero};
 use rand::Rng;
@@ -83,10 +83,42 @@ impl<T> Interval<T> {
 
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Bounded> Mul for Interval<T>  { // Intersection
+impl<T : TimeType + Scalar + PartialOrd + Bounded + Add<Output = T>> Add for Interval<T> { // Intersection
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        Interval(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+impl<T : TimeType + Scalar + PartialOrd + Bounded + Sub<Output = T>> Sub for Interval<T> { 
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Interval(self.0 - rhs.1, self.1 - rhs.0)
+    }
+}
+
+impl<T : TimeType + Scalar + PartialOrd + Bounded> Mul for Interval<T> { 
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         self.intersection(rhs)
+    }
+}
+
+impl<T : PartialOrd + Mul<Output = T> + Zero + Clone> Mul<T> for Interval<T> {
+    type Output = Self;
+    fn mul(self, rhs: T) -> Self::Output {
+        if rhs < T::zero() {
+            Interval(self.1 * rhs.clone(), self.0 * rhs)
+        } else {
+            Interval(self.0 * rhs.clone(), self.1 * rhs)
+        }
+    }
+}
+
+impl<T : TimeType + Scalar + PartialOrd + Neg<Output = T> + Bounded> Neg for Interval<T> {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        Interval(-self.1, -self.0)
     }
 }
 
