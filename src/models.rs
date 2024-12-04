@@ -3,7 +3,11 @@ mod label;
 mod model_state;
 mod node;
 
-use std::{any::Any, collections::{HashMap, HashSet}, rc::Rc};
+use std::{
+    any::Any,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 pub use edge::Edge;
 pub use label::{lbl, Label};
@@ -16,24 +20,25 @@ use time::RealTimeBound;
 pub mod action;
 pub mod caching;
 pub mod class_graph;
+pub mod computation_tree;
 pub mod digraph;
 pub mod expressions;
 pub mod markov;
 pub mod model_clock;
+pub mod model_const;
 pub mod model_context;
 pub mod model_network;
+pub mod model_project;
 pub mod model_solving_graph;
 pub mod model_storage;
 pub mod model_var;
-pub mod model_const;
-pub mod computation_tree;
 pub mod petri;
 pub mod program;
 pub mod run;
-pub mod word;
 pub mod tapn;
 pub mod time;
-pub mod model_project;
+pub mod timed_automata;
+pub mod word;
 
 use crate::{computation::virtual_memory::EvaluationType, verification::VerificationBound};
 
@@ -117,7 +122,7 @@ impl std::fmt::Display for ModelMeta {
 }
 
 /// Generic trait that should be implemented by all Timed Transition Systems
-pub trait Model : Any {
+pub trait Model: Any {
     // Given a state and an action, returns a state and actions available
     fn next(&self, state: ModelState, action: Action) -> Option<ModelState>;
 
@@ -138,7 +143,7 @@ pub trait Model : Any {
         Some(state)
     }
 
-    fn delay_next(&self, state : ModelState, dt : ClockValue, action : Action) -> Option<ModelState> {
+    fn delay_next(&self, state: ModelState, dt: ClockValue, action: Action) -> Option<ModelState> {
         if let Some(delayed) = self.delay(state, dt) {
             self.next(delayed, action)
         } else {
@@ -166,7 +171,7 @@ pub trait Model : Any {
     // Should be overrided by stochastic models with a more relevant behaviour !
     fn random_next(&self, state: ModelState) -> (Option<ModelState>, ClockValue, Option<Action>) {
         let mut rng = thread_rng();
-        let max_delay : ClockValue = self.available_delay(&state).into();
+        let max_delay: ClockValue = self.available_delay(&state).into();
         let mut delayed_state = state;
         let mut delay = ClockValue::zero();
         if !max_delay.is_zero() && self.is_timed() {
@@ -187,8 +192,11 @@ pub trait Model : Any {
         (Some(next.unwrap()), delay, Some(action))
     }
 
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
-        -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>;
+    fn random_run<'a>(
+        &'a self,
+        initial: &'a ModelState,
+        bound: VerificationBound,
+    ) -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>;
 
     fn compile(&mut self, context: &mut ModelContext) -> CompilationResult<()>;
 
@@ -203,11 +211,10 @@ pub trait Model : Any {
     fn is_compiled(&self) -> bool {
         self.get_id() != usize::MAX
     }
-
 }
 
 // Blanket implementation to add downgrading capabilities and calls to statics for each object implementing Model
-pub trait ModelObject : Model + Send + Sync {
+pub trait ModelObject: Model + Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
     fn get_model_meta(&self) -> ModelMeta;
@@ -215,7 +222,7 @@ pub trait ModelObject : Model + Send + Sync {
     fn model_object(&self) -> &dyn ModelObject;
 }
 
-impl<T : Model + Send + Sync> ModelObject for T {
+impl<T: Model + Send + Sync> ModelObject for T {
     fn as_any(&self) -> &dyn Any {
         self
     }
