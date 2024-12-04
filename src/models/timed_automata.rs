@@ -64,6 +64,13 @@ impl Model for TimedAutomata {
             compiled_transitions.push(Arc::new(compiled_transition));
         }
         self.transitions = compiled_transitions;
+        let mut compiled_states = Vec::new();
+        for state in self.states.iter() {
+            let mut compiled_state = TAState::clone(state);
+            compiled_state.compile(context)?;
+            compiled_states.push(Arc::new(compiled_state));
+        }
+        self.states = compiled_states;
         Ok(())
     }
 
