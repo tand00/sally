@@ -47,7 +47,6 @@ use PropositionType::*;
 pub enum Expr {
     Var(ModelVar),
     Constant(i32),
-    ClockComparison(PropositionType, ModelClock, i32),
     Plus(Box<Expr>, Box<Expr>),
     Minus(Box<Expr>, Box<Expr>),
     Multiply(Box<Expr>, Box<Expr>),
@@ -64,34 +63,12 @@ impl Expr {
         match self {
             Constant(i) => *i,
             Var(x) => x.evaluate(state),
-            ClockComparison(prop_type, clock, value) => match prop_type {
-                EQ => (state.evaluate_clock(clock) == (*value as f64)) as i32,
-                NE => (state.evaluate_clock(clock) != (*value as f64)) as i32,
-                LE => (state.evaluate_clock(clock) <= (*value as f64)) as i32,
-                GE => (state.evaluate_clock(clock) >= (*value as f64)) as i32,
-                LS => (state.evaluate_clock(clock) < (*value as f64)) as i32,
-                GS => (state.evaluate_clock(clock) > (*value as f64)) as i32,
-            }
             Plus(e1, e2) => e1.evaluate(state) + e2.evaluate(state),
             Minus(e1, e2) => e1.evaluate(state) - e2.evaluate(state),
             Multiply(e1, e2) => e1.evaluate(state) * e2.evaluate(state),
             Negative(e) => -e.evaluate(state),
             Modulo(e1, e2) => e1.evaluate(state) % e2.evaluate(state),
             Pow(e1, e2) => e1.evaluate(state).pow(e2.evaluate(state) as u32)
-        }
-    }
-
-    pub fn contains_clock_proposition(&self) -> bool {
-        match self {
-            Plus(e1,e2) | 
-            Minus(e1, e2) | 
-            Multiply(e1,e2) |
-            Modulo(e1,e2) |
-            Pow(e1, e2)
-                => e1.contains_clock_proposition() || e2.contains_clock_proposition(),
-            Negative(e) => e.contains_clock_proposition(),
-            ClockComparison(_,_,_) => true,
-            _ => false,
         }
     }
 
@@ -142,7 +119,6 @@ impl Display for Expr {
         match self {
             Var(v) => v.fmt(f),
             Constant(i) => i.fmt(f),
-            ClockComparison(op, c, i) => write!(f, "({c} {op} {i})"),
             Plus(a, b) => write!(f, "({a} + {b})"),
             Minus(a, b) => write!(f, "({a} - {b})"),
             Multiply(a, b) => write!(f, "({a} * {b})"),
@@ -159,6 +135,7 @@ pub enum Condition {
     False,
     Deadlock,
     Evaluation(Expr),
+    ClockComparison(PropositionType, ModelClock, i32),
     Proposition(PropositionType, Expr, Expr),
     And(Box<Condition>, Box<Condition>),
     Or(Box<Condition>, Box<Condition>),
@@ -178,8 +155,8 @@ impl Condition {
         match self {
             Until(_, _) => true,
             Not(c) | Next(c) => c.contains_until(),
-            And(c1,c2) | 
-            Or(c1, c2) | 
+            And(c1,c2) |
+            Or(c1, c2) |
             Implies(c1, c2)
                 => c1.contains_until() || c2.contains_until(),
             _ => false
@@ -191,8 +168,8 @@ impl Condition {
             Until(_, _) => false,
             Next(_) => false,
             Not(c) => c.is_state_condition(),
-            And(c1,c2) | 
-            Or(c1, c2) | 
+            And(c1,c2) |
+            Or(c1, c2) |
             Implies(c1, c2)
                 => c1.is_state_condition() && c2.is_state_condition(),
             _ => true
@@ -202,13 +179,12 @@ impl Condition {
     pub fn contains_clock_proposition(&self) -> bool {
         match self {
             Next(c) | Not(c) => c.contains_clock_proposition(),
-            And(c1,c2) | 
-            Or(c1, c2) | 
+            And(c1,c2) |
+            Or(c1, c2) |
             Until(c1, c2) |
             Implies(c1, c2)
                 => c1.contains_clock_proposition() || c2.contains_clock_proposition(),
-            Evaluation(e) => e.contains_clock_proposition(),
-            Proposition(_, e1, e2) => e1.contains_clock_proposition() || e2.contains_clock_proposition(),
+            ClockComparison(_,_,_) => true,
             _ => false
         }
     }
@@ -219,6 +195,9 @@ impl Condition {
             Proposition(p_type, e1, e2) => Ok(Proposition(
                 *p_type, e1.apply_to(ctx)?, e2.apply_to(ctx)?
             )),
+            ClockComparison(op, c, v) => {
+                Ok(ClockComparison(*op, c.apply_to(ctx)?, *v))
+            }
             And(c1, c2) => Ok(And(
                 Box::new(c1.apply_to(ctx)?), Box::new(c2.apply_to(ctx)?)
             )),
@@ -272,7 +251,22 @@ impl Condition {
                     (Unverified, None)
                 }
             },
-            And(c1, c2) => { 
+            ClockComparison(prop_type, clock, value) => {
+                let prop_res = match prop_type {
+                    EQ => (state.evaluate_clock(clock) == (*value as f64)),
+                    NE => (state.evaluate_clock(clock) != (*value as f64)),
+                    LE => (state.evaluate_clock(clock) <= (*value as f64)),
+                    GE => (state.evaluate_clock(clock) >= (*value as f64)),
+                    LS => (state.evaluate_clock(clock) < (*value as f64)),
+                    GS => (state.evaluate_clock(clock) > (*value as f64)),
+                };
+                if prop_res {
+                    (Verified, None)
+                } else {
+                    (Unverified, None)
+                }
+            }
+            And(c1, c2) => {
                 let res1 = c1.evaluate(state);
                 let res2 = c2.evaluate(state);
                 let status = res1.0 & res2.0;
@@ -285,7 +279,7 @@ impl Condition {
                     }),
                     _ => (status, None),
                 }
-                
+
             },
             Or(c1, c2) => {
                 let res1 = c1.evaluate(state);
@@ -364,8 +358,8 @@ impl Condition {
                 visitor.visit_condition(self);
                 c.accept(visitor);
             },
-            And(c1,c2) | 
-            Or(c1, c2) | 
+            And(c1,c2) |
+            Or(c1, c2) |
             Until(c1, c2) |
             Implies(c1, c2)
                 => {
@@ -440,11 +434,11 @@ impl Condition {
                 match sub {
                     Not(c1) => c1.disjunctive_normal(),
                     And(c1, c2) => Or(
-                        Box::new(Not(c1).disjunctive_normal()), 
+                        Box::new(Not(c1).disjunctive_normal()),
                         Box::new(Not(c2).disjunctive_normal())
                     ),
                     Or(c1, c2) => And(
-                        Box::new(Not(c1)), 
+                        Box::new(Not(c1)),
                         Box::new(Not(c2))
                     ).disjunctive_normal(),
                     Implies(c1, c2) => And(
@@ -459,11 +453,11 @@ impl Condition {
                 }
             }
             Or(c1, c2) => Or(
-                Box::new(c1.disjunctive_normal()), 
+                Box::new(c1.disjunctive_normal()),
                 Box::new(c2.disjunctive_normal())
             ),
             Implies(c1, c2) => Or(
-                Box::new(Not(c1.clone()).disjunctive_normal()), 
+                Box::new(Not(c1.clone()).disjunctive_normal()),
                 Box::new(c2.disjunctive_normal())
             ),
             And(c1, c2) => {
@@ -502,19 +496,19 @@ impl Condition {
             Next(sub) => {
                 let sub = sub.disjunctive_normal();
                 match sub {
-                    Or(a,b) => Or( 
-                        Box::new(Next(a).disjunctive_normal()), 
-                        Box::new(Next(b).disjunctive_normal()) 
+                    Or(a,b) => Or(
+                        Box::new(Next(a).disjunctive_normal()),
+                        Box::new(Next(b).disjunctive_normal())
                     ),
-                    And(a,b) => And( 
-                        Box::new(Next(a).disjunctive_normal()), 
-                        Box::new(Next(b).disjunctive_normal()) 
+                    And(a,b) => And(
+                        Box::new(Next(a).disjunctive_normal()),
+                        Box::new(Next(b).disjunctive_normal())
                     ),
                     _ => Next(Box::new(sub)) // sub cannot be implies
                 }
             },
             Until(a, b) => Until(
-                Box::new(a.disjunctive_normal()), 
+                Box::new(a.disjunctive_normal()),
                 Box::new(b.disjunctive_normal())
             ),
             _ => self.clone()
@@ -636,6 +630,7 @@ impl Display for Condition {
             False => write!(f, "false"),
             Deadlock => write!(f, "deadlock"),
             Evaluation(e) => e.fmt(f),
+            ClockComparison(op, c, i) => write!(f, "({c} {op} {i})"),
             Proposition(op, a, b) => write!(f, "({a} {op} {b})"),
             And(a, b) => write!(f, "({a} && {b})"),
             Or(a, b) => write!(f, "({a} || {b})"),
@@ -653,7 +648,7 @@ pub struct ObjectsScannerVisitor {
 }
 impl ObjectsScannerVisitor {
     pub fn new() -> Self {
-        ObjectsScannerVisitor { 
+        ObjectsScannerVisitor {
             vars : HashSet::new(),
             clocks : HashSet::new()
         }
@@ -661,12 +656,14 @@ impl ObjectsScannerVisitor {
 }
 impl QueryVisitor for ObjectsScannerVisitor {
     fn visit_query(&mut self, _query : &Query) { }
-    fn visit_condition(&mut self, _condition : &Condition) { }
+    fn visit_condition(&mut self, condition : &Condition) {
+        if let ClockComparison(_, c, _) = condition {
+            self.clocks.insert(c.clone());
+        }
+    }
     fn visit_expression(&mut self, expr : &Expr) {
         if let Var(x) = expr {
             self.vars.insert(x.clone());
-        } else if let ClockComparison(_, c, _) = expr {
-            self.clocks.insert(c.clone());
         }
     }
 }

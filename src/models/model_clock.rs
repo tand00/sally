@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-use super::Label;
+use super::{model_context::ModelContext, model_var::{MappingError, MappingResult}, Label};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ModelClock {
@@ -17,7 +17,7 @@ impl ModelClock {
             name : Label::new(), index : usize::MAX
         }
     }
-    
+
     pub fn name(name : Label) -> ModelClock {
         ModelClock {
             name, index : usize::MAX
@@ -34,6 +34,14 @@ impl ModelClock {
 
     pub fn is_mapped(&self) -> bool {
         self.index != usize::MAX
+    }
+
+    pub fn apply_to(&self, ctx : &ModelContext) -> MappingResult<ModelClock> {
+        let res = ctx.get_clock(&self.name);
+        match res {
+            None => Err(MappingError(Label::from("Unable to map clock to index !"))),
+            Some(v) => Ok(v)
+        }
     }
 
 }
