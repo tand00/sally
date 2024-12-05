@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
 use std::{collections::HashSet, hash::Hash, ops::Not};
 
 use crate::verification::query::{Query, QueryVisitor};
@@ -189,6 +190,50 @@ impl Condition {
         }
     }
 
+    pub fn is_clock_guard(&self) -> bool {
+        match self {
+            Next(_) | Until(_,_) => false, // Guards are instantaneous
+            Not(c) => c.contains_clock_proposition(),
+            And(c1,c2) |
+            Or(c1, c2) |
+            Implies(c1, c2)
+                => c1.contains_clock_proposition() && c2.contains_clock_proposition(),
+            ClockComparison(_,_,_) => true,
+            True | False => true,
+            _ => false
+        }
+    }
+
+    pub fn remove_clock(&self, clock : &ModelClock) -> Condition {
+        match self {
+            Next(c) | Not(c) => {
+                if let ClockComparison(_, ref cond_clock, _) = **c {
+                    if cond_clock.get_index() == clock.get_index() {
+                        return True;
+                    }
+                }
+                self.clone()
+            }
+            And(c1, c2) => c1.remove_clock(clock) & c2.remove_clock(clock),
+            Or(c1, c2) => c1.remove_clock(clock) | c2.remove_clock(clock),
+            Until(c1, c2) => Until(
+                Box::new(c1.remove_clock(clock)),
+                Box::new(c2.remove_clock(clock))
+            ),
+            Implies(c1, c2) => Implies(
+                Box::new(c1.remove_clock(clock)),
+                Box::new(c2.remove_clock(clock))
+            ),
+            ClockComparison(_, c, _) => {
+                if c.get_index() == clock.get_index() {
+                    return True;
+                }
+                self.clone()
+            },
+            _ => self.clone()
+        }
+    }
+
     pub fn apply_to(&self, ctx : &ModelContext) -> MappingResult<Condition> {
         match self {
             Evaluation(e) => Ok(Evaluation(e.apply_to(ctx)?)),
@@ -198,13 +243,9 @@ impl Condition {
             ClockComparison(op, c, v) => {
                 Ok(ClockComparison(*op, c.apply_to(ctx)?, *v))
             }
-            And(c1, c2) => Ok(And(
-                Box::new(c1.apply_to(ctx)?), Box::new(c2.apply_to(ctx)?)
-            )),
-            Or(c1, c2) => Ok(Or(
-                Box::new(c1.apply_to(ctx)?), Box::new(c2.apply_to(ctx)?)
-            )),
-            Not(c) => Ok(Not(Box::new(c.apply_to(ctx)?))),
+            And(c1, c2) => Ok((c1.apply_to(ctx)?) & (c2.apply_to(ctx)?)),
+            Or(c1, c2) => Ok((c1.apply_to(ctx)?) | (c2.apply_to(ctx)?)),
+            Not(c) => Ok(!(c.apply_to(ctx)?)),
             Implies(c1, c2) => Ok(Implies(
                 Box::new(c1.apply_to(ctx)?), Box::new(c2.apply_to(ctx)?)
             )),
@@ -253,12 +294,12 @@ impl Condition {
             },
             ClockComparison(prop_type, clock, value) => {
                 let prop_res = match prop_type {
-                    EQ => (state.evaluate_clock(clock) == (*value as f64)),
-                    NE => (state.evaluate_clock(clock) != (*value as f64)),
-                    LE => (state.evaluate_clock(clock) <= (*value as f64)),
-                    GE => (state.evaluate_clock(clock) >= (*value as f64)),
-                    LS => (state.evaluate_clock(clock) < (*value as f64)),
-                    GS => (state.evaluate_clock(clock) > (*value as f64)),
+                    EQ => state.evaluate_clock(clock) == (*value as f64),
+                    NE => state.evaluate_clock(clock) != (*value as f64),
+                    LE => state.evaluate_clock(clock) <= (*value as f64),
+                    GE => state.evaluate_clock(clock) >= (*value as f64),
+                    LS => state.evaluate_clock(clock) < (*value as f64),
+                    GS => state.evaluate_clock(clock) > (*value as f64),
                 };
                 if prop_res {
                     (Verified, None)
@@ -388,32 +429,17 @@ impl Condition {
                     True => False,
                     False => True,
                     Proposition(op, e1, e2) => Proposition(!op, e1, e2),
-                    And(c1, c2) => Or(
-                        Box::new(Not(c1).distribute_not()),
-                        Box::new(Not(c2).distribute_not())
-                    ),
-                    Or(c1, c2) => And(
-                        Box::new(Not(c1).distribute_not()),
-                        Box::new(Not(c2).distribute_not())
-                    ),
+                    And(c1, c2) => Not(c1).distribute_not() | Not(c2).distribute_not(),
+                    Or(c1, c2) => Not(c1).distribute_not() & Not(c2).distribute_not(),
                     Next(sub) => Next(Box::new(Not(sub).distribute_not())),
-                    Implies(c1, c2) => And(
-                        Box::new(c1.distribute_not()),
-                        Box::new(Not(c2).distribute_not())
-                    ),
+                    Implies(c1, c2) => c1.distribute_not() & Not(c2).distribute_not(),
                     Not(sub) => sub.distribute_not(),
                     //Until ?
                     _ => Not(Box::new(sub.distribute_not()))
                 }
             },
-            And(c1,c2) => And(
-                Box::new(c1.distribute_not()),
-                Box::new(c2.distribute_not())
-            ),
-            Or(c1, c2) => Or(
-                Box::new(c1.distribute_not()),
-                Box::new(c2.distribute_not())
-            ),
+            And(c1,c2) => c1.distribute_not() & c2.distribute_not(),
+            Or(c1, c2) => c1.distribute_not() | c2.distribute_not(),
             Until(c1, c2) => Until(
                 Box::new(c1.distribute_not()),
                 Box::new(c2.distribute_not())
@@ -490,20 +516,14 @@ impl Condition {
                             d, Box::new(c1)
                         ).disjunctive_normal()),
                     ),
-                    (c1,c2) => And(Box::new(c1), Box::new(c2)),
+                    (c1,c2) => c1 & c2,
                 }
             },
             Next(sub) => {
                 let sub = sub.disjunctive_normal();
                 match sub {
-                    Or(a,b) => Or(
-                        Box::new(Next(a).disjunctive_normal()),
-                        Box::new(Next(b).disjunctive_normal())
-                    ),
-                    And(a,b) => And(
-                        Box::new(Next(a).disjunctive_normal()),
-                        Box::new(Next(b).disjunctive_normal())
-                    ),
+                    Or(a,b) => Next(a).disjunctive_normal() | Next(b).disjunctive_normal(),
+                    And(a,b) => Next(a).disjunctive_normal() & Next(b).disjunctive_normal(),
                     _ => Next(Box::new(sub)) // sub cannot be implies
                 }
             },
@@ -532,15 +552,9 @@ impl Condition {
 
     pub fn to_greater_eq(&self) -> Condition {
         match self { //prop
-            Not(c) => Not(Box::new(c.to_greater_eq())),
-            And(c1,c2) => And(
-                Box::new(c1.to_greater_eq()),
-                Box::new(c2.to_greater_eq())
-            ),
-            Or(c1, c2) => Or(
-                Box::new(c1.to_greater_eq()),
-                Box::new(c2.to_greater_eq())
-            ),
+            Not(c) => !c.to_greater_eq(),
+            And(c1,c2) => c1.to_greater_eq() & c2.to_greater_eq(),
+            Or(c1, c2) => c1.to_greater_eq() | c2.to_greater_eq(),
             Until(c1, c2) => Until(
                 Box::new(c1.to_greater_eq()),
                 Box::new(c2.to_greater_eq())
@@ -564,15 +578,9 @@ impl Condition {
 
     pub fn to_lesser_eq(&self) -> Condition {
         match self { //prop
-            Not(c) => Not(Box::new(c.to_lesser_eq())),
-            And(c1,c2) => And(
-                Box::new(c1.to_lesser_eq()),
-                Box::new(c2.to_lesser_eq())
-            ),
-            Or(c1, c2) => Or(
-                Box::new(c1.to_lesser_eq()),
-                Box::new(c2.to_lesser_eq())
-            ),
+            Not(c) => !c.to_lesser_eq(),
+            And(c1,c2) => c1.to_lesser_eq() & c2.to_lesser_eq(),
+            Or(c1, c2) => c1.to_lesser_eq() | c2.to_lesser_eq(),
             Until(c1, c2) => Until(
                 Box::new(c1.to_lesser_eq()),
                 Box::new(c2.to_lesser_eq())
@@ -619,7 +627,49 @@ impl Default for Condition {
 impl Not for Condition {
     type Output = Self;
     fn not(self) -> Self::Output {
-        Not(Box::new(self))
+        match self {
+            True => False,
+            False => True,
+            c => Not(Box::new(c))
+        }
+    }
+}
+
+impl BitAnd for Condition {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (True, True) => True,
+            (False, _) | (_, False) => False,
+            (True, c) | (c, True) => c,
+            (a,b) => And(Box::new(a), Box::new(b))
+        }
+    }
+}
+
+impl BitOr for Condition {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (False, False) => False,
+            (True, _) | (_, True) => True,
+            (False, c) | (c, False) => c,
+            (a,b) => Or(Box::new(a), Box::new(b))
+        }
+    }
+}
+
+impl BitAndAssign for Condition {
+    fn bitand_assign(&mut self, rhs: Self) {
+        let cond = std::mem::take(self);
+        *self = cond & rhs;
+    }
+}
+
+impl BitOrAssign for Condition {
+    fn bitor_assign(&mut self, rhs: Self) {
+        let cond = std::mem::take(self);
+        *self = cond | rhs;
     }
 }
 
