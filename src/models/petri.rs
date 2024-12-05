@@ -8,7 +8,7 @@ use crate::{models::{class_graph::StateClassGenerator, digraph::search_strategy:
 
 use super::{
     action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::{ClockValue, RealTimeBound},
-    CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node,
+    CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node, UNMAPPED_ID,
 };
 
 mod petri_place;
@@ -39,18 +39,10 @@ pub struct PetriNet {
 impl PetriNet {
 
     pub fn new(places: Vec<PetriPlace>, transitions: Vec<PetriTransition>) -> Self {
-        let mut places_ptr: Vec<Arc<PetriPlace>> = Vec::new();
-        let mut transitions_ptr: Vec<Arc<PetriTransition>> = Vec::new();
-        for place in places {
-            places_ptr.push(Arc::new(place));
-        }
-        for transition in transitions {
-            transitions_ptr.push(Arc::new(transition));
-        }
         let petri = PetriNet {
-            id: usize::MAX,
-            places: places_ptr,
-            transitions: transitions_ptr,
+            id: UNMAPPED_ID,
+            places: places.into_iter().map(Arc::new).collect(),
+            transitions: transitions.into_iter().map(Arc::new).collect(),
             places_dic: HashMap::new(),
             transitions_dic: HashMap::new(),
             actions_dic: HashMap::new(),
@@ -101,8 +93,8 @@ impl PetriNet {
         }
     }
 
-    pub fn compute_new_actions(&self, new_state: &mut ModelState, changed_places: &HashSet<usize>) 
-        -> (HashSet<usize>, HashSet<usize>) 
+    pub fn compute_new_actions(&self, new_state: &mut ModelState, changed_places: &HashSet<usize>)
+        -> (HashSet<usize>, HashSet<usize>)
     {
         let mut pers = new_state.enabled_clocks();
         let mut newen: HashSet<usize> = HashSet::new();
@@ -130,8 +122,8 @@ impl PetriNet {
         (newen, pers)
     }
 
-    pub fn fire(&self, mut state: ModelState, transi: usize) 
-        -> (ModelState, HashSet<usize>, HashSet<usize>) 
+    pub fn fire(&self, mut state: ModelState, transi: usize)
+        -> (ModelState, HashSet<usize>, HashSet<usize>)
     {
         let transi = &self.transitions[transi];
         let mut changed_places: HashSet<usize> = HashSet::new();
@@ -160,7 +152,7 @@ impl PetriNet {
     }
 
     fn create_transition_edges(
-        &self, transition: &Arc<PetriTransition>, 
+        &self, transition: &Arc<PetriTransition>,
         places_down : &mut Vec<Vec<Arc<PetriTransition>>>, places_up : &mut Vec<Vec<Arc<PetriTransition>>>
     ) {
         let from_labels = transition.from.clone();
@@ -362,8 +354,8 @@ impl Model for PetriNet {
         Ok(())
     }
 
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
-        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }

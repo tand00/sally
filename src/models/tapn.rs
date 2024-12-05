@@ -9,7 +9,7 @@ use tapn_transition::TAPNTransition;
 
 use crate::verification::VerificationBound;
 
-use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, TIMED};
+use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, TIMED, UNMAPPED_ID};
 
 pub mod tapn_place;
 pub mod tapn_edge;
@@ -35,21 +35,13 @@ pub struct TAPN {
 impl TAPN {
 
     pub fn new(places : Vec<TAPNPlace>, transitions : Vec<TAPNTransition>) -> Self {
-        let mut places_ptr = Vec::new();
-        for place in places {
-            places_ptr.push(Arc::new(place));
-        }
-        let mut transitions_ptr = Vec::new();
-        for transition in transitions {
-            transitions_ptr.push(Arc::new(transition));
-        }
-        TAPN { 
-            id: usize::MAX, 
-            tokens_storage: usize::MAX, 
-            places: places_ptr, 
-            transitions: transitions_ptr, 
+        TAPN {
+            id: UNMAPPED_ID,
+            tokens_storage: UNMAPPED_ID,
+            places: places.into_iter().map(Arc::new).collect(),
+            transitions: transitions.into_iter().map(Arc::new).collect(),
             places_dic: HashMap::new(),
-            actions_dic: HashMap::new() 
+            actions_dic: HashMap::new()
         }
     }
 
@@ -94,7 +86,7 @@ impl TAPN {
     }
 
     pub fn create_transition_edges(
-        &self, transition : &Arc<TAPNTransition>, 
+        &self, transition : &Arc<TAPNTransition>,
         places_down : &mut Vec<Vec<Arc<TAPNTransition>>>, places_up : &mut Vec<Vec<Arc<TAPNTransition>>>
     ) {
         let mut input_edges = Vec::new();
@@ -215,7 +207,7 @@ impl Model for TAPN {
         min_delay
     }
 
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
         -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
     {
         Box::new(TAPNRunGenerator::generate(self, initial, bound))

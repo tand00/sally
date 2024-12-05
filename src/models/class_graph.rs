@@ -18,7 +18,7 @@ use super::digraph::search_strategy::{GraphTraversal, NeighborsFinder, SearchStr
 use super::model_context::ModelContext;
 use super::model_var::{ModelVar, VarType};
 use super::time::ClockValue;
-use super::{lbl, Edge, Model, ModelMeta, ModelState, CONTROLLABLE, SYMBOLIC, TIMED};
+use super::{lbl, Edge, Model, ModelMeta, ModelState, CONTROLLABLE, SYMBOLIC, TIMED, UNMAPPED_ID};
 use super::petri::{PetriNet, PetriTransition};
 
 const CLASS_LIMIT : usize = u16::MAX as usize;
@@ -36,7 +36,7 @@ impl ClassGraph {
 
     pub fn compute(p_net : &PetriNet, initial_state : &ModelState) -> Self {
         let mut cg = ClassGraph {
-            id : usize::MAX,
+            id : UNMAPPED_ID,
             classes : Vec::new(),
             edges : Vec::new(),
             current_class : ModelVar::name(lbl("CurrentClass")),
@@ -229,8 +229,8 @@ impl Model for ClassGraph {
         Ok(())
     }
 
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
-        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
@@ -248,8 +248,8 @@ pub struct StateClassGenerator<'a> {
 
 impl<'a> StateClassGenerator<'a> {
 
-    pub fn classes<S : SearchStrategy<Arc<StateClass>>>(strategy : S, net : &'a PetriNet, initial_state : &ModelState) 
-        -> GraphTraversal<Arc<StateClass>, S, Self> 
+    pub fn classes<S : SearchStrategy<Arc<StateClass>>>(strategy : S, net : &'a PetriNet, initial_state : &ModelState)
+        -> GraphTraversal<Arc<StateClass>, S, Self>
     {
         let mut gen = Self::from(net);
         let initial = Arc::new(StateClass::compute_class(net, initial_state));

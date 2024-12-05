@@ -6,19 +6,27 @@ use crate::models::{action::Action, expressions::Condition, model_clock::ModelCl
 
 use super::TAState;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default)]
 pub struct TATransition {
     pub name : Label,
     pub from : Label,
     pub to : Label,
-    pub action : Action,
     pub guard : Condition,
     pub resets : Vec<ModelClock>,
+    pub action : Action,
     pub node_from : OnceLock<Weak<TAState>>,
     pub node_to : OnceLock<Weak<TAState>>,
 }
 
 impl TATransition {
+
+    pub fn new(name : Label, from : Label, to : Label) -> Self {
+        TATransition { name, from, to, ..Default::default() }
+    }
+
+    pub fn set_resets(&mut self, resets : Vec<Label>) {
+        self.resets = resets.into_iter().map(ModelClock::name).collect();
+    }
 
     pub fn get_name(&self) -> Label {
         self.name.clone()
@@ -71,4 +79,17 @@ impl TATransition {
         state
     }
 
+}
+
+impl Clone for TATransition {
+    fn clone(&self) -> Self {
+        TATransition {
+            name: self.name.clone(),
+            from: self.from.clone(),
+            to: self.to.clone(),
+            guard: self.guard.clone(),
+            resets: self.resets.clone(),
+            ..Default::default()
+        }
+    }
 }

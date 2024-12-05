@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, rc::Rc, sync::Arc};
+use std::{collections::{HashMap, HashSet}, rc::Rc, sync::{Arc, OnceLock}};
 
 mod ta_state;
 mod ta_transition;
@@ -9,7 +9,7 @@ pub use ta_transition::TATransition;
 
 use crate::verification::{smc::RandomRunIterator, VerificationBound};
 
-use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Model, ModelMeta, ModelState, CONTROLLABLE, TIMED};
+use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelState, CONTROLLABLE, TIMED, UNMAPPED_ID};
 
 pub struct TimedAutomata {
     pub id: usize,
@@ -21,6 +21,17 @@ pub struct TimedAutomata {
 }
 
 impl TimedAutomata {
+
+    pub fn new(states : Vec<TAState>, transitions : Vec<TATransition>, clocks : Vec<Label>) -> Self {
+        TimedAutomata {
+            id : UNMAPPED_ID,
+            states: states.into_iter().map(Arc::new).collect(),
+            transitions: transitions.into_iter().map(Arc::new).collect(),
+            clocks: clocks.into_iter().map(ModelClock::name).collect(),
+            actions_dic: HashMap::new(),
+            state_cache: UNMAPPED_ID
+        }
+    }
 
     pub fn get_active_place(&self, state : &ModelState) -> &Arc<TAState> {
         let storage = state.storage(&self.state_cache);
@@ -44,7 +55,10 @@ impl Model for TimedAutomata {
 
     fn available_actions(&self, state: &ModelState) -> HashSet<Action> {
         let place = self.get_active_place(state);
-        todo!()
+        let transis = place.downsteam.get().unwrap();
+        transis.iter().filter_map(|t| {
+            if t.is_enabled(state) { Some(t.get_action()) } else { None }
+        }).collect()
     }
 
     fn get_meta() -> ModelMeta {
@@ -87,13 +101,33 @@ impl Model for TimedAutomata {
         self.states = compiled_states;
         let mut compiled_transitions = Vec::new();
         self.actions_dic.clear();
+        let mut downstream = self.states.iter().map(|s| (s.get_name(), Vec::new()))
+            .collect::<HashMap<Label, Vec<Arc<TATransition>>>>();
+        let mut upstream = downstream.clone();
         for transition in self.transitions.iter() {
             let mut compiled_transition = TATransition::clone(transition);
+            let place_from = &places_dic[&compiled_transition.from];
+            let place_to = &places_dic[&compiled_transition.to];
+            compiled_transition.merge_target_invariants(place_to);
+            if compiled_transition.node_from.set(Arc::downgrade(place_from)).is_err() {
+                return Err(CompilationError);
+            }
+            if compiled_transition.node_to.set(Arc::downgrade(place_to)).is_err() {
+                return Err(CompilationError);
+            }
             compiled_transition.compile(context)?;
             self.actions_dic.insert(compiled_transition.get_action(), compiled_transitions.len());
-            compiled_transitions.push(Arc::new(compiled_transition));
+            let compiled_transition = Arc::new(compiled_transition);
+            downstream.get_mut(&compiled_transition.from).unwrap().push(Arc::clone(&compiled_transition));
+            upstream.get_mut(&compiled_transition.to).unwrap().push(Arc::clone(&compiled_transition));
+            compiled_transitions.push(compiled_transition);
         }
         self.transitions = compiled_transitions;
+        for state in self.states.iter() {
+            let label = state.get_name();
+            state.upstream.set(upstream.remove(&label).unwrap()).unwrap();
+            state.downsteam.set(downstream.remove(&label).unwrap()).unwrap();
+        }
         self.state_cache = context.add_storage();
         Ok(())
     }

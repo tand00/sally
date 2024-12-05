@@ -1,6 +1,6 @@
 use std::{cmp::max, collections::{HashMap, HashSet}};
 
-use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
+use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
 use crate::log;
 
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,7 @@ impl<T : Model> PartialObservation<T> {
 
     pub fn new(obs : ObservationFunction) -> PartialObservation<T> {
         PartialObservation {
-            id : usize::MAX,
+            id : UNMAPPED_ID,
             observation_function : obs,
             vars_link : Default::default(),
             clocks_link : Default::default(),
@@ -97,7 +97,7 @@ impl<T : Model> PartialObservation<T> {
 
     pub fn observe(&self, state : &ModelState) -> ModelState {
         let mut observed = self.context.make_empty_state();
-        let var_junction : fn(EvaluationType, EvaluationType) -> EvaluationType = 
+        let var_junction : fn(EvaluationType, EvaluationType) -> EvaluationType =
         match self.observation_function.var_policy {
             SumVars => |x,y| x + y,
             MaxVar => |x,y| max(x, y),
@@ -176,9 +176,9 @@ impl<T : Model> Model for PartialObservation<T> {
     fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
         Err(CompilationError)
     }
-    
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
-        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
@@ -186,7 +186,7 @@ impl<T : Model> Model for PartialObservation<T> {
 }
 
 impl<T : ModelObject + Clone> Translation for PartialObservation<T> {
-    
+
     fn get_meta(&self) -> TranslationMeta {
         TranslationMeta {
             name : lbl("PartialObservation"),
@@ -220,7 +220,7 @@ impl<T : ModelObject + Clone> Translation for PartialObservation<T> {
     fn forward_translate(&self, state : ModelState) -> Option<ModelState> {
         Some(self.observe(&state))
     }
-    
+
     fn make_instance(&self) -> Box<dyn Translation> {
         Box::new(Self::new(self.observation_function.clone()))
     }

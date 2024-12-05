@@ -1,4 +1,4 @@
-use std::sync::{Arc, OnceLock};
+use std::{sync::{Arc, OnceLock}, usize};
 
 use crate::models::{expressions::Condition, model_context::ModelContext, model_var::{ModelVar, VarType}, time::RealTimeBound, CompilationError, CompilationResult, Label, ModelState};
 
@@ -6,7 +6,7 @@ use super::TATransition;
 
 const TA_STATE_VAR_TYPE : VarType = VarType::VarU8;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Default)]
 pub struct TAState {
     pub name : Label,
     pub invariants : Condition,
@@ -17,6 +17,14 @@ pub struct TAState {
 }
 
 impl TAState {
+
+    pub fn new(name : Label) -> Self {
+        TAState { name, ..Default::default() }
+    }
+
+    pub fn with_invariants(name : Label, invariants : Condition) -> Self {
+        TAState { name, invariants, ..Default::default() }
+    }
 
     pub fn get_name(&self) -> Label {
         self.name.clone()
@@ -42,4 +50,15 @@ impl TAState {
         Ok(())
     }
 
+}
+
+impl Clone for TAState {
+    fn clone(&self) -> Self {
+        TAState {
+            name : self.name.clone(),
+            invariants : self.invariants.clone(),
+            index : self.index,
+            ..Default::default()
+        }
+    }
 }

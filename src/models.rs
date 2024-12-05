@@ -52,6 +52,8 @@ pub type CompilationResult<T> = Result<T, CompilationError>;
 
 pub type InitialMarking = HashMap<Label, EvaluationType>;
 
+pub const UNMAPPED_ID : usize = usize::MAX;
+
 pub mod model_characteristics {
     use crate::flag;
 
@@ -209,7 +211,7 @@ pub trait Model: Any {
     fn get_id(&self) -> usize;
 
     fn is_compiled(&self) -> bool {
-        self.get_id() != usize::MAX
+        self.get_id() != UNMAPPED_ID
     }
 }
 

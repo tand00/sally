@@ -2,7 +2,7 @@ use std::{collections::HashSet, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
-use super::model_storage::ModelStorage;
+use super::{model_storage::ModelStorage, UNMAPPED_ID};
 
 // Action enum :
 // Epsilon : No label nor ID, used for internal invisible transitions
@@ -20,7 +20,7 @@ impl Action {
 
     pub fn get_id(&self) -> usize {
         match self {
-            Self::Epsilon => usize::MAX,
+            Self::Epsilon => UNMAPPED_ID,
             Self::Base(i) => *i,
             Self::Sync(i, _, _) => *i,
             Self::WithData(i, _) => *i
@@ -115,7 +115,7 @@ impl ActionPairs {
             let base = action.base();
             if self.0.contains(&base) {
                 inputs.insert(action.clone());
-            } 
+            }
             if self.1.contains(&base) {
                 outputs.insert(action.clone());
             }

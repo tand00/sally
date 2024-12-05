@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::probability::ProbabilisticChoice, models::{action::Action, lbl, model_context::ModelContext, model_var::{ModelVar, VarType}, time::ClockValue, CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
+use crate::{computation::probability::ProbabilisticChoice, models::{action::Action, lbl, model_context::ModelContext, model_var::{ModelVar, VarType}, time::ClockValue, CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
 
 use super::markov_node::MarkovNode;
 
@@ -23,7 +23,7 @@ impl MarkovChain {
         MarkovChain {
             nodes,
             nodes_dic : HashMap::new(),
-            id : usize::MAX,
+            id : UNMAPPED_ID,
             current_node : ModelVar::new()
         }
     }
@@ -67,7 +67,7 @@ impl MarkovChain {
     pub fn get_structure(&self) -> Vec<MarkovNode> {
         self.nodes.clone()
     }
-    
+
 }
 
 impl Model for MarkovChain {
@@ -126,8 +126,8 @@ impl Model for MarkovChain {
         Ok(())
     }
 
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
-        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
