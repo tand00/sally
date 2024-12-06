@@ -1,23 +1,29 @@
-use crate::models::ModelState;
+use crate::models::{action::Action, ModelObject, ModelState};
 
 pub trait Strategy {
 
-    type Input;
-    type Output;
-
-    fn play(&mut self, from : &Self::Input) -> Self::Output;
+    fn play(&mut self, from : ModelState) -> (ModelState, Vec<Action>);
 
 }
 
-pub trait PlayCombiner {
+pub struct PlayCombiner<'a> {
 
-    type Input;
-    type Output;
-
-    fn combine(
-        &mut self,
-        strategies : &mut Vec<Box<dyn Strategy<Input = Self::Input, Output = Self::Output>>>,
-        from : &Self::Input
-    ) -> Self::Input;
+    pub model : &'a dyn ModelObject,
+    pub strategies : Vec<Box<dyn Strategy>>,
 
 }
+
+impl<'a> PlayCombiner<'a> {
+
+    pub fn combine(&mut self, mut from : ModelState) -> ModelState {
+        for strat in self.strategies.iter_mut() {
+            let next_state = std::mem::take(&mut from);
+            let (next_state, actions) = strat.play(next_state);
+            from = next_state;
+        }
+        from
+    }
+
+}
+
+    
