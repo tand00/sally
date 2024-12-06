@@ -11,6 +11,7 @@ pub struct TAState {
     pub name : Label,
     pub invariants : Condition,
     pub var : ModelVar,
+    pub accepting : bool,
     pub downsteam : OnceLock<Vec<Arc<TATransition>>>,
     pub upstream : OnceLock<Vec<Arc<TATransition>>>,
     pub index : usize
@@ -19,11 +20,11 @@ pub struct TAState {
 impl TAState {
 
     pub fn new(name : Label) -> Self {
-        TAState { name, ..Default::default() }
+        TAState { name, accepting: false, ..Default::default() }
     }
 
     pub fn with_invariants(name : Label, invariants : Condition) -> Self {
-        TAState { name, invariants, ..Default::default() }
+        TAState { name, invariants, accepting: false, ..Default::default() }
     }
 
     pub fn get_name(&self) -> Label {
@@ -35,7 +36,12 @@ impl TAState {
     }
 
     pub fn remaining_time(&self, state : &ModelState) -> RealTimeBound {
-        todo!()
+        let conds = self.invariants.conjunctions();
+        let max_time = RealTimeBound::Infinite;
+        for cond in conds {
+            todo!()
+        }
+        max_time
     }
 
     pub fn compile(&mut self, ctx : &mut ModelContext) -> CompilationResult<()> {

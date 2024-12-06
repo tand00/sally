@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, rc::Rc, sync::{Arc, OnceLock}};
+use std::{collections::{HashMap, HashSet}, rc::Rc, sync::Arc};
 
 mod ta_state;
 mod ta_transition;
@@ -11,7 +11,7 @@ use crate::verification::{smc::RandomRunIterator, VerificationBound};
 
 use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelState, CONTROLLABLE, TIMED, UNMAPPED_ID};
 
-pub struct TimedAutomata {
+pub struct TimedAutomaton {
     pub id: usize,
     pub states: Vec<Arc<TAState>>,
     pub transitions: Vec<Arc<TATransition>>,
@@ -20,10 +20,10 @@ pub struct TimedAutomata {
     pub state_cache: usize // Store current active state, speed optimization at the cost of space. Might be worst
 }
 
-impl TimedAutomata {
+impl TimedAutomaton {
 
     pub fn new(states : Vec<TAState>, transitions : Vec<TATransition>, clocks : Vec<Label>) -> Self {
-        TimedAutomata {
+        TimedAutomaton {
             id : UNMAPPED_ID,
             states: states.into_iter().map(Arc::new).collect(),
             transitions: transitions.into_iter().map(Arc::new).collect(),
@@ -50,7 +50,7 @@ impl TimedAutomata {
 
 }
 
-impl Model for TimedAutomata {
+impl Model for TimedAutomaton {
 
     fn next(&self, state: ModelState, action: Action) -> Option<ModelState> {
         let transi = self.actions_dic[&action];
