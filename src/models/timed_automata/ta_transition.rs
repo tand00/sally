@@ -52,7 +52,7 @@ impl TATransition {
         let Ok(cond) = self.guard.apply_to(ctx) else {
             return Err(CompilationError)
         };
-        self.guard = cond;
+        self.guard = cond.disjunctive_normal();
         for clock in self.resets.iter_mut() {
             let Ok(c) = clock.apply_to(ctx) else {
                 return Err(CompilationError);
@@ -74,8 +74,11 @@ impl TATransition {
         let target = self.node_to.get().unwrap().upgrade().unwrap();
         state.unmark(source.get_var(), 1);
         state.mark(target.get_var(), 1);
-        let place_index = state.mut_storage(cache).mut_int();
-        *place_index = target.index as i32;
+        let storage = state.mut_storage(cache);
+        if storage.is_int() {
+            let place_index = storage.mut_int();
+            *place_index = target.index as i32;
+        }
         state
     }
 

@@ -43,6 +43,11 @@ impl TimedAutomata {
         &self.states[state_index]
     }
 
+    pub fn disable_cache(&self, state : &mut ModelState) {
+        let storage = state.mut_storage(&self.state_cache);
+        *storage = ModelStorage::EmptyStorage;
+    }
+
 }
 
 impl Model for TimedAutomata {

@@ -46,7 +46,7 @@ impl TAState {
         let Ok(cond) = self.invariants.apply_to(ctx) else {
             return Err(CompilationError);
         };
-        self.invariants = cond;
+        self.invariants = cond.disjunctive_normal();
         Ok(())
     }
 

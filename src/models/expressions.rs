@@ -429,6 +429,7 @@ impl Condition {
                     True => False,
                     False => True,
                     Proposition(op, e1, e2) => Proposition(!op, e1, e2),
+                    ClockComparison(op, c, v) => ClockComparison(!op, c.clone(), v),
                     And(c1, c2) => Not(c1).distribute_not() | Not(c2).distribute_not(),
                     Or(c1, c2) => Not(c1).distribute_not() & Not(c2).distribute_not(),
                     Next(sub) => Next(Box::new(Not(sub).distribute_not())),
