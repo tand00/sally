@@ -5,7 +5,7 @@ use std::cmp::min;
 const CELL_SIZE : usize = 64;
 
 // Structure for fast operations on boolean sets : And, Or, Not... Complexity O(n) to retrieve indexs after computation
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct BitSet {
     enabled: Vec<u64>
 }
@@ -17,17 +17,17 @@ impl BitSet {
 
     pub fn single_bit(bit : usize) -> Self {
         let mut set = BitSet::new();
-        set.enable(bit);
+        set.enable(&bit);
         set
     }
 
-    pub fn get_indexs(bit : usize) -> (u64, usize) {
-        let a_byte = 1 << (bit % CELL_SIZE);
-        let byte_index = bit / CELL_SIZE;
+    pub fn get_indexs(bit : &usize) -> (u64, usize) {
+        let a_byte = 1 << (*bit % CELL_SIZE);
+        let byte_index = *bit / CELL_SIZE;
         (a_byte, byte_index)
     }
 
-    pub fn enable(&mut self, bit : usize) {
+    pub fn enable(&mut self, bit : &usize) {
         let (new_byte, byte_index) = Self::get_indexs(bit);
         if byte_index >= self.enabled.len() {
             self.enabled.resize(byte_index + 1, 0);
@@ -35,7 +35,7 @@ impl BitSet {
         self.enabled[byte_index] |= new_byte;
     }
 
-    pub fn disable(&mut self, bit : usize) {
+    pub fn disable(&mut self, bit : &usize) {
         let (new_byte, byte_index) = Self::get_indexs(bit);
         if byte_index >= self.enabled.len() {
             self.enabled.resize(byte_index + 1, 0);
@@ -44,7 +44,7 @@ impl BitSet {
         self.trim();
     }
 
-    pub fn is_enabled(&self, bit : usize) -> bool {
+    pub fn is_enabled(&self, bit : &usize) -> bool {
         let (new_byte, byte_index) = Self::get_indexs(bit);
         if byte_index >= self.enabled.len() {
             false
@@ -53,20 +53,17 @@ impl BitSet {
         }
     }
 
-    pub fn get_bits(&self) -> HashSet<usize> { // Might be optimized by unfolding
-        let mut res : HashSet<usize> = HashSet::new();
-        for (b_i,b) in self.enabled.iter().enumerate() { // Usually only one block, except if > 64 bits
-            let mut rem = *b;
-            let mut i : usize = 0;
-            while rem > 0 {
-                if rem % 2 == 1 {
-                    res.insert(b_i * CELL_SIZE + i);
+    pub fn get_bits<'a>(&'a self) -> impl Iterator<Item = usize> + 'a {
+        self.enabled.iter().enumerate().map(|(b_i,b)| {
+            let r = *b;
+            (0..CELL_SIZE).take_while(move |i| (r >> *i) > 0).filter_map(move |i| {
+                if (r >> i) % 2 == 1 {
+                    Some(b_i * CELL_SIZE + i)
+                } else {
+                    None
                 }
-                i += 1;
-                rem >>= 1;
-            }
-        }
-        res
+            })
+        }).flatten()
     }
 
     pub fn get_newen(old : &BitSet, new : &BitSet) -> BitSet {
@@ -117,7 +114,7 @@ impl BitSet {
 
 impl BitOr for BitSet {
     type Output = BitSet;
-    
+
     fn bitor(self, rhs: Self) -> Self::Output {
         let (mut sink, source) = if self.enabled.len() >= rhs.enabled.len() {
             (self, rhs)
@@ -132,7 +129,7 @@ impl BitOr for BitSet {
         }
         sink
     }
-    
+
 }
 
 impl BitOrAssign for BitSet {
@@ -150,7 +147,7 @@ impl BitOrAssign for BitSet {
 
 impl BitAnd for BitSet {
     type Output = BitSet;
-    
+
     fn bitand(self, rhs: Self) -> Self::Output {
         let (mut sink, source) = if self.enabled.len() <= rhs.enabled.len() {
             (self, rhs)
@@ -163,7 +160,7 @@ impl BitAnd for BitSet {
         sink.trim();
         sink
     }
-    
+
 }
 
 impl BitAndAssign for BitSet {
@@ -183,7 +180,7 @@ impl BitAndAssign for BitSet {
 
 impl BitXor for BitSet {
     type Output = BitSet;
-    
+
     fn bitxor(self, rhs: Self) -> Self::Output {
         let (mut sink, source) = if self.enabled.len() >= rhs.enabled.len() {
             (self, rhs)
@@ -225,7 +222,7 @@ impl From<HashSet<usize>> for BitSet {
     fn from(value: HashSet<usize>) -> Self {
         let mut set = BitSet::new();
         for bit in value {
-            set.enable(bit);
+            set.enable(&bit);
         }
         set
     }

@@ -1,6 +1,8 @@
-use std::{collections::HashSet, fmt::Display};
+use std::{collections::{HashMap, HashSet}, fmt::Display, iter};
 
 use serde::{Deserialize, Serialize};
+
+use crate::computation::BitSet;
 
 use super::{model_storage::ModelStorage, UNMAPPED_ID};
 
@@ -154,6 +156,105 @@ impl ActionPairs {
             }
         }
         res
+    }
+
+}
+
+#[derive(Debug, Clone)]
+pub struct ActionSet {
+    pub enabled : BitSet,
+    pub has_spe : BitSet,
+    pub specializations : HashMap<usize, HashSet<Action>>
+}
+
+impl ActionSet {
+
+    pub fn is_enabled(&self, action : &Action) -> bool {
+        if action.is_epsilon() {
+            return false;
+        }
+        self.enabled.is_enabled(&action.get_id())
+    }
+
+    pub fn add_action(&mut self, action : Action) {
+        match action {
+            Action::Epsilon => (),
+            Action::Base(i) => self.enabled.enable(&i),
+            a => {
+                let id = a.get_id();
+                self.enabled.enable(&id);
+                self.has_spe.enable(&id);
+                if self.specializations.contains_key(&id) {
+                    self.specializations.get_mut(&id).unwrap().insert(a);
+                } else {
+                    let mut set = HashSet::new();
+                    set.insert(a);
+                    self.specializations.insert(id, set);
+                }
+            },
+        }
+    }
+
+    pub fn disable_action(&mut self, action : &Action) {
+        if !self.is_enabled(action) { return }
+        let id = action.get_id();
+        self.enabled.disable(&id);
+        if self.has_spe.is_enabled(&id) {
+            self.has_spe.disable(&id);
+            self.specializations.remove(&id);
+        }
+    }
+
+    pub fn unspecialize(&mut self, action : &Action) {
+        if !self.has_specialization(action) { return }
+        let id = action.get_id();
+        self.has_spe.disable(&id);
+        self.specializations.remove(&id);
+    }
+
+    pub fn remove_specialization(&mut self, action : &Action) {
+        if !self.has_specialization(action) { return }
+        let id = action.get_id();
+        self.specializations.get_mut(&id).unwrap().remove(action);
+        if self.specializations[&id].is_empty() {
+            self.has_spe.disable(&id);
+            self.specializations.remove(&id);
+        }
+    }
+
+    pub fn has_specialization(&self, action : &Action) -> bool {
+        if action.is_epsilon() {
+            return false;
+        }
+        self.has_spe.is_enabled(&action.get_id())
+    }
+
+    pub fn base_actions<'a>(&'a self) -> impl Iterator<Item = Action> + 'a {
+        self.enabled.get_bits().map(|bit| Action::Base(bit))
+    }
+
+    pub fn get_specializations<'a>(&'a self, action : &Action) -> Box<dyn Iterator<Item = &'a Action> + 'a> {
+        if !self.has_specialization(action) {
+            return Box::new(iter::empty());
+        }
+        Box::new(self.specializations[&action.get_id()].iter())
+    }
+
+    pub fn enabledness_intersection(self, other : Self) -> Self {
+        let (mut enabled, has_spe, mut spe) = (self.enabled, self.has_spe, self.specializations);
+        let (o_en, o_has_spe, mut o_spe) = (other.enabled, other.has_spe, other.specializations);
+        enabled &= o_en;
+        let has_spe = enabled.clone() & (has_spe | o_has_spe);
+        let mut specializations = HashMap::new();
+        for bit in has_spe.get_bits() {
+            let mut spe1 = spe.remove(&bit).unwrap();
+            let spe2 = o_spe.remove(&bit).unwrap();
+            spe1.extend(spe2);
+            specializations.insert(bit, spe1);
+        }
+        ActionSet {
+            enabled, has_spe, specializations
+        }
     }
 
 }
