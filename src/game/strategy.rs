@@ -34,3 +34,13 @@ impl<'a> PlayCombiner for SequentialPlayCombiner<'a> {
         from
     }
 }
+
+impl<'a> PlayCombiner for FinalChoosePlayCombiner<'a> {
+    fn combine(&mut self, players : &mut Vec<Player>, mut from : ModelState) -> ModelState {
+        for player in players.iter_mut() {
+            let next_state = std::mem::take(&mut from);
+            let avail = self.model.available_actions(&next_state);
+        }
+        from
+    }
+}
