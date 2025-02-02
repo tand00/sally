@@ -71,10 +71,8 @@ impl ModelContext {
         self.definer.clone().into()
     }
 
-    pub fn get_vars(&self) -> Vec<ModelVar> {
-        self.vars.iter().map(|(_,l)| {
-            l.clone()
-        }).collect()
+    pub fn get_vars(&self) -> impl Iterator<Item = &ModelVar> {
+        self.vars.iter().map(|(_,l)| { l })
     }
 
     pub fn add_var(&mut self, name : Label, var_type : VarType) -> ModelVar {
@@ -109,10 +107,8 @@ impl ModelContext {
         self.vars.contains_key(&var_name)
     }
 
-    pub fn get_actions(&self) -> Vec<(Label, Action)> {
-        self.actions.iter().map(|(l,a)| {
-            (l.clone(), a.clone())
-        }).collect()
+    pub fn get_actions(&self) -> impl Iterator<Item = (&Label, &Action)> {
+        self.actions.iter()
     }
 
     pub fn add_action(&mut self, name : Label) -> Action {
@@ -137,10 +133,8 @@ impl ModelContext {
         self.actions.contains_key(&local_name)
     }
 
-    pub fn get_clocks(&self) -> Vec<ModelClock> {
-        self.clocks.iter().map(|(_, c)| {
-            c.clone()
-        }).collect()
+    pub fn get_clocks(&self) -> impl Iterator<Item = &ModelClock> {
+        self.clocks.iter().map(|(_, c)| { c })
     }
 
     pub fn add_clock(&mut self, name : Label) -> ModelClock {
@@ -189,7 +183,6 @@ impl ModelContext {
         }
     }
 
-    
     pub fn get_local_vars(&self) -> Vec<ModelVar> {
         let domain = self.get_path();
         self.vars.iter().filter_map(|(l,x)| {

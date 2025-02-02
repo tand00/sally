@@ -114,7 +114,7 @@ pub trait Verifiable : Hash {
     }
     fn is_deadlocked(&self) -> bool;
     fn as_verifiable(&self) -> &impl Verifiable
-        where Self : Sized 
+        where Self : Sized
     {
         self
     }
@@ -138,7 +138,7 @@ impl Verification {
     }
 
     pub fn verify(&mut self, _ : &mut Query, _ : &impl Verifiable) {
-        
+
     }
 
 }

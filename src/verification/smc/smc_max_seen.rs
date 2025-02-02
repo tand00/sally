@@ -1,6 +1,6 @@
 use std::{cmp::max, sync::Mutex, thread, time::Instant};
 
-use crate::{models::{model_context::ModelContext, ModelObject, ModelState}, solution::SolverResult, verification::VerificationBound};
+use crate::{models::{model_context::ModelContext, model_var::ModelVar, ModelObject, ModelState}, solution::SolverResult, verification::VerificationBound};
 use crate::log::*;
 
 #[derive(Debug, Clone)]
@@ -23,11 +23,10 @@ impl SMCMaxSeen {
         let now = Instant::now();
         let bound = bound.apply_to(ctx).unwrap();
         let mut max_seen = 0;
-        let vars = ctx.get_vars();
         for _ in 0..self.runs_needed {
             let iterator = model.random_run(initial, bound.clone());
             for (state, _, _) in iterator {
-                let tokens = state.marking_sum(vars.iter());
+                let tokens = state.marking_sum(ctx.get_vars());
                 if tokens > max_seen {
                     max_seen = tokens;
                 }
@@ -41,7 +40,7 @@ impl SMCMaxSeen {
 
     pub fn parallel_estimate_max(&self, model : &dyn ModelObject, ctx : &ModelContext, initial : &ModelState, bound : VerificationBound) -> SolverResult {
         info("Estimating max tokens using SMC...");
-        
+
         let threads = thread::available_parallelism().unwrap().get();
         continue_info(format!("Parallel mode [Threads : {}]", threads));
         continue_info(format!("Runs to be executed : {}", self.runs_needed));
@@ -50,8 +49,8 @@ impl SMCMaxSeen {
 
         let bound = bound.apply_to(ctx).unwrap();
         let runs_done : Mutex<usize> = Mutex::new(0);
-        let vars = ctx.get_vars();
-        
+        //let vars : Vec<ModelVar> = ctx.get_vars().map(ModelVar::clone).collect();
+
         let max_seen = thread::scope(|s| {
             let mut handles = Vec::new();
             for _ in 0..threads {
@@ -62,7 +61,7 @@ impl SMCMaxSeen {
                     while runs < self.runs_needed {
                         let iterator = model.random_run(initial, bound.clone());
                         for (state, _, _) in iterator {
-                            let tokens = state.marking_sum(vars.iter());
+                            let tokens = state.marking_sum(ctx.get_vars());
                             if tokens > local_max {
                                 local_max = tokens;
                             }
@@ -75,7 +74,7 @@ impl SMCMaxSeen {
                     }
                     local_max
                 });
-                
+
                 handles.push(handle);
             }
             let mut threads_max = 0;

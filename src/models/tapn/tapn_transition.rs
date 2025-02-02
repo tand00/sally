@@ -6,7 +6,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::computation::combinatory::{CartesianProduct, KInVec};
-use crate::computation::intervals::{ContinuousSet, Convex, Delta, ToPositive};
+use crate::computation::convex::{ContinuousSet, Convex, Delta, ToPositive};
 use crate::computation::probability::RealDistribution;
 use crate::models::action::Action;
 use crate::models::model_context::ModelContext;
@@ -64,8 +64,8 @@ impl Node for TAPNTransition {
 impl TAPNTransition {
 
     pub fn new(
-        label : Label, 
-        from : Vec<(Label, TAPNEdgeData)>, 
+        label : Label,
+        from : Vec<(Label, TAPNEdgeData)>,
         to : Vec<(Label, i32)>,
         inhibitors : Vec<(Label, TAPNEdgeData)>,
         transports : Vec<(Label, Label, TAPNEdgeData)>

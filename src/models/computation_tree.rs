@@ -1,6 +1,6 @@
 use std::{ops::{Add, Div, Mul, Neg, Sub}, sync::{Mutex, RwLock}};
 
-use crate::computation::intervals::Convex;
+use crate::computation::convex::Convex;
 
 use super::{time::Interval, Model};
 
@@ -35,49 +35,49 @@ impl<'a> ComputationTree<'a> {
 
     pub fn constraint(&self) -> Interval<f64> {
         match self {
-            AddBranches(c1, c2) => 
+            AddBranches(c1, c2) =>
                 c1.constraint() + c2.constraint(),
-            SubBranches(c1, c2) => 
+            SubBranches(c1, c2) =>
                 c1.constraint() - c2.constraint(),
-            MulBranches(c1, c2) => 
+            MulBranches(c1, c2) =>
                 c1.constraint() + todo!(),
             DivBranches(c1, c2) => todo!(),
             ScalBranch(s, c1) => c1.constraint() * (*s),
             Leaf(p) => p.constraint,
             Constant(_) => Interval::full(),
-            ApplyFunc(diff_func, c) => 
+            ApplyFunc(diff_func, c) =>
                 diff_func.interval_image(c.constraint()),
-            
+
         }
     }
 
     pub fn value(&self) -> Option<f64> {
         match self {
-            AddBranches(c1, c2) => 
+            AddBranches(c1, c2) =>
                 match (c1.value(), c2.value()) {
                     (Some(a), Some(b)) => Some(a + b),
                     _ => None
                 },
-            SubBranches(c1, c2) => 
+            SubBranches(c1, c2) =>
                 match (c1.value(), c2.value()) {
                     (Some(a), Some(b)) => Some(a - b),
                     _ => None
                 },
-            MulBranches(c1, c2) => 
+            MulBranches(c1, c2) =>
                 match (c1.value(), c2.value()) {
                     (Some(a), Some(b)) => Some(a * b),
                     _ => None
                 },
-            DivBranches(c1, c2) => 
+            DivBranches(c1, c2) =>
                 match (c1.value(), c2.value()) {
                     (Some(a), Some(b)) => Some(a / b),
                     _ => None
                 },
-            ScalBranch(s, c1) => 
+            ScalBranch(s, c1) =>
                 c1.value().map(|x| (*s) * x),
             Leaf(p) => p.value,
             Constant(c) => Some(*c),
-            ApplyFunc(diff_func, c) => 
+            ApplyFunc(diff_func, c) =>
                 c.value().map(diff_func),
         }
     }

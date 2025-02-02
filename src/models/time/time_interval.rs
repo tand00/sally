@@ -4,7 +4,7 @@ use num_traits::{Bounded, One, Zero};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::computation::intervals::{Convex, Delta, Disjoint, Measurable, ToPositive};
+use crate::computation::convex::{Convex, Delta, Disjoint, Measurable, ToPositive};
 
 use super::{clock_value::TimeType, Bound, ClockValue, RealTimeBound, TimeBound};
 
@@ -69,13 +69,13 @@ impl<T> Interval<T> {
         Interval(Bound::zero(), bound)
     }
 
-    pub fn lower(&self) -> Bound<T> 
+    pub fn lower(&self) -> Bound<T>
         where T : Copy
     {
         self.0
     }
 
-    pub fn upper(&self) -> Bound<T> 
+    pub fn upper(&self) -> Bound<T>
         where T : Copy
     {
         self.1
@@ -90,14 +90,14 @@ impl<T : TimeType + Scalar + PartialOrd + Bounded + Add<Output = T>> Add for Int
     }
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Bounded + Sub<Output = T>> Sub for Interval<T> { 
+impl<T : TimeType + Scalar + PartialOrd + Bounded + Sub<Output = T>> Sub for Interval<T> {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
         Interval(self.0 - rhs.1, self.1 - rhs.0)
     }
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Bounded> Mul for Interval<T> { 
+impl<T : TimeType + Scalar + PartialOrd + Bounded> Mul for Interval<T> {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         self.intersection(rhs)

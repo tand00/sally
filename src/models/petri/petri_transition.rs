@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 
-use crate::computation::intervals::Convex;
+use crate::computation::convex::Convex;
 use crate::models::action::Action;
 use crate::models::model_clock::ModelClock;
 use crate::models::model_context::ModelContext;
@@ -68,7 +68,7 @@ impl PetriTransition {
     pub fn safe(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
         PetriTransition {
             label,
-            from : from.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(), 
+            from : from.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(),
             to : to.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(),
             interval,
             guard : Condition::True,

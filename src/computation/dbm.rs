@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::time::{Bound, ClockValue, Interval};
 
-use super::intervals::{ContinuousSet, Convex, Delta, Disjoint, Measurable};
+use super::convex::{ContinuousSet, Convex, Delta, Disjoint, Measurable};
 
 pub type IntBound = Bound<i32>;
 pub type IntInterval = Interval<i32>;
@@ -23,7 +23,7 @@ pub struct DBM {
 // We add an imaginary variable, always equal to zero, at the beginning of the matrix. That way, we can encode rectangular constraints
 // Algorithms inspired by Bengtsson et Yi, « Timed Automata » https://doi.org/10.1007/978-3-540-27755-2_3.
 impl DBM {
-    
+
     pub fn new(vars: usize) -> Self {
         DBM {
             constraints: DMatrix::from_fn(vars + 1, vars + 1, |i, j| {
@@ -121,7 +121,7 @@ impl DBM {
     pub fn remove_var(&mut self, var_i: usize) {
         //self.free_clock(var_i);
         let mut constraints = mem::replace(
-            &mut self.constraints, 
+            &mut self.constraints,
             DMatrix::from_vec(0, 0, vec![])
         );
         constraints = constraints.remove_column(var_i).remove_row(var_i);
@@ -149,7 +149,7 @@ impl DBM {
             *x = x.existential_projection(vars)
         });
         let interm = interm.complement();
-        
+
         ContinuousSet::from(self.existential_projection(vars)).intersection(interm)
     }
 
@@ -365,7 +365,7 @@ impl Convex<DatesVector> for DBM {
         }
         self.constraints >= other.constraints
     }
-    
+
     // Might cause bad performances, but ensure no duplicates... I don't know
     fn fuse(set: &mut Vec<Self>, elem: Self) {
         for x in set.iter() {
@@ -388,12 +388,20 @@ impl Delta<IntBound> for DBM {
     }
 }
 
+/// Experimental measure, volume of the englobing square
 impl Measurable for DBM {
     fn len(&self) -> f64 {
         if self.is_empty() {
             return 0.0;
         }
-        
-        todo!()
+        let mut s = 1.0f64;
+        for i in 0..self.vars_count() {
+            let rect = self.rectangulars(i + 1);
+            s *= rect.len();
+            if s.is_zero() {
+                return 0.0;
+            }
+        }
+        s
     }
 }

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use num_traits::Zero;
 
-use crate::{computation::{intervals::{ContinuousSet, Delta, ToPositive}, probability::ProbabilisticChoice}, models::{action::Action, run::RunStatus, time::{ClockValue, RealTimeInterval}, Model, ModelState}, verification::VerificationBound};
+use crate::{computation::{convex::{ContinuousSet, Delta, ToPositive}, probability::ProbabilisticChoice}, models::{action::Action, run::RunStatus, time::{ClockValue, RealTimeInterval}, Model, ModelState}, verification::VerificationBound};
 
 use super::{tapn_transition::{FiringMode, TAPNTransition}, TAPNPlaceList, TAPNPlaceListReader, TAPN};
 
@@ -23,7 +23,7 @@ impl<'a> TAPNRunGenerator<'a> {
 
     pub fn generate(tapn : &'a TAPN, initial_state : &'a ModelState, bound : VerificationBound) -> Self {
         let mut generator = TAPNRunGenerator {
-            tapn, 
+            tapn,
             initial_state,
             bound,
             intervals : vec![ContinuousSet::EmptySet ; tapn.transitions.len()],
@@ -75,7 +75,7 @@ impl<'a> TAPNRunGenerator<'a> {
     }
 
     pub fn get_winner_and_delay(&mut self) -> (Option<usize>, ClockValue) {
-        let mut delay = ClockValue::infinity(); 
+        let mut delay = ClockValue::infinity();
         let mut candidates : Vec<(usize, f64)> = Vec::new();
         let mut infinite_weights : Vec<usize> = Vec::new();
         let mut null_weights : Vec<usize> = Vec::new();
@@ -181,7 +181,7 @@ impl<'a> TAPNRunGenerator<'a> {
 impl<'a> Iterator for TAPNRunGenerator<'a> {
 
     type Item = (Rc<ModelState>, ClockValue, Option<Action>);
-    
+
     fn next(&mut self) -> Option<Self::Item> {
         if !self.started {
             self.started = true;
@@ -195,7 +195,7 @@ impl<'a> Iterator for TAPNRunGenerator<'a> {
         self.run_status.time += delay;
 
         self.time_forward(delay);
-        
+
         if let Some(winner) = winner {
             let place_list = TAPNPlaceListReader::from(next_state.storage(&self.tapn.tokens_storage));
             let in_tokens = self.select_token_set(winner, place_list);
@@ -212,5 +212,5 @@ impl<'a> Iterator for TAPNRunGenerator<'a> {
             return Some((Rc::clone(&self.run_status.current_state), delay, None));
         }
     }
-    
+
 }

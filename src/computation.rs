@@ -3,7 +3,7 @@ mod dbm;
 
 pub mod virtual_memory;
 pub mod combinatory;
-pub mod intervals;
+pub mod convex;
 pub mod probability;
 pub mod fix_point;
 

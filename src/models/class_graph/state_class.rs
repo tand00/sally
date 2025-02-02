@@ -5,7 +5,7 @@ use nalgebra::DVector;
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::{intervals::Convex, virtual_memory::{EvaluationType, VirtualMemory}, DBM}, models::{action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue, Label, ModelState, Node}, verification::Verifiable};
+use crate::{computation::{convex::{Convex, Disjoint}, virtual_memory::{EvaluationType, VirtualMemory}, DBM}, models::{action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue, Label, ModelState, Node, UNMAPPED_ID}, verification::Verifiable};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StateClass {
@@ -83,6 +83,18 @@ impl StateClass {
         s.finish()
     }
 
+    pub fn down(&self) -> Self {
+        let mut closed = self.clone();
+        closed.dbm = closed.dbm.down();
+        closed
+    }
+
+    pub fn up(&self) -> Self {
+        let mut closed = self.clone();
+        closed.dbm = closed.dbm.up();
+        closed
+    }
+
 }
 
 impl Verifiable for StateClass {
@@ -142,7 +154,7 @@ impl Clone for StateClass {
             dbm : self.dbm.clone(),
             to_dbm_index : self.to_dbm_index.clone(),
             from_dbm_index : self.from_dbm_index.clone(),
-            index : self.index,
+            index : UNMAPPED_ID,
             predecessors : Default::default(),
         }
     }
