@@ -363,6 +363,21 @@ impl Model for PetriNet {
     fn get_id(&self) -> usize {
         self.id
     }
+    
+    fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a> {
+        let iter = self.places.iter().map(|p| p.as_node());
+        let iter = iter.chain(self.transitions.iter().map(|t| t.as_node()));
+        Box::new(iter)
+    }
+    
+    fn edges(&self) -> Vec<Edge<String, Label, Label>> {
+        let iter = self.transitions.iter().map(|t| {
+            let iter = t.input_edges.get().unwrap().iter().map(Edge::stringify);
+            iter.chain(t.output_edges.get().unwrap().iter().map(Edge::stringify))
+        }).flatten();
+        iter.collect()
+    }
+    
 }
 
 // Display implementations ---

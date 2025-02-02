@@ -1,23 +1,22 @@
-use std::{io::Write, sync::{Arc, RwLock}};
+use std::{io::{Cursor, Write}, sync::{Arc, RwLock}};
 
 use quick_xml::{events::BytesText, ElementWriter, Writer};
 
 use super::{Edge, Label};
 
 pub type NodePos = (f64,f64);
+pub type OutBuff = Vec<u8>;
 
 /// Generic trait that should be implemented by all types of nodes to allow automatic rendering
 pub trait Node {
+
     fn get_label(&self) -> Label;
-}
 
-pub trait GraphicNode {
-    fn design_node<'a, W : Write>(&self, elem : ElementWriter<W>);
-    fn write_svg<'a, W : Write>(&self, writer : &'a mut Writer<W>, pos : NodePos);
-}
+    fn as_node(&self) -> &dyn Node where Self : Sized {
+        self
+    }
 
-impl<T : Node> GraphicNode for T {
-    fn design_node<'a, W : Write>(&self, elem : ElementWriter<W>) {
+    fn design_node<'a>(&self, elem : ElementWriter<OutBuff>) {
         let label = self.get_label();
         elem.write_inner_content(|writer| -> Result<(), quick_xml::Error> {
             writer.create_element("circle")
@@ -29,12 +28,13 @@ impl<T : Node> GraphicNode for T {
         });
     }
 
-    fn write_svg<'a, W : Write>(&self, writer : &'a mut Writer<W>, pos : NodePos) {
+    fn write_svg<'a>(&self, writer : &'a mut Writer<OutBuff>, pos : NodePos) {
         let elem = writer.create_element("g")
             .with_attribute(("id", (/*prefix.clone() +*/ self.get_label()).as_ref()))
             .with_attribute(("transform", format!("translate({} {})", pos.0, pos.1).as_str()));
         self.design_node(elem);
     }
+
 }
 
 impl Node for usize {

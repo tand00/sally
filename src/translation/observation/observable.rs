@@ -58,5 +58,11 @@ impl Observable for Action {
 }
 
 impl Observable for StateClass { 
-    type Observed = Self; 
+    type Observed = Self;
+    
+    fn observe(&self, ctx : &ObservationContext, fun : &ObservationFunction) -> Self::Observed {
+        todo!()
+    } 
+
+    
 }

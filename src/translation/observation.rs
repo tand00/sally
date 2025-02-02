@@ -41,7 +41,7 @@ impl<T : Model> PartialObservation<T> {
 
 }
 
-impl<T : Model> Model for PartialObservation<T> {
+/*impl<T : Model> Model for PartialObservation<T> {
 
     fn get_meta() -> ModelMeta {
         let sub_chars = T::get_meta();
@@ -90,7 +90,7 @@ impl<T : Model> Model for PartialObservation<T> {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
-}
+}*/
 
 impl<T : ModelObject + Clone> Translation for PartialObservation<T> {
 

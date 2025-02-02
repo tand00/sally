@@ -123,6 +123,18 @@ impl<T, U, V> Edge<T, U, V> {
         }
     }
 
+    pub fn stringify(&self) -> Edge<String, Label, Label>
+        where T : ToString
+    {
+        Edge {
+            from: self.from.clone(), 
+            to: self.to.clone(),
+            weight: self.weight.to_string().into(),
+            ref_from : None,
+            ref_to : None,
+        }
+    }
+
 }
 
 impl<U, V> Edge<i32, U, V> {

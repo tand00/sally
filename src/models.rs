@@ -12,7 +12,6 @@ use std::{
 pub use edge::Edge;
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
-use node::GraphicNode;
 pub use node::Node;
 use num_traits::Zero;
 use rand::{seq::SliceRandom, thread_rng, Rng};
@@ -216,8 +215,9 @@ pub trait Model: Any {
         self.get_id() != UNMAPPED_ID
     }
 
-    fn nodes_iter(&self) -> impl Iterator<Item = &dyn GraphicNode>;
-    fn edges_iter(&self) -> impl Iterator<Item = &Edge<Label, Label, Label>>;
+    fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a>;
+    
+    fn edges(&self) -> Vec<Edge<String,Label,Label>>;
 
 }
 
