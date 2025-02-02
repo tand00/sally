@@ -252,6 +252,9 @@ impl fmt::Display for DBM {
 impl Convex<DatesVector> for DBM {
 
     fn contains(&self, elem: &DatesVector) -> bool {
+        if self.vars_count() == 0 {
+            return true;
+        }
         if elem.len() != self.vars_count() || self.is_empty() {
             return false;
         }
@@ -325,11 +328,6 @@ impl Convex<DatesVector> for DBM {
             }
         }
         Disjoint::from(res)
-    }
-
-    fn difference(self, other: Self) -> Disjoint<DatesVector, Self> {
-        let disj = other.complement();
-        disj.intersection(self)
     }
 
     fn intersects(&self, other: &Self) -> bool {

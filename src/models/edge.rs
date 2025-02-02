@@ -111,6 +111,18 @@ impl<T, U, V> Edge<T, U, V> {
         self.has_source() && self.has_target()
     }
 
+    pub fn map<F,W>(&self, fun : F) -> Edge<W,U,V> 
+        where F : Fn (&T) -> W 
+    {
+        Edge {
+            from: self.from.clone(), 
+            to: self.to.clone(),
+            weight: fun(&self.weight),
+            ref_from : None,
+            ref_to : None,
+        }
+    }
+
 }
 
 impl<U, V> Edge<i32, U, V> {

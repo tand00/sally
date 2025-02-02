@@ -45,6 +45,12 @@ impl Label {
 
 }
 
+impl AsRef<str> for Label {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl Default for Label {
     fn default() -> Self {
         Label::new()

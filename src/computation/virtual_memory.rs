@@ -24,7 +24,7 @@ impl VirtualMemory {
     }
 
     pub fn evaluate_at<T : Copy>(&self, address : usize) -> T {
-        if address + size_of::<T>() > self.size() {
+        if address + size_of::<T>() > self.len() {
             panic!("Pointer out of bound !")
         }
         let storage = self.storage.as_ptr();
@@ -38,7 +38,7 @@ impl VirtualMemory {
 
     pub fn set_at<T : Copy>(&mut self, address : usize, value : T) {
         let type_size = size_of::<T>();
-        if address + type_size > self.size() {
+        if address + type_size > self.len() {
             panic!("Pointer out of bound !")
         }
         let storage = self.storage.as_mut_ptr();
@@ -49,7 +49,7 @@ impl VirtualMemory {
     }
 
     pub fn evaluate(&self, var : &ModelVar) -> EvaluationType { 
-        if !var.is_mapped() || (var.get_address() + var.size() > self.size()) {
+        if !var.is_mapped() || (var.get_address() + var.size() > self.len()) {
             panic!("Pointer out of bound !")
         }
         let address = var.get_address();
@@ -65,7 +65,7 @@ impl VirtualMemory {
     }
 
     pub fn set(&mut self, var : &ModelVar, value : EvaluationType) {
-        if !var.is_mapped() || (var.get_address() + var.size() > self.size()) {
+        if !var.is_mapped() || (var.get_address() + var.size() > self.len()) {
             panic!("Pointer out of bound !")
         }
         let address = var.get_address();
@@ -80,7 +80,7 @@ impl VirtualMemory {
         }
     }
 
-    pub fn size(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.storage.len()
     }
 
@@ -93,12 +93,12 @@ impl VirtualMemory {
             panic!("Can't redefine already mapped var !");
         }
         var.set_type(var_type);
-        var.set_address(self.size());
-        self.storage.resize(self.size() + var.size(), 0);
+        var.set_address(self.len());
+        self.storage.resize(self.len() + var.size(), 0);
     }
 
     pub fn copy_from(&mut self, other : &VirtualMemory) {
-        let to_copy = min(other.size(), self.size());
+        let to_copy = min(other.len(), self.len());
         self.storage[0..to_copy].copy_from_slice(&other.storage[0..to_copy])
     }
 
@@ -107,7 +107,7 @@ impl VirtualMemory {
     }
 
     pub fn size_delta(&mut self, delta : usize) {
-        self.storage.resize(self.size() + delta, 0)
+        self.storage.resize(self.len() + delta, 0)
     }
 
 }
@@ -119,7 +119,7 @@ impl Display for VirtualMemory {
             return write!(f, "VirtualMemory[EMPTY]");
         }
         write!(f, "VirtualMemory[")?;
-        for cursor in 0..self.size() {
+        for cursor in 0..self.len() {
             if cursor % 16 == 0 {
                 write!(f, "\n{:x} |\t", cursor)?;
             }

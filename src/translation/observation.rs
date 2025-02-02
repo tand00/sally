@@ -1,13 +1,15 @@
 use std::{cmp::max, collections::{HashMap, HashSet}};
 
 use function::{ObservationContext, ObservationFunction, VarPolicy};
+use observable::Observable;
 
-use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
+use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, class_graph::StateClass, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
 use crate::log;
 
 use super::{Translation, TranslationError, TranslationMeta, TranslationResult, TranslationType};
 
 pub mod function;
+pub mod observable;
 
 pub struct PartialObservation<T : Model> {
     pub id : usize,
@@ -30,40 +32,11 @@ impl<T : Model> PartialObservation<T> {
     }
 
     pub fn observe(&self, state : &ModelState) -> ModelState {
-        let mut observed = self.obs_ctx.observed.make_empty_state();
-        let var_junction : fn(EvaluationType, EvaluationType) -> EvaluationType =
-        match self.observation_function.var_policy {
-            VarPolicy::SumVars => |x,y| x + y,
-            VarPolicy::MaxVar => |x,y| max(x, y),
-            VarPolicy::UnitVar => |x,_| if x > 0 { 1 } else { 0 },
-        };
-        for (x,o) in self.obs_ctx.links.vars.iter() {
-            let value = var_junction(state.evaluate_var(x), observed.evaluate_var(o));
-            observed.set_marking(o, value);
-        }
-        for (x,o) in self.obs_ctx.links.clocks.iter() {
-            if state.is_enabled(x) {
-                observed.set_clock(o, state.get_clock_value(x));
-                break;
-            }
-        }
-        observed.storages = state.storages.clone();
-        observed.deadlocked = state.deadlocked;
-        observed
+        state.observe(&self.obs_ctx, &self.observation_function)
     }
 
     pub fn observe_action(&self, action : &Action) -> Action {
-        let base = action.base();
-        if !self.obs_ctx.links.actions.contains_key(&base) {
-            return Action::Epsilon;
-        }
-        let result = self.obs_ctx.links.actions[&base].clone();
-        match action {
-            Action::Epsilon => Action::Epsilon,
-            Action::Base(_) => result,
-            Action::Sync(_, a, b) => result.sync(Action::clone(a), Action::clone(b)),
-            Action::WithData(_, d) => result.with_data(d.clone())
-        }
+        action.observe(&self.obs_ctx, &self.observation_function)
     }
 
 }
@@ -83,7 +56,7 @@ impl<T : Model> Model for PartialObservation<T> {
         todo!()
     }
 
-    fn delay(&self, state : ModelState, dt : crate::models::time::ClockValue) -> Option<ModelState> {
+    fn delay(&self, state : ModelState, dt : ClockValue) -> Option<ModelState> {
         todo!()
     }
 

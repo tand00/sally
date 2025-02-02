@@ -12,6 +12,7 @@ use std::{
 pub use edge::Edge;
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
+use node::GraphicNode;
 pub use node::Node;
 use num_traits::Zero;
 use rand::{seq::SliceRandom, thread_rng, Rng};
@@ -39,6 +40,7 @@ pub mod tapn;
 pub mod time;
 pub mod timed_automata;
 pub mod word;
+pub mod beliefs_graph;
 
 use crate::{computation::virtual_memory::EvaluationType, verification::VerificationBound};
 
@@ -213,6 +215,10 @@ pub trait Model: Any {
     fn is_compiled(&self) -> bool {
         self.get_id() != UNMAPPED_ID
     }
+
+    fn nodes_iter(&self) -> impl Iterator<Item = &dyn GraphicNode>;
+    fn edges_iter(&self) -> impl Iterator<Item = &Edge<Label, Label, Label>>;
+
 }
 
 // Blanket implementation to add downgrading capabilities and calls to statics for each object implementing Model
