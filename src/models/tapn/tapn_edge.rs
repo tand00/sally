@@ -15,7 +15,7 @@ pub struct TAPNEdgeData {
 impl Display for TAPNEdgeData {
 
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} : x")
+        write!(f, "{} : x{}", self.interval, self.weight)
     }
 
 }

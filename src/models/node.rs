@@ -31,6 +31,7 @@ pub trait Node {
     fn write_svg<'a>(&self, writer : &'a mut Writer<OutBuff>, pos : NodePos) {
         let elem = writer.create_element("g")
             .with_attribute(("id", (/*prefix.clone() +*/ self.get_label()).as_ref()))
+            .with_attribute(("class", "node"))
             .with_attribute(("transform", format!("translate({} {})", pos.0, pos.1).as_str()));
         self.design_node(elem);
     }
