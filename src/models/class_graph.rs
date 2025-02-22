@@ -18,7 +18,7 @@ use super::digraph::search_strategy::{GraphTraversal, NeighborsFinder, SearchStr
 use super::model_context::ModelContext;
 use super::model_var::{ModelVar, VarType};
 use super::time::ClockValue;
-use super::{lbl, Edge, Model, ModelMeta, ModelState, CONTROLLABLE, SYMBOLIC, TIMED, UNMAPPED_ID};
+use super::{lbl, Edge, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, SYMBOLIC, TIMED, UNMAPPED_ID};
 use super::petri::{PetriNet, PetriTransition};
 
 const CLASS_LIMIT : usize = u16::MAX as usize;
@@ -237,6 +237,15 @@ impl Model for ClassGraph {
 
     fn get_id(&self) -> usize {
         self.id
+    }
+
+    fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn super::Node> + 'a> {
+        let iter = self.classes.iter().map(|c| c.as_node());
+        Box::new(iter)
+    }
+
+    fn edges(&self) -> Vec<Edge<String, Label, Label>> {
+        self.edges.iter().map(Edge::stringify).collect()
     }
 
 }

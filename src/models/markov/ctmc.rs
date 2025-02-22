@@ -46,14 +46,22 @@ impl Model for CTMarkovChain {
         todo!()
     }
 
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
-        -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
+        -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
     fn get_id(&self) -> usize {
         self.id
+    }
+
+    fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a> {
+        todo!()
+    }
+
+    fn edges(&self) -> Vec<crate::models::Edge<String,Label,Label>> {
+        todo!()
     }
 
 }

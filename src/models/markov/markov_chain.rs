@@ -2,9 +2,11 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::probability::ProbabilisticChoice, models::{action::Action, lbl, model_context::ModelContext, model_var::{ModelVar, VarType}, time::ClockValue, CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
+use crate::{computation::probability::ProbabilisticChoice, models::{action::Action, lbl, model_context::ModelContext, model_var::{ModelVar, VarType}, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
 
 use super::markov_node::MarkovNode;
+
+pub const MarkovActiveNodeVarName : &str = "ActiveNode";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarkovChain {
@@ -122,7 +124,7 @@ impl Model for MarkovChain {
             self.build_node_outputs(context, node);
         }
         self.nodes = nodes;
-        self.current_node = context.add_var(lbl("CurrentNode"), VarType::VarU16);
+        self.current_node = context.add_var(lbl(MarkovActiveNodeVarName), VarType::VarU16);
         Ok(())
     }
 
@@ -134,6 +136,16 @@ impl Model for MarkovChain {
 
     fn get_id(&self) -> usize {
         self.id
+    }
+
+    fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a> {
+        Box::new(self.nodes.iter().map(|n| n.as_node()))
+    }
+
+    fn edges(&self) -> Vec<Edge<String,Label,Label>> {
+        self.nodes.iter().map(|n| {
+            n.outputs.iter().map(f)
+        })
     }
 
 }

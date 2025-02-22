@@ -1,10 +1,11 @@
-use std::{io::{Cursor, Write}, sync::{Arc, RwLock}};
+use std::{collections::HashMap, sync::{Arc, RwLock}};
 
 use quick_xml::{events::BytesText, ElementWriter, Writer};
 
-use super::{Edge, Label};
+use super::{model_param::NamedParams, Edge, Label};
 
-pub type NodePos = (f64,f64);
+pub type NodePos = (i32,i32);
+pub type NodePosMap = HashMap<Label, NodePos>;
 pub type OutBuff = Vec<u8>;
 
 /// Generic trait that should be implemented by all types of nodes to allow automatic rendering
@@ -12,9 +13,19 @@ pub trait Node {
 
     fn get_label(&self) -> Label;
 
-    fn as_node(&self) -> &dyn Node where Self : Sized {
+    fn as_node(&self) -> &dyn Node
+        where Self : Sized
+    {
         self
     }
+
+    fn get_params(&self) -> NamedParams {
+        Default::default()
+    }
+
+    fn apply_params(&mut self, params : NamedParams) {
+        let _ = params;
+     }
 
     fn design_node<'a>(&self, elem : ElementWriter<OutBuff>) {
         let label = self.get_label();
@@ -47,7 +58,7 @@ impl Node for usize {
 // T is the data type carried by the node, U is the data type carried by the edges
 pub struct DataNode<T, U> {
     pub element : T,
-    pub out_edges : RwLock<Vec<Arc<Edge<U, Self, Self>>>>, 
+    pub out_edges : RwLock<Vec<Arc<Edge<U, Self, Self>>>>,
     pub in_edges : RwLock<Vec<Arc<Edge<U, Self, Self>>>>,
     pub index : usize,
 }
