@@ -11,6 +11,10 @@ impl<'a, T> KInVec<'a, T> {
             chosen: (0..k).collect(),
         }
     }
+    #[inline]
+    pub fn k(&self) -> usize {
+        self.chosen.len()
+    }
 }
 
 impl<'a, T> Iterator for KInVec<'a, T> {
@@ -19,13 +23,13 @@ impl<'a, T> Iterator for KInVec<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let n = self.vec.len();
-        let k = self.chosen.len();
+        let k = self.k();
         let last_i = k - 1;
 
         if k > n || self.chosen[last_i] >= n {
             return None;
         }
-            
+
         let res = Some(self.chosen.iter().map(|i| &self.vec[*i]).collect());
         self.chosen[last_i] += 1;
         if self.chosen[last_i] == n && self.chosen[0] < n - k {
@@ -69,7 +73,7 @@ impl<'a, T> Iterator for CartesianProduct<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         let n_vecs = self.vecs.len();
         let last_i = n_vecs - 1;
-        
+
         if self.chosen[0] == self.vecs[0].len() {
             return None;
         }
@@ -89,6 +93,36 @@ impl<'a, T> Iterator for CartesianProduct<'a, T> {
         }
 
         Some(res)
+    }
+
+}
+
+pub struct Parts<'a, T> {
+    vec : &'a [T],
+    intern_iter : KInVec<'a, T>
+}
+
+impl<'a, T> Parts<'a, T> {
+    pub fn of(value: &'a [T]) -> Self {
+        Parts {
+            vec : value,
+            intern_iter : KInVec::of(1, value)
+        }
+    }
+}
+
+impl<'a, T> Iterator for Parts<'a, T> {
+
+    type Item = Vec<&'a T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let k = self.intern_iter.k();
+        let mut next_part = self.intern_iter.next();
+        if next_part.is_none() {
+            self.intern_iter = KInVec::of(k + 1, &self.vec);
+            next_part = self.intern_iter.next();
+        }
+        next_part
     }
 
 }
