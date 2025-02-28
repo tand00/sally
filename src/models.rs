@@ -40,6 +40,7 @@ pub mod time;
 pub mod timed_automata;
 pub mod word;
 pub mod beliefs_graph;
+pub mod model_param;
 
 use crate::{computation::virtual_memory::EvaluationType, verification::VerificationBound};
 
@@ -216,7 +217,7 @@ pub trait Model: Any {
     }
 
     fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a>;
-    
+
     fn edges(&self) -> Vec<Edge<String,Label,Label>>;
 
 }

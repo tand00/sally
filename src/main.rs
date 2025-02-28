@@ -72,7 +72,7 @@ fn main() {
     let initial_state = project.initial_state.clone().unwrap();
 
     println!("{:?}", initial_state);
-    
+
     let mut prob_est = ProbabilityEstimation::fixed_runs(1000000, 0.95);
     prob_est.parallel_verify(net.model_object(), &initial_state, &query);
 
@@ -102,7 +102,7 @@ fn build_solver() -> ModelSolvingGraph {
 fn sample_tapn() -> ModelProject {
     let p0 = TAPNPlace::new_with_invariant(lbl("p0"), Large(1));
     let mut t0 = TAPNTransition::new(
-        lbl("t0"), 
+        lbl("t0"),
         vec![
             (lbl("p0"), TAPNEdgeData {
                 interval : TimeInterval::new(Large(0), Large(1)),

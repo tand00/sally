@@ -4,7 +4,7 @@ use num_traits::Zero;
 
 use crate::verification::{smc::RandomRunIterator, VerificationBound};
 
-use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound}, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState, NONE};
+use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelObject, ModelState, Node, NONE};
 
 pub struct ModelNetwork {
     pub id : usize,
@@ -81,7 +81,7 @@ impl Model for ModelNetwork {
                 min_delay = model_delay;
             }
         }
-        if is_timed { 
+        if is_timed {
             min_delay
         } else {
             RealTimeBound::zero()
@@ -110,14 +110,26 @@ impl Model for ModelNetwork {
         Ok(())
     }
 
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound) 
-        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a> 
+    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
     fn get_id(&self) -> usize {
         self.id
+    }
+
+    fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a> {
+        Box::new(self.models.iter().map(|m| m.nodes_iter()).flatten())
+    }
+
+    fn edges(&self) -> Vec<Edge<String,Label,Label>> {
+        self.models.iter().fold(Vec::new(), |mut x, m| {
+            let mut edges = m.edges();
+            x.append(&mut edges);
+            x
+        })
     }
 
 }
