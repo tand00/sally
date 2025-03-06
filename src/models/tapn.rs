@@ -279,7 +279,7 @@ impl Model for TAPN {
         let iter = iter.chain(self.transitions.iter().map(|t| t.as_node()));
         Box::new(iter)
     }
-    
+
     fn edges(&self) -> Vec<Edge<String, Label, Label>> {
         let iter = self.transitions.iter().map(|t| {
             let iter = t.input_edges.get().unwrap().iter().map(Edge::stringify);

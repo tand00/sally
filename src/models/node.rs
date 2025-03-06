@@ -55,6 +55,12 @@ impl Node for usize {
     }
 }
 
+impl Node for i32 {
+    fn get_label(&self) -> Label {
+        Label::from(self.to_string())
+    }
+}
+
 // T is the data type carried by the node, U is the data type carried by the edges
 pub struct DataNode<T, U> {
     pub element : T,

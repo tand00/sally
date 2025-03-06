@@ -1,3 +1,7 @@
+use std::{iter::Cloned, ops::{Add, Mul, Sub}, process::Output, slice::Iter};
+
+use num_traits::Zero;
+
 /// Returns every combination of K elements of a slice, keeping the relative order
 pub struct KInVec<'a, T> {
     vec: &'a [T],
@@ -14,6 +18,10 @@ impl<'a, T> KInVec<'a, T> {
     #[inline]
     pub fn k(&self) -> usize {
         self.chosen.len()
+    }
+    #[inline]
+    pub fn chosen_indexs<I>(&'a self) -> Cloned<Iter<'a, usize>> {
+        self.chosen.iter().cloned()
     }
 }
 
