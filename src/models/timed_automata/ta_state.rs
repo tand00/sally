@@ -1,8 +1,8 @@
 use std::{sync::{Arc, OnceLock}, usize};
 
-use crate::models::{expressions::Condition, model_context::ModelContext, model_var::{ModelVar, VarType}, time::RealTimeBound, CompilationError, CompilationResult, Label, ModelState};
+use crate::models::{expressions::Condition, model_context::ModelContext, model_var::{ModelVar, VarType}, time::RealTimeBound, CompilationError, CompilationResult, Label, ModelState, Node};
 
-use super::TATransition;
+use super::ta_transition::TAEdge;
 
 const TA_STATE_VAR_TYPE : VarType = VarType::VarU8;
 
@@ -12,8 +12,8 @@ pub struct TAState {
     pub invariants : Condition,
     pub var : ModelVar,
     pub accepting : bool,
-    pub downsteam : OnceLock<Vec<Arc<TATransition>>>,
-    pub upstream : OnceLock<Vec<Arc<TATransition>>>,
+    pub downsteam : OnceLock<Vec<Arc<TAEdge>>>,
+    pub upstream : OnceLock<Vec<Arc<TAEdge>>>,
     pub index : usize
 }
 
@@ -56,6 +56,12 @@ impl TAState {
         Ok(())
     }
 
+}
+
+impl Node for TAState {
+    fn get_label(&self) -> Label {
+        self.get_name()
+    }
 }
 
 impl Clone for TAState {

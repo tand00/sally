@@ -5,16 +5,17 @@ mod ta_transition;
 
 use num_traits::Zero;
 pub use ta_state::TAState;
+use ta_transition::TAEdge;
 pub use ta_transition::TATransition;
 
 use crate::verification::{smc::RandomRunIterator, VerificationBound};
 
-use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelState, CONTROLLABLE, TIMED, UNMAPPED_ID};
+use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, TIMED, UNMAPPED_ID};
 
 pub struct TimedAutomaton {
     pub id: usize,
     pub states: Vec<Arc<TAState>>,
-    pub transitions: Vec<Arc<TATransition>>,
+    pub transitions: Vec<Arc<TAEdge>>,
     pub clocks: Vec<ModelClock>,
     pub actions_dic: HashMap<Action, usize>,
     pub state_cache: usize // Store current active state, speed optimization at the cost of space. Might be worst
@@ -22,7 +23,7 @@ pub struct TimedAutomaton {
 
 impl TimedAutomaton {
 
-    pub fn new(states : Vec<TAState>, transitions : Vec<TATransition>, clocks : Vec<Label>) -> Self {
+    pub fn new(states : Vec<TAState>, transitions : Vec<TAEdge>, clocks : Vec<Label>) -> Self {
         TimedAutomaton {
             id : UNMAPPED_ID,
             states: states.into_iter().map(Arc::new).collect(),
@@ -62,7 +63,7 @@ impl Model for TimedAutomaton {
         let place = self.get_active_place(state);
         let transis = place.downsteam.get().unwrap();
         transis.iter().filter_map(|t| {
-            if t.is_enabled(state) { Some(t.get_action()) } else { None }
+            if t.data().is_enabled(state) { Some(t.data().get_action()) } else { None }
         }).collect()
     }
 
@@ -107,24 +108,20 @@ impl Model for TimedAutomaton {
         let mut compiled_transitions = Vec::new();
         self.actions_dic.clear();
         let mut downstream = self.states.iter().map(|s| (s.get_name(), Vec::new()))
-            .collect::<HashMap<Label, Vec<Arc<TATransition>>>>();
+            .collect::<HashMap<Label, Vec<Arc<TAEdge>>>>();
         let mut upstream = downstream.clone();
         for transition in self.transitions.iter() {
-            let mut compiled_transition = TATransition::clone(transition);
-            let place_from = &places_dic[&compiled_transition.from];
-            let place_to = &places_dic[&compiled_transition.to];
-            compiled_transition.merge_target_invariants(place_to);
-            if compiled_transition.node_from.set(Arc::downgrade(place_from)).is_err() {
-                return Err(CompilationError);
-            }
-            if compiled_transition.node_to.set(Arc::downgrade(place_to)).is_err() {
-                return Err(CompilationError);
-            }
-            compiled_transition.compile(context)?;
-            self.actions_dic.insert(compiled_transition.get_action(), compiled_transitions.len());
+            let mut compiled_transition = TAEdge::clone(transition);
+            let place_from = &places_dic[&compiled_transition.from.as_ref().unwrap()];
+            let place_to = &places_dic[&compiled_transition.to.as_ref().unwrap()];
+            compiled_transition.mut_data().merge_target_invariants(place_to);
+            compiled_transition.set_node_from(place_from);
+            compiled_transition.set_node_to(place_to);
+            compiled_transition.mut_data().compile(context)?;
+            self.actions_dic.insert(compiled_transition.data().get_action(), compiled_transitions.len());
             let compiled_transition = Arc::new(compiled_transition);
-            downstream.get_mut(&compiled_transition.from).unwrap().push(Arc::clone(&compiled_transition));
-            upstream.get_mut(&compiled_transition.to).unwrap().push(Arc::clone(&compiled_transition));
+            downstream.get_mut(compiled_transition.get_label_from()).unwrap().push(Arc::clone(&compiled_transition));
+            upstream.get_mut(compiled_transition.get_label_to()).unwrap().push(Arc::clone(&compiled_transition));
             compiled_transitions.push(compiled_transition);
         }
         self.transitions = compiled_transitions;
@@ -171,5 +168,13 @@ impl Model for TimedAutomaton {
         let cache = state.mut_storage(&self.state_cache);
         *cache = ModelStorage::Integer(current_state as i32);
         state
+    }
+
+    fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a> {
+        Box::new(self.states.iter().map(|x| x.as_node()))
+    }
+
+    fn edges(&self) -> Vec<Edge<String,Label,Label>> {
+        self.transitions.iter().map(|e| e.stringify()).collect()
     }
 }

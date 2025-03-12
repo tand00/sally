@@ -1,27 +1,25 @@
-use std::sync::{OnceLock, Weak};
+use std::{fmt::Display, sync::{OnceLock, Weak}};
 
 use num_traits::Zero;
 
-use crate::models::{action::Action, expressions::Condition, model_clock::ModelClock, model_context::ModelContext, time::ClockValue, CompilationError, CompilationResult, Label, ModelState};
+use crate::models::{action::Action, expressions::Condition, model_clock::ModelClock, model_context::ModelContext, time::ClockValue, CompilationError, CompilationResult, Edge, Label, ModelState};
 
 use super::TAState;
 
 #[derive(Debug, Default)]
 pub struct TATransition {
     pub name : Label,
-    pub from : Label,
-    pub to : Label,
     pub guard : Condition,
     pub resets : Vec<ModelClock>,
     pub action : Action,
-    pub node_from : OnceLock<Weak<TAState>>,
-    pub node_to : OnceLock<Weak<TAState>>,
 }
+
+pub type TAEdge = Edge<TATransition, TAState, TAState>;
 
 impl TATransition {
 
     pub fn new(name : Label, from : Label, to : Label) -> Self {
-        TATransition { name, from, to, ..Default::default() }
+        TATransition { name, ..Default::default() }
     }
 
     pub fn set_resets(&mut self, resets : Vec<Label>) {
@@ -66,12 +64,16 @@ impl TATransition {
         self.guard.is_true(state)
     }
 
+}
+
+impl TAEdge {
+
     pub fn fire(&self, mut state : ModelState, cache : &usize) -> ModelState {
-        for clock in self.resets.iter() {
+        for clock in self.data().resets.iter() {
             state.set_clock(clock, ClockValue::zero());
         }
-        let source = self.node_from.get().unwrap().upgrade().unwrap();
-        let target = self.node_to.get().unwrap().upgrade().unwrap();
+        let source = self.get_node_from();
+        let target = self.get_node_to();
         state.unmark(source.get_var(), 1);
         state.mark(target.get_var(), 1);
         let storage = state.mut_storage(cache);
@@ -88,11 +90,15 @@ impl Clone for TATransition {
     fn clone(&self) -> Self {
         TATransition {
             name: self.name.clone(),
-            from: self.from.clone(),
-            to: self.to.clone(),
             guard: self.guard.clone(),
             resets: self.resets.clone(),
             ..Default::default()
         }
+    }
+}
+
+impl Display for TATransition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }

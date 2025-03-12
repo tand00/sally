@@ -77,6 +77,18 @@ impl<T, U, V> Edge<T, U, V> {
         &self.weight
     }
 
+    pub fn mut_data(&mut self) -> &mut T {
+        &mut self.weight
+    }
+
+    pub fn get_label_from(&self) -> &Label {
+        self.from.as_ref().unwrap()
+    }
+
+    pub fn get_label_to(&self) -> &Label {
+        self.to.as_ref().unwrap()
+    }
+
     pub fn get_node_from(&self) -> Arc<U> {
         self.node_from().unwrap()
     }
