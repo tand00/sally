@@ -1,4 +1,4 @@
-use std::{cmp::min, fmt::Display, mem::size_of};
+use std::{cmp::min, fmt::Display, hash::{DefaultHasher, Hash, Hasher}, mem::size_of};
 
 use serde::{Deserialize, Serialize};
 
@@ -48,7 +48,7 @@ impl VirtualMemory {
         }
     }
 
-    pub fn evaluate(&self, var : &ModelVar) -> EvaluationType { 
+    pub fn evaluate(&self, var : &ModelVar) -> EvaluationType {
         if !var.is_mapped() || (var.get_address() + var.size() > self.len()) {
             panic!("Pointer out of bound !")
         }
@@ -108,6 +108,12 @@ impl VirtualMemory {
 
     pub fn size_delta(&mut self, delta : usize) {
         self.storage.resize(self.len() + delta, 0)
+    }
+
+    pub fn get_hash(&self) -> u64 {
+        let mut s = DefaultHasher::new();
+        self.hash(&mut s);
+        s.finish()
     }
 
 }

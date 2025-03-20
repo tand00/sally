@@ -143,9 +143,7 @@ impl Model for MarkovChain {
     }
 
     fn edges(&self) -> Vec<Edge<String,Label,Label>> {
-        self.nodes.iter().map(|n| {
-            n.outputs.iter().map(f)
-        })
+        todo!()
     }
 
 }

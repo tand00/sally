@@ -97,10 +97,11 @@ impl DBM {
     }
 
     pub fn add(&mut self, var_i: usize, var_j: usize, constraint: IntBound) {
-        let current = &mut self.constraints[(var_i, var_j)];
-        if *current + constraint < IntBound::zero() {
+        if self.constraints[(var_j, var_i)] + constraint < IntBound::zero() {
             self.make_empty();
-        } else if constraint < *current {
+        }
+        let current = &mut self.constraints[(var_i, var_j)];
+        if constraint < *current {
             *current = constraint;
             let n_rows = self.constraints.nrows();
             for i in 0..n_rows {
@@ -116,6 +117,14 @@ impl DBM {
                 }
             }
         }
+    }
+
+    pub fn add_sup(&mut self, var_i : usize, constraint : IntBound) {
+        self.add(var_i, 0, constraint);
+    }
+    
+    pub fn add_inf(&mut self, var_i : usize, constraint : IntBound) {
+        self.add(0, var_i, -constraint);
     }
 
     pub fn remove_var(&mut self, var_i: usize) {

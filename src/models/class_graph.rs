@@ -17,7 +17,7 @@ use super::action::Action;
 use super::digraph::search_strategy::{GraphTraversal, NeighborsFinder, SearchStrategy};
 use super::model_context::ModelContext;
 use super::model_var::{ModelVar, VarType};
-use super::time::ClockValue;
+use super::time::{Bound, ClockValue};
 use super::{lbl, Edge, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, SYMBOLIC, TIMED, UNMAPPED_ID};
 use super::petri::{PetriNet, PetriTransition};
 
@@ -97,11 +97,20 @@ impl ClassGraph {
                 to_dbm[transi] = dbm_index;
                 from_dbm.push(transi);
                 let previous_index = prev_to_dbm[transi];
-                if dbm[(previous_index, 0)] < dbm[(fired_i, 0)] {
-                    return None
+                if dbm[(previous_index, 0)] < -dbm[(0, fired_i)] {
+                    return None;
                 }
-                next_dbm[(dbm_index, 0)] = dbm[(previous_index, fired_i)];
-                next_dbm[(0, dbm_index)] = dbm[(fired_i, previous_index)];
+                next_dbm[(dbm_index, 0)] = std::cmp::min(
+                    dbm[(previous_index, 0)] + dbm[(0, fired_i)],
+                    dbm[(previous_index, fired_i)]
+                );
+                next_dbm[(0, dbm_index)] = std::cmp::min(
+                    dbm[(fired_i, previous_index)],
+                    std::cmp::min(
+                        dbm[(0, previous_index)] + dbm[(fired_i, 0)],
+                        Bound::Large(0) // useless I think
+                    )
+                );
             } else if newen.contains(&transi) {
                 let dbm_index = from_dbm.len();
                 to_dbm[transi] = dbm_index;

@@ -58,7 +58,7 @@ fn main() {
     continue_info(format!("Translations : \t[{}]", solver.translations.len()));
     lf();
 
-    let mut project = sample_tapn();//solver.load_file("test_petri.sly".to_owned()).unwrap_or(sample_petri());
+    let mut project = sample_petri();//solver.load_file("test_petri.sly".to_owned()).unwrap_or(sample_petri());
 
     println!("{project}");
 
@@ -73,14 +73,14 @@ fn main() {
 
     println!("{:?}", initial_state);
 
-    let mut prob_est = ProbabilityEstimation::fixed_runs(1000000, 0.95);
-    prob_est.parallel_verify(net.model_object(), &initial_state, &query);
+    // let mut prob_est = ProbabilityEstimation::fixed_runs(1000000, 0.95);
+    // prob_est.parallel_verify(net.model_object(), &initial_state, &query);
 
-    /*let p_net = net.as_any().downcast_ref::<PetriNet>().unwrap();
+    let p_net = net.as_any().downcast_ref::<PetriNet>().unwrap();
     let cg = ClassGraph::compute(p_net, &initial_state);
     for class in cg.classes.iter() {
         println!("{}", class);
-    }*/
+    }
 
     solver.write_file("test_petri.sly".to_owned(), &project).unwrap();
 }
@@ -118,41 +118,32 @@ fn sample_tapn() -> ModelProject {
 }
 
 fn sample_petri() -> ModelProject {
-    let p0 = PetriPlace::new(lbl("p0"));
     let p1 = PetriPlace::new(lbl("p1"));
     let p2 = PetriPlace::new(lbl("p2"));
     let p3 = PetriPlace::new(lbl("p3"));
-    let p4 = PetriPlace::new(lbl("p4"));
-    let p5 = PetriPlace::new(lbl("p5"));
-    let t0 = PetriTransition::safe(
-        lbl("t0"),
-        vec![lbl("p0")],
-        vec![lbl("p1"), lbl("p4")],
-        TimeInterval::new(Large(0), Large(0))
-    );
-    let a = PetriTransition::safe(
-        lbl("a"),
+    let t1 = PetriTransition::safe(
+        lbl("t1"),
         vec![lbl("p1")],
+        vec![],
+        TimeInterval::new(Large(3), Large(5))
+    );
+    let t2 = PetriTransition::safe(
+        lbl("t2"),
         vec![lbl("p2")],
-        TimeInterval::new(Large(0), Large(4))
+        vec![],
+        TimeInterval::new(Large(7), Large(9))
     );
-    let b = PetriTransition::safe(
-        lbl("b"),
-        vec![lbl("p2"), lbl("p4")],
+    let t3 = PetriTransition::safe(
+        lbl("t3"),
         vec![lbl("p3")],
-        TimeInterval::new(Large(3), Large(4))
-    );
-    let c = PetriTransition::safe(
-        lbl("c"),
-        vec![lbl("p4")],
-        vec![lbl("p5")],
-        TimeInterval::new(Large(5), Large(6))
+        vec![],
+        TimeInterval::new(Large(4), Large(6))
     );
     let net = PetriNet::new(
-        vec![p0, p1, p2, p3, p4, p5],
-        vec![t0, a, b, c]
+        vec![p1, p2, p3],
+        vec![t1, t2, t3]
     );
-    let query = parse_query("F p5".to_owned()).unwrap();
-    let marking = HashMap::from([(lbl("p0"), 1)]);
+    let query = parse_query("F p2".to_owned()).unwrap();
+    let marking = HashMap::from([(lbl("p1"), 1), (lbl("p2"), 1), (lbl("p3"), 1)]);
     ModelProject::new(Box::new(net), vec![query], marking)
 }

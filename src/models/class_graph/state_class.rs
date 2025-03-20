@@ -5,7 +5,7 @@ use nalgebra::DVector;
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::{convex::{Convex, Disjoint, Measurable}, virtual_memory::{EvaluationType, VirtualMemory}, DBM}, models::{action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue, Label, ModelState, Node, UNMAPPED_ID}, verification::Verifiable};
+use crate::{computation::{convex::{Convex, Measurable}, virtual_memory::{EvaluationType, VirtualMemory}, DBM}, models::{action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue, Label, ModelState, Node, UNMAPPED_ID}, verification::Verifiable};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StateClass {
@@ -137,7 +137,12 @@ impl fmt::Display for StateClass {
         if self.from_dbm_index.len() > 1 {
             transitions = self.from_dbm_index[1..].iter().map(|i| i.to_string()).collect::<Vec<String>>().join(",");
         }
-        write!(f, "Class_{}\n- Marking {}\n- Transitions\n  [{}]\n\n- {}", self.index, self.discrete, transitions, self.dbm)
+        let preds = self.predecessors.read().unwrap().iter().map(|(p, a)| {
+            let p = Weak::upgrade(p);
+            format!("(Class_{}:{})", p.unwrap().index, a.get_id())
+        }).collect::<Vec<String>>();
+        let preds = preds.join(",");
+        write!(f, "Class_{}\n- Marking {}\n- Transitions\n  [{}]\n- Predecessors\n  [{}]\n\n- {}", self.index, self.discrete, transitions, preds, self.dbm)
     }
 }
 
