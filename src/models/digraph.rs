@@ -79,7 +79,7 @@ impl<T, U> Digraph<T,U> {
     }
 
     pub fn make_edge(&mut self, from : &T, to : &T, weight : U) -> Option<GraphEdge<T,U>>
-    where 
+    where
         T : PartialEq
     {
         let mut e = Edge::orphan(weight);
@@ -176,7 +176,7 @@ impl<T, U> Digraph<T,U> {
     }
 
     pub fn make_edge_when<F>(&mut self, filter : F, weight : U) -> Vec<GraphEdge<T,U>>
-    where 
+    where
         F : Fn (&T,&T) -> bool,
         U : Clone
     {
@@ -197,7 +197,7 @@ impl<T, U> Digraph<T,U> {
         res
     }
 
-    pub fn find<F>(&self, filter : F) -> Vec<GraphNode<T,U>> 
+    pub fn find<F>(&self, filter : F) -> Vec<GraphNode<T,U>>
         where F : Fn(&T) -> bool
     {
         let mut res = Vec::new();
@@ -228,22 +228,22 @@ impl<T, U> Digraph<T,U> {
 
     // Implementation of the Floyd-Warshall algorithm ----------------------------------
 
-    pub fn all_shortest_paths(&self) -> DMatrix<U> 
-    where 
+    pub fn all_shortest_paths(&self) -> DMatrix<U>
+    where
         U : Add<Output = U> + PartialOrd + Zero + Bounded + Scalar
     {
         self.floyd_warshall(U::clone, U::max_value())
     }
 
-    pub fn all_shortest_float_paths<F>(&self, weight : F) -> DMatrix<f64> 
-    where 
+    pub fn all_shortest_float_paths<F>(&self, weight : F) -> DMatrix<f64>
+    where
         F : Fn(&U) -> f64
     {
         self.floyd_warshall(weight, f64::INFINITY)
     }
 
-    pub fn floyd_warshall<F,V>(&self, weight : F, no_edge : V) -> DMatrix<V> 
-    where 
+    pub fn floyd_warshall<F,V>(&self, weight : F, no_edge : V) -> DMatrix<V>
+    where
         F : Fn(&U) -> V,
         V : Add<Output = V> + PartialOrd + Zero + Scalar
     {
@@ -265,8 +265,8 @@ impl<T, U> Digraph<T,U> {
         distances
     }
 
-    pub fn shortest_digraph(&self) -> Self 
-    where 
+    pub fn shortest_digraph(&self) -> Self
+    where
         U : Add<Output = U> + PartialOrd + Zero + Bounded + Scalar
     {
         let distances = self.all_shortest_paths();
@@ -282,17 +282,17 @@ impl<T, U> Digraph<T,U> {
 
     // Implementation of the Dijkstra algorithm ----------------------------------------
 
-    pub fn shortest_path(&self, from : &GraphNode<T,U>, target : &GraphNode<T,U>) 
-        -> Option<(U, Vec<GraphEdge<T,U>>)> 
-    where 
+    pub fn shortest_path(&self, from : &GraphNode<T,U>, target : &GraphNode<T,U>)
+        -> Option<(U, Vec<GraphEdge<T,U>>)>
+    where
         U : Add<Output = U> + PartialOrd + Zero + Bounded + Scalar
     {
         self.shortest_weighted_path(from, target, U::clone, U::max_value())
     }
 
-    pub fn shortest_paths_from(&self, from : &GraphNode<T,U>) 
+    pub fn shortest_paths_from(&self, from : &GraphNode<T,U>)
         -> (Vec<U>, Vec<Vec<GraphEdge<T,U>>>)
-    where 
+    where
         U : Add<Output = U> + PartialOrd + Zero + Bounded + Scalar
     {
         self.shortest_weighted_paths_from(from, U::clone, U::max_value())
@@ -301,9 +301,9 @@ impl<T, U> Digraph<T,U> {
     pub fn shortest_weighted_path<F,V>(
         &self, from : &GraphNode<T,U>, target : &GraphNode<T,U>,
         weight : F, no_edge : V
-    ) 
+    )
         -> Option<(V, Vec<GraphEdge<T,U>>)>
-    where 
+    where
         F : Fn(&U) -> V,
         V : Add<Output = V> + PartialOrd + Zero + Scalar
     {
@@ -316,9 +316,9 @@ impl<T, U> Digraph<T,U> {
 
     pub fn shortest_weighted_paths_from<F,V>(
         &self, from : &GraphNode<T,U>, weight : F, no_edge : V
-    ) 
+    )
         -> (Vec<V>, Vec<Vec<GraphEdge<T,U>>>)
-    where 
+    where
         F : Fn(&U) -> V,
         V : Add<Output = V> + PartialOrd + Zero + Scalar
     {
@@ -328,7 +328,7 @@ impl<T, U> Digraph<T,U> {
     pub fn dijkstra<F,V>(
         &self, from : &GraphNode<T,U>, target : Option<&GraphNode<T,U>>,
         weight : F, no_edge : V
-    ) 
+    )
         -> (Vec<V>, Vec<Vec<GraphEdge<T,U>>>)
     where
         F : Fn(&U) -> V,
@@ -357,7 +357,7 @@ impl<T, U> Digraph<T,U> {
             }
             dists.push(value);
         }
-        
+
         while min_j < usize::MAX && (target.is_none() || !added[target.unwrap()]){
             added[min_j] = true;
             let pre = min_j;
@@ -383,15 +383,15 @@ impl<T, U> Digraph<T,U> {
 
     // ---------------------------------------------------------------------------------
 
-    pub fn is_positive(&self) -> bool 
-    where 
+    pub fn is_positive(&self) -> bool
+    where
         U : Zero + PartialOrd + Clone
     {
         self.is_positively_weighted(U::clone)
     }
-    
-    pub fn is_positively_weighted<F,V>(&self, weight : F) -> bool 
-    where 
+
+    pub fn is_positively_weighted<F,V>(&self, weight : F) -> bool
+    where
         F : Fn(&U) -> V,
         V : PartialOrd + Zero
     {
@@ -405,7 +405,7 @@ impl<T, U> Digraph<T,U> {
         true
     }
 
-    pub fn from_matrix(elements : Vec<T>, relations : DMatrix<U>) -> Self 
+    pub fn from_matrix(elements : Vec<T>, relations : DMatrix<U>) -> Self
     where
         U : PartialOrd + Clone + Bounded + Zero
     {
@@ -414,34 +414,34 @@ impl<T, U> Digraph<T,U> {
         graph
     }
 
-    pub fn get_matrix(&self) -> DMatrix<U> 
-    where 
+    pub fn get_matrix(&self) -> DMatrix<U>
+    where
         U : Scalar + Zero + Bounded
     {
         self.make_weight_matrix(U::clone, U::max_value())
     }
 
-    pub fn get_float_matrix<F>(&self, weight : F) -> DMatrix<f64> 
-    where 
+    pub fn get_float_matrix<F>(&self, weight : F) -> DMatrix<f64>
+    where
         F : Fn(&U) -> f64
     {
         self.make_weight_matrix(weight, f64::INFINITY)
     }
 
-    pub fn make_weight_matrix<F,V>(&self, weight : F, no_edge : V) -> DMatrix<V> 
-    where 
+    pub fn make_weight_matrix<F,V>(&self, weight : F, no_edge : V) -> DMatrix<V>
+    where
         F : Fn(&U) -> V,
         V : Zero + Scalar
     {
         let n_nodes = self.nodes.len();
         DMatrix::from_fn(n_nodes, n_nodes, |i,j| {
             if i == j { V::zero() }
-            else { 
+            else {
                 if let Some(edge) = &self.edges[i * n_nodes + j] {
                     weight(&edge.weight)
-                } 
-                else { 
-                    no_edge.clone() 
+                }
+                else {
+                    no_edge.clone()
                 }
             }
         })
@@ -451,7 +451,7 @@ impl<T, U> Digraph<T,U> {
         let mut seen = vec![false ; self.n_nodes()];
         loop {
             let next_index = seen.iter().position(|x| !*x);
-            let Some(next_index) = next_index else { 
+            let Some(next_index) = next_index else {
                 return false;
             };
             let traversal = GraphTraversal::dfs(self.nodes[next_index].clone());
@@ -464,7 +464,7 @@ impl<T, U> Digraph<T,U> {
         }
     }
 
-    pub fn create_relations(&mut self, relations : DMatrix<U>) 
+    pub fn create_relations(&mut self, relations : DMatrix<U>)
     where
         U : PartialOrd + Clone + Bounded + Zero
     {
@@ -504,7 +504,7 @@ impl<T, U> From<Vec<T>> for Digraph<T,U> {
 
 impl<T : ToString, U> Digraph<T,U> {
 
-    pub fn labelize(&mut self) 
+    pub fn labelize(&mut self)
         where T : ToString, U : Clone
     {
         for node in self.nodes.iter() {
@@ -516,7 +516,7 @@ impl<T : ToString, U> Digraph<T,U> {
             let mut new_edge = Edge::orphan(edge.weight.clone());
             let source = edge.get_node_from();
             new_edge.set_node_from(&source);
-            new_edge.from = Some(source.get_label());                
+            new_edge.from = Some(source.get_label());
             let target = edge.get_node_to();
             new_edge.set_node_to(&target);
             new_edge.to = Some(target.get_label());

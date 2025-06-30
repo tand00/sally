@@ -1,9 +1,9 @@
-use std::usize;
+use std::{marker::PhantomData, usize};
 
 pub trait FixPoint<T : PartialEq> {
 
     fn next_step(&mut self, x : &T) -> T;
-    
+
     fn converge(&mut self, x0 : &T, max_n : usize) -> Option<(usize,T)> {
         let mut item1 = self.next_step(x0);
         if item1 == (*x0) {
@@ -26,18 +26,29 @@ pub trait FixPoint<T : PartialEq> {
 
 }
 
-pub struct IntSequence<F : Fn(i32) -> i32> {
-    pub recurrence : F
+pub struct FSequence<T : PartialEq, F : Fn(&T) -> T> {
+    pub recurrence : F,
+    pub phantom : PhantomData<T>
 }
-impl<F : Fn(i32) -> i32> IntSequence<F> {
+impl<T : PartialEq, F : Fn(&T) -> T> FSequence<T, F> {
 
     pub fn new(recurrence : F) -> Self {
-        IntSequence { recurrence }
+        FSequence { recurrence, phantom: PhantomData }
     }
 
-} 
-impl<F : Fn(i32) -> i32> FixPoint<i32> for IntSequence<F> {
-    fn next_step(&mut self, x : &i32) -> i32 {
-        (self.recurrence)(*x)
+    pub fn generate_n(&self, x0 : T, n : usize) -> Vec<T> {
+        let mut res = Vec::new();
+        res.reserve(n+1);
+        res[0] = x0;
+        for i in 0..n {
+            res[i+1] = (self.recurrence)(&res[i]);
+        }
+        res
+    }
+
+}
+impl<T : PartialEq, F : Fn(&T) -> T> FixPoint<T> for FSequence<T,F> {
+    fn next_step(&mut self, x : &T) -> T {
+        (self.recurrence)(x)
     }
 }

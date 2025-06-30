@@ -24,7 +24,6 @@ pub mod digraph;
 pub mod expressions;
 pub mod markov;
 pub mod model_clock;
-pub mod model_const;
 pub mod model_context;
 pub mod model_network;
 pub mod model_project;
@@ -37,7 +36,6 @@ pub mod run;
 pub mod tapn;
 pub mod time;
 pub mod timed_automata;
-pub mod word;
 pub mod beliefs_graph;
 pub mod model_param;
 

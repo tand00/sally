@@ -4,19 +4,18 @@ use crate::{computation::virtual_memory::EvaluationType, models::{action::Action
 
 use super::function::{ObservationContext, ObservationFunction, VarPolicy};
 
-pub trait Observable { 
+pub trait Observable {
     type Observed;
 
     fn observe(&self, ctx : &ObservationContext, fun : &ObservationFunction) -> Self::Observed;
 }
 
-impl Observable for ModelState { 
+impl Observable for ModelState {
     type Observed = Self;
-    
+
     fn observe(&self, ctx : &ObservationContext, fun : &ObservationFunction) -> Self::Observed {
         let mut observed = ctx.observed.make_empty_state();
-        let var_junction : fn(EvaluationType, EvaluationType) -> EvaluationType =
-        match fun.var_policy {
+        let var_junction = match fun.var_policy {
             VarPolicy::SumVars => |x,y| x + y,
             VarPolicy::MaxVar => |x,y| max(x, y),
             VarPolicy::UnitVar => |x,_| if x > 0 { 1 } else { 0 },
@@ -34,13 +33,13 @@ impl Observable for ModelState {
         observed.storages = self.storages.clone();
         observed.deadlocked = self.deadlocked;
         observed
-    } 
-    
+    }
+
 }
 
 impl Observable for Action {
     type Observed = Self;
-    
+
     fn observe(&self, ctx : &ObservationContext, _fun : &ObservationFunction) -> Self::Observed {
         let base = self.base();
         if !ctx.links.actions.contains_key(&base) {
@@ -57,12 +56,12 @@ impl Observable for Action {
 
 }
 
-impl Observable for StateClass { 
+impl Observable for StateClass {
     type Observed = Self;
-    
+
     fn observe(&self, ctx : &ObservationContext, fun : &ObservationFunction) -> Self::Observed {
         todo!()
-    } 
+    }
 
-    
+
 }

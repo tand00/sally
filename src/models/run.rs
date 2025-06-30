@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::verification::{VerificationBound, Verifiable};
 
-use super::{action::Action, time::ClockValue, word::Word, ModelState};
+use super::{action::Action, time::ClockValue, ModelState};
 
 use num_traits::Zero;
 use VerificationBound::*;
@@ -76,7 +76,7 @@ impl Run {
         self.elements.push(elem);
     }
 
-    pub fn trace(&self) -> Run {
+    pub fn canonical(self) -> Run {
         let mut res = Run::new();
         for elem in self.elements.iter() {
             match elem {
@@ -99,36 +99,21 @@ impl Run {
         res
     }
 
-    pub fn actions(&self) -> Vec<Action> {
-        let mut res = Vec::new();
-        for elem in self.elements.iter() {
-            if let Step(a) = elem {
-                if !a.is_epsilon() {
-                    res.push(a.clone());
-                }
+    pub fn actions<'a>(&'a self) -> impl Iterator<Item = &'a Action> {
+        self.elements.iter().filter_map(|x| match x {
+                Step(Action::Epsilon) => None,
+                Step(a) => Some(a),
+                _ => None
             }
-        }
-        res
-    }
-
-    pub fn word(&self) -> Word {
-        let mut res = Word::new();
-        for elem in self.elements.iter() {
-            if let Step(a) = elem {
-                if !a.is_epsilon() {
-                    res.add_letter(a.get_id());
-                }
-            }
-        }
-        res
+        )
     }
 
     pub fn status(&self) -> Option<RunStatus> {
         if let Some(s) = self.last_state() {
-            Some(RunStatus { 
+            Some(RunStatus {
                 current_state: s,
-                steps: self.steps, 
-                time: self.time, 
+                steps: self.steps,
+                time: self.time,
                 maximal: self.maximal
             })
         } else {

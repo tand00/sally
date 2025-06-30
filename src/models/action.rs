@@ -52,6 +52,13 @@ impl Action {
         }
     }
 
+    pub fn extract_sync(self) -> Option<(Action, Action, Action)> {
+        match self {
+            Self::Sync(i, a1, a2) => Some((Self::Base(i), *a1, *a2)),
+            _ => None
+        }
+    }
+
     pub fn sync(&self, a : Action, b : Action) -> Action {
         Self::Sync(self.get_id(), Box::new(a), Box::new(b))
     }
