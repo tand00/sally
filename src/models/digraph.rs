@@ -1,4 +1,4 @@
-use std::{ops::Add, sync::Arc, usize};
+use std::{collections::BTreeMap, ops::Add, sync::Arc, usize};
 
 use nalgebra::{DMatrix, Scalar};
 use num_traits::{Bounded, Zero};
@@ -17,7 +17,7 @@ pub mod search_strategy;
 
 pub struct Digraph<T, U> {
     nodes : Vec<GraphNode<T,U>>,
-    edges : Vec<Option<GraphEdge<T,U>>>,
+    edges : BTreeMap<(usize, usize), GraphEdge<T,U>>,
 }
 
 impl<T, U> Digraph<T,U> {
@@ -25,7 +25,7 @@ impl<T, U> Digraph<T,U> {
     pub fn new() -> Self {
         Self {
             nodes : Vec::new(),
-            edges : Vec::new(),
+            edges : Default::default(),
         }
     }
 
@@ -34,7 +34,6 @@ impl<T, U> Digraph<T,U> {
         node.index = self.nodes.len();
         let node = Arc::new(node);
         self.nodes.push(Arc::clone(&node));
-        self.edges.resize(self.nodes.len() * self.nodes.len(), None);
         node
     }
 
@@ -47,7 +46,7 @@ impl<T, U> Digraph<T,U> {
     }
 
     pub fn edges_iter(&self) -> impl Iterator<Item = &GraphEdge<T,U>> {
-        self.edges.iter().filter_map(|x| x.as_ref())
+        self.edges.iter().map(|(_, v)| v)
     }
 
     pub fn node_at(&self, i : usize) -> GraphNode<T,U> {
@@ -55,26 +54,26 @@ impl<T, U> Digraph<T,U> {
     }
 
     pub fn edge_at(&self, i : usize, j : usize) -> Option<GraphEdge<T,U>> {
-        let edge = &self.edges[i * self.nodes.len() + j];
-        edge.as_ref().map(Arc::clone)
+        let edge = self.edges.get(&(i,j));
+        edge.map(Arc::clone)
     }
 
     pub fn has_edge(&self, i : usize, j : usize) -> bool {
-        self.edges[i * self.nodes.len() + j].is_some()
+        self.edges.contains_key(&(i,j))
     }
 
-    fn edge_index(&self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) -> usize {
-        (from.index * self.nodes.len()) + to.index
+    fn edge_index(&self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) -> (usize, usize) {
+        (from.index, to.index)
     }
 
     fn save_edge(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>, edge : GraphEdge<T,U>) -> Option<GraphEdge<T,U>> {
         let index = self.edge_index(&from, &to);
-        if self.edges[index].is_some() {
+        if self.edges.contains_key(&index) {
             return None;
         }
         from.add_out_edge(&edge);
         to.add_in_edge(&edge);
-        self.edges[index] = Some(Arc::clone(&edge));
+        self.edges.insert(index, Arc::clone(&edge));
         Some(edge)
     }
 
@@ -115,16 +114,23 @@ impl<T, U> Digraph<T,U> {
     }
 
     pub fn get_connection(&self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) -> Option<GraphEdge<T,U>> {
-        let edge = &self.edges[self.edge_index(from, to)];
-        edge.as_ref().map(Arc::clone)
+        let edge = &self.edges.get(&self.edge_index(from, to));
+        edge.map(Arc::clone)
     }
 
     pub fn disconnect(&mut self, from : &GraphNode<T,U>, to : &GraphNode<T,U>) {
         let index = self.edge_index(from, to);
-        if self.edges[index].is_none() {
+        self.remove_edge_at(index);
+    }
+
+    pub fn remove_edge_at(&mut self, index : (usize, usize)) {
+        if !self.edges.contains_key(&index) {
             return;
         }
-        self.edges[index] = None;
+        self.edges.remove(&index);
+
+        let from = &self.nodes[index.0];
+        let to = &self.nodes[index.1];
 
         let mut to_remove = None;
         for (i, edge) in from.out_edges.read().unwrap().iter().enumerate() {
@@ -154,24 +160,11 @@ impl<T, U> Digraph<T,U> {
         }
     }
 
-    pub fn remove_edge_at(&mut self, i : usize, j : usize) {
-        let from = Arc::clone(&self.nodes[i]);
-        let to = Arc::clone(&self.nodes[j]);
-        self.disconnect(&from, &to)
-    }
-
     pub fn remove_node(&mut self, node : &GraphNode<T,U>) {
         let n = self.n_nodes();
         for j in 0..n {
-            self.remove_edge_at(node.index, j);
-            self.remove_edge_at(j, node.index);
-        }
-        let begin = node.index * n;
-        self.edges.drain(begin..(begin + n));
-        let mut j = node.index;
-        while j < self.edges.len() {
-            self.edges.remove(j);
-            j += n - 1;
+            self.remove_edge_at((node.index, j));
+            self.remove_edge_at((j, node.index));
         }
     }
 
@@ -184,13 +177,13 @@ impl<T, U> Digraph<T,U> {
         for from in self.nodes.iter() {
             for to in self.nodes.iter() {
                 let index = self.edge_index(&from, &to);
-                if self.edges[index].is_some() { continue };
+                if self.edges.contains_key(&index) { continue };
                 if !filter(&from.element, &to.element) { continue };
                 let e = Edge::data_edge(from, to, weight.clone());
                 let e = Arc::new(e);
                 from.add_out_edge(&e);
                 to.add_in_edge(&e);
-                self.edges[index] = Some(Arc::clone(&e));
+                self.edges.insert(index, Arc::clone(&e));
                 res.push(e);
             }
         }
@@ -272,7 +265,7 @@ impl<T, U> Digraph<T,U> {
         let distances = self.all_shortest_paths();
         let mut res = Digraph {
             nodes : self.nodes.clone(),
-            edges : vec![None ; self.nodes.len() * self.nodes.len()]
+            edges : Default::default()
         };
         res.create_relations(distances);
         res
@@ -395,11 +388,9 @@ impl<T, U> Digraph<T,U> {
         F : Fn(&U) -> V,
         V : PartialOrd + Zero
     {
-        for edge in self.edges.iter() {
-            if let Some(edge) = edge {
-                if weight(edge.data()) < V::zero() {
-                    return false;
-                }
+        for (_, edge) in self.edges.iter() {
+            if weight(edge.data()) < V::zero() {
+                return false;
             }
         }
         true
@@ -437,7 +428,7 @@ impl<T, U> Digraph<T,U> {
         DMatrix::from_fn(n_nodes, n_nodes, |i,j| {
             if i == j { V::zero() }
             else {
-                if let Some(edge) = &self.edges[i * n_nodes + j] {
+                if let Some(edge) = &self.edges.get(&(i,j)) {
                     weight(&edge.weight)
                 }
                 else {
@@ -472,10 +463,11 @@ impl<T, U> Digraph<T,U> {
         for (n, w) in relations.iter().enumerate() {
             let i = n / n_nodes;
             let j = n % n_nodes;
+            let index = (i,j);
             if *w >= U::max_value() || (w.is_zero() && i == j) { // Max length = INF, min length to self = no edge
                 continue;
             }
-            if self.edges[n].is_some() {
+            if self.edges.contains_key(&index) {
                 continue;
             }
             let from = &self.nodes[i];
@@ -484,7 +476,7 @@ impl<T, U> Digraph<T,U> {
             let e = Arc::new(e);
             from.add_out_edge(&e);
             to.add_in_edge(&e);
-            self.edges[n] = Some(e);
+            self.edges.insert(index, e);
         }
     }
 
@@ -492,13 +484,12 @@ impl<T, U> Digraph<T,U> {
 
 impl<T, U> From<Vec<T>> for Digraph<T,U> {
     fn from(data : Vec<T>) -> Self {
-        let n = data.len();
         let nodes : Vec<Arc<DataNode<T, U>>> = data.into_iter().enumerate().map(|(i,x)| {
             let mut node = DataNode::from(x);
             node.index = i;
             Arc::new(node)
         }).collect();
-        Digraph { nodes, edges : vec![None ; n * n] }
+        Digraph { nodes, edges : Default::default() }
     }
 }
 
@@ -510,9 +501,8 @@ impl<T : ToString, U> Digraph<T,U> {
         for node in self.nodes.iter() {
             node.clear_edges();
         }
-        let mut new_edges = vec![None ; self.nodes.len() * self.nodes.len()];
-        for edge in self.edges.iter() {
-            let Some(edge) = edge else { continue };
+        let mut new_edges = BTreeMap::new();
+        for (_, edge) in self.edges.iter() {
             let mut new_edge = Edge::orphan(edge.weight.clone());
             let source = edge.get_node_from();
             new_edge.set_node_from(&source);
@@ -524,7 +514,7 @@ impl<T : ToString, U> Digraph<T,U> {
             source.add_out_edge(&new_edge);
             target.add_in_edge(&new_edge);
             let index = self.edge_index(&source, &target);
-            new_edges[index] = Some(new_edge);
+            new_edges.insert(index, new_edge);
         }
         self.edges = new_edges;
     }
