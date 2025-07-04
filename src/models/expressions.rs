@@ -193,11 +193,11 @@ impl Condition {
     pub fn is_clock_guard(&self) -> bool {
         match self {
             Next(_) | Until(_,_) => false, // Guards are instantaneous
-            Not(c) => c.contains_clock_proposition(),
+            Not(c) => c.is_clock_guard(),
             And(c1,c2) |
             Or(c1, c2) |
             Implies(c1, c2)
-                => c1.contains_clock_proposition() && c2.contains_clock_proposition(),
+                => c1.is_clock_guard() && c2.is_clock_guard(),
             ClockComparison(_,_,_) => true,
             True | False => true,
             _ => false

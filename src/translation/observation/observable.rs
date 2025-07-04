@@ -18,7 +18,7 @@ impl Observable for ModelState {
         let var_junction = match fun.var_policy {
             VarPolicy::SumVars => |x,y| x + y,
             VarPolicy::MaxVar => |x,y| max(x, y),
-            VarPolicy::UnitVar => |x,_| if x > 0 { 1 } else { 0 },
+            VarPolicy::UnitVar => |x,y| if x > 0 || y > 0 { 1 } else { 0 },
         };
         for (x,o) in ctx.links.vars.iter() {
             let value = var_junction(self.evaluate_var(x), observed.evaluate_var(o));

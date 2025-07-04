@@ -29,7 +29,7 @@ pub trait Node {
 
     fn design_node<'a>(&self, elem : ElementWriter<OutBuff>) {
         let label = self.get_label();
-        elem.write_inner_content(|writer| -> Result<(), quick_xml::Error> {
+        let _ = elem.write_inner_content(|writer| -> Result<(), quick_xml::Error> {
             writer.create_element("circle")
                 .with_attributes(vec![("r","50"),("stroke","black"),("stroke-width","5")]);
             writer.create_element("text")
@@ -101,7 +101,7 @@ impl<T, U> DataNode<T, U> {
         self.in_edges.read().unwrap().len() as i32
     }
 
-    pub fn deg_diff(&self) -> i32 {
+    pub fn rise(&self) -> i32 {
         self.out_degree() - self.in_degree()
     }
 

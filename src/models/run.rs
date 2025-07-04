@@ -100,7 +100,8 @@ impl Run {
     }
 
     pub fn actions<'a>(&'a self) -> impl Iterator<Item = &'a Action> {
-        self.elements.iter().filter_map(|x| match x {
+        self.elements.iter().filter_map(|x|
+            match x {
                 Step(Action::Epsilon) => None,
                 Step(a) => Some(a),
                 _ => None

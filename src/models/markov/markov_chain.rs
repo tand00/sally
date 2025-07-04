@@ -6,7 +6,7 @@ use crate::{computation::probability::ProbabilisticChoice, models::{action::Acti
 
 use super::markov_node::MarkovNode;
 
-pub const MarkovActiveNodeVarName : &str = "ActiveNode";
+pub const MARKOV_ACTIVE_NODE_VAR_NAME : &str = "ActiveNode";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarkovChain {
@@ -124,7 +124,7 @@ impl Model for MarkovChain {
             self.build_node_outputs(context, node);
         }
         self.nodes = nodes;
-        self.current_node = context.add_var(lbl(MarkovActiveNodeVarName), VarType::VarU16);
+        self.current_node = context.add_var(lbl(MARKOV_ACTIVE_NODE_VAR_NAME), VarType::VarU16);
         Ok(())
     }
 
