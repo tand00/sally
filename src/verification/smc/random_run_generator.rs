@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use num_traits::Zero;
 
-use crate::{models::{action::Action, run::RunStatus, time::ClockValue, Model, ModelState}, verification::VerificationBound};
+use crate::{models::{Action, run::RunStatus, time::ClockValue, Model, ModelState}, verification::VerificationBound};
 
 pub struct RandomRunIterator<'a, T : Model> {
     pub model : &'a T,

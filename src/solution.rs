@@ -4,8 +4,7 @@ pub mod class_graph_reachability;
 pub use class_graph_reachability::ClassGraphReachability;
 
 use crate::flag;
-use crate::models::model_context::ModelContext;
-use crate::models::{lbl, Label, ModelObject, ModelState};
+use crate::models::{lbl, Label, ModelObject, ModelState, ModelContext};
 use crate::verification::query::{Quantifier, Query, StateLogic};
 use Quantifier::*;
 use StateLogic::*;

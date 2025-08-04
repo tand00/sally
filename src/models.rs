@@ -2,6 +2,13 @@ mod edge;
 mod label;
 mod model_state;
 mod node;
+mod model_context;
+mod model_clock;
+mod model_var;
+mod model_storage;
+mod model_project;
+mod model_param;
+mod action;
 
 use std::{
     any::Any,
@@ -12,24 +19,26 @@ use std::{
 pub use edge::Edge;
 pub use label::{lbl, Label};
 pub use model_state::ModelState;
+pub use model_context::ModelContext;
+pub use model_clock::ModelClock;
+pub use model_var::*;
+pub use model_storage::ModelStorage;
+pub use model_project::ModelProject;
+pub use model_param::ModelParam;
+pub use action::*;
 pub use node::Node;
+
 use num_traits::Zero;
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use time::RealTimeBound;
 
-pub mod action;
 pub mod caching;
 pub mod class_graph;
 pub mod digraph;
 pub mod expressions;
 pub mod markov;
-pub mod model_clock;
-pub mod model_context;
 pub mod model_network;
-pub mod model_project;
 pub mod model_solving_graph;
-pub mod model_storage;
-pub mod model_var;
 pub mod petri;
 pub mod program;
 pub mod run;
@@ -37,12 +46,11 @@ pub mod tapn;
 pub mod time;
 pub mod timed_automata;
 pub mod beliefs_graph;
-pub mod model_param;
 
 use crate::{computation::virtual_memory::EvaluationType, verification::VerificationBound};
 
 use self::{
-    action::Action, model_characteristics::*, model_context::ModelContext, time::ClockValue,
+    model_characteristics::*, time::ClockValue,
 };
 
 #[derive(Debug, Clone)]
@@ -92,7 +100,7 @@ pub mod model_characteristics {
     }
 }
 
-use model_characteristics::ModelCharacteristics;
+pub use model_characteristics::ModelCharacteristics;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelMeta {

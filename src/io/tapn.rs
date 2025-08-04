@@ -1,4 +1,4 @@
-use crate::models::{lbl, model_project::ModelProject, tapn::TAPN, Model};
+use crate::models::{lbl, ModelProject, tapn::TAPN, Model};
 
 use super::{ModelLoader, ModelLoaderMeta, ModelLoadingResult, ModelWriter, ModelWriterMeta, ModelWritingResult};
 

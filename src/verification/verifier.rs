@@ -1,5 +1,5 @@
 use std::{hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
-use crate::{computation::virtual_memory::EvaluationType, models::{model_clock::ModelClock, model_context::ModelContext, model_var::{MappingResult, ModelVar}}};
+use crate::{computation::virtual_memory::EvaluationType, models::{ModelClock, ModelContext, MappingResult, ModelVar}};
 
 use super::query::*;
 use serde::{Deserialize, Serialize};

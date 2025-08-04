@@ -1,6 +1,6 @@
 use std::cmp::max;
 
-use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, class_graph::StateClass, ModelState}, verification::Verifiable};
+use crate::{computation::virtual_memory::EvaluationType, models::{Action, class_graph::StateClass, ModelState}, verification::Verifiable};
 
 use super::function::{ObservationContext, ObservationFunction, VarPolicy};
 

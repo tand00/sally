@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use VarPolicy::*;
 
-use crate::models::{action::Action, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, Label};
+use crate::models::{Action, ModelClock, ModelContext, ModelVar, Label};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum VarPolicy {

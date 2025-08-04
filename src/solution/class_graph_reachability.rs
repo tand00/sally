@@ -1,5 +1,5 @@
 
-use crate::{models::{class_graph::ClassGraph, lbl, model_context::ModelContext, ModelObject}, verification::{Verifiable, VerificationStatus}};
+use crate::{models::{class_graph::ClassGraph, lbl, ModelContext, ModelObject}, verification::{Verifiable, VerificationStatus}};
 
 use super::{Solution, SolutionMeta, SolverResult, REACHABILITY};
 

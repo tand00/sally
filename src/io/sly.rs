@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde_json::{Map, Value};
 
-use crate::models::{lbl, markov::markov_chain::MarkovChain, model_project::ModelProject, petri::{PetriNet, PetriStructure}, tapn::{TAPNStructure, TAPN}, Label, Model, ModelObject};
+use crate::models::{lbl, markov::markov_chain::MarkovChain, ModelProject, petri::{PetriNet, PetriStructure}, tapn::{TAPNStructure, TAPN}, Label, Model, ModelObject};
 
 use super::{deserialize_structure, serialize_structure, ModelIOError, ModelLoader, ModelLoaderMeta, ModelLoadingResult, ModelWriter, ModelWriterMeta, ModelWritingResult};
 

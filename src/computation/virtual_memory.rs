@@ -2,7 +2,7 @@ use std::{cmp::min, fmt::Display, hash::{DefaultHasher, Hash, Hasher}, mem::size
 
 use serde::{Deserialize, Serialize};
 
-use crate::models::model_var::{ModelVar, VarType};
+use crate::models::{ModelVar, VarType};
 
 use VarType::*;
 

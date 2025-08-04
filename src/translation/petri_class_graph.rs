@@ -1,4 +1,4 @@
-use crate::models::{class_graph::ClassGraph, lbl, model_context::ModelContext, petri::PetriNet, Model, ModelObject, ModelState};
+use crate::models::{class_graph::ClassGraph, lbl, ModelContext, petri::PetriNet, Model, ModelObject, ModelState};
 
 use super::{Translation, TranslationError, TranslationMeta, TranslationResult, TranslationType::SymbolicSpace};
 

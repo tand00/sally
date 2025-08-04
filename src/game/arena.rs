@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::models::{action::Action, ModelObject};
+use crate::models::{Action, ModelObject};
 
 use super::strategy::Strategy;
 

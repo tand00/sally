@@ -1,4 +1,4 @@
-use crate::models::{lbl, model_context::ModelContext, ModelObject, ModelState};
+use crate::models::{lbl, ModelContext, ModelObject, ModelState};
 
 use super::{Translation, TranslationMeta, TranslationResult, TranslationType::Observation};
 

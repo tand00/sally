@@ -3,7 +3,7 @@ use std::{fs, io};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 
-use crate::models::{model_project::ModelProject, Label, ModelObject};
+use crate::models::{ModelProject, Label, ModelObject};
 
 pub mod pnml;
 pub mod tapn;

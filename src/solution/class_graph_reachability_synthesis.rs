@@ -1,4 +1,4 @@
-use crate::models::{lbl, model_context::ModelContext, ModelObject};
+use crate::models::{lbl, ModelContext, ModelObject};
 
 use super::{Solution, SolutionMeta, SolverResult, REACHABILITY, SYNTHESIS, TWO_PLAYERS};
 

@@ -1,9 +1,9 @@
-use std::{cmp::max, collections::{HashMap, HashSet}};
+ use std::{cmp::max, collections::{HashMap, HashSet}};
 
 use function::{ObservationContext, ObservationFunction, VarPolicy};
 use observable::Observable;
 
-use crate::{computation::virtual_memory::EvaluationType, models::{action::Action, class_graph::StateClass, lbl, model_clock::ModelClock, model_context::ModelContext, model_var::ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
+use crate::{computation::virtual_memory::EvaluationType, models::{Action, class_graph::StateClass, lbl, ModelClock, ModelContext, ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
 use crate::log;
 
 use super::{Translation, TranslationError, TranslationMeta, TranslationResult, TranslationType};
@@ -40,57 +40,6 @@ impl<T : Model> PartialObservation<T> {
     }
 
 }
-
-/*impl<T : Model> Model for PartialObservation<T> {
-
-    fn get_meta() -> ModelMeta {
-        let sub_chars = T::get_meta();
-        ModelMeta {
-            name : lbl("PO-") + sub_chars.name,
-            description : String::from("Partially observed model"),
-            characteristics : sub_chars.characteristics
-        }
-    }
-
-    fn next(&self, state : ModelState, action : Action) -> Option<ModelState> {
-        todo!()
-    }
-
-    fn delay(&self, state : ModelState, dt : ClockValue) -> Option<ModelState> {
-        todo!()
-    }
-
-    fn available_actions(&self, state : &ModelState) -> HashSet<Action> {
-        todo!()
-    }
-
-    fn available_delay(&self, state : &ModelState) -> RealTimeBound {
-        todo!()
-    }
-
-    fn is_stochastic(&self) -> bool {
-        self.model.as_ref().unwrap().is_stochastic()
-    }
-
-    fn is_timed(&self) -> bool {
-        self.model.as_ref().unwrap().is_timed()
-    }
-
-    fn get_id(&self) -> usize {
-        self.id
-    }
-
-    fn compile(&mut self, context : &mut ModelContext) -> CompilationResult<()> {
-        Err(CompilationError)
-    }
-
-    fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
-        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
-    {
-        Box::new(RandomRunIterator::generate(self, initial, bound))
-    }
-
-}*/
 
 impl<T : ModelObject + Clone> Translation for PartialObservation<T> {
 

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::models::{action::Action, ModelObject, ModelState};
+use crate::models::{Action, ModelObject, ModelState};
 
 use super::arena::Player;
 
