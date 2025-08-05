@@ -37,8 +37,6 @@ pub struct TranslationMeta {
     pub translation_type : TranslationType
 }
 
-use TranslationType::*;
-
 pub trait Translation {
 
     fn translate(&mut self, base : &dyn ModelObject, context : &ModelContext, initial_state : &ModelState) -> TranslationResult;
@@ -63,8 +61,6 @@ pub trait Translation {
         let _ = state;
         None
     }
-
-    fn make_instance(&self) -> Box<dyn Translation>;
 
 }
 

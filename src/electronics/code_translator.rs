@@ -1,4 +1,4 @@
-use crate::models::{model_context::ModelContext, program::Program};
+use crate::models::{ModelContext, program::Program};
 
 use super::IOContext;
 

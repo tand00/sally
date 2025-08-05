@@ -77,8 +77,4 @@ impl<T : ModelObject + Clone> Translation for PartialObservation<T> {
         Some(self.observe(&state))
     }
 
-    fn make_instance(&self) -> Box<dyn Translation> {
-        Box::new(Self::new(self.observation_function.clone()))
-    }
-
 }

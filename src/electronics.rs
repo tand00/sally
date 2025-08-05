@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use code_translator::CodeTranslator;
 
 use crate::computation::probability::RealDistribution;
-use crate::models::model_project::ModelProject;
-use crate::models::model_var::ModelVar;
-use crate::models::action::Action;
+use crate::models::ModelProject;
+use crate::models::ModelVar;
+use crate::models::Action;
 use crate::models::CompilationResult;
 
 pub mod code_translator;

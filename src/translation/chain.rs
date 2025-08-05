@@ -1,4 +1,4 @@
-use crate::{models::{lbl, ModelContext, ModelObject, ModelState}, translation::{Translation, TranslationError, TranslationMeta, TranslationResult, TranslationType}};
+use crate::{models::{lbl, ModelContext, ModelObject, ModelState}, translation::{Translation, TranslationError, TranslationFactory, TranslationMeta, TranslationResult, TranslationType}};
 
 use TranslationType::*;
 
@@ -65,11 +65,36 @@ impl Translation for TranslationChain {
         }
         Some(current_state)
     }
+
+}
+
+pub struct TranslationChainFactory {
+    pub factories: Vec<Box<dyn TranslationFactory>>
+}
+
+impl TranslationFactory for TranslationChainFactory {
+
+    fn get_meta(&self) -> TranslationMeta {
+        TranslationMeta {
+            name : lbl("TranslationChain"),
+            description : String::from("Structs used to chain translations into a more complex one."),
+            input : match self.factories.first() {
+                None => lbl("any"),
+                Some(x) => x.get_meta().input
+            },
+            output : match self.factories.last() {
+                None => lbl("any"),
+                Some(x) => x.get_meta().output
+            },
+            translation_type : Unspecified,
+        }
+    }
     
     fn make_instance(&self) -> Box<dyn Translation> {
         Box::new(TranslationChain {
-            translations : self.translations.iter().map(|t| t.make_instance()).collect()
+            translations : self.factories.iter().map(|t| t.make_instance()).collect()
         })
+    
     }
-
+    
 }

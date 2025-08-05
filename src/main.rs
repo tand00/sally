@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use computation::probability::RealDistribution;
 use io::sly::{SLYLoader, SLYWriter};
 use io::tapn::TAPNLoader;
-use models::model_project::ModelProject;
+use models::ModelProject;
 use models::lbl;
 use models::markov::markov_chain::MarkovChain;
 use models::petri::{PetriPlace, PetriTransition};

@@ -35,9 +35,5 @@ impl Translation for PetriPartialObservation {
     fn get_translated(&mut self) -> (&mut dyn ModelObject, &ModelContext, &ModelState) {
         panic!("Nothing for now")
     }
-
-    fn make_instance(&self) -> Box<dyn Translation> {
-        Box::new(Self::new())
-    }
-
+    
 }
