@@ -1,6 +1,4 @@
-use std::{iter::Cloned, ops::{Add, Mul, Sub}, process::Output, slice::Iter};
-
-use num_traits::Zero;
+use std::{iter::Cloned, slice::Iter};
 
 /// Returns every combination of K elements of a slice, keeping the relative order
 pub struct KInVec<'a, T> {

@@ -89,12 +89,16 @@ impl TranslationFactory for TranslationChainFactory {
             translation_type : Unspecified,
         }
     }
-    
+
     fn make_instance(&self) -> Box<dyn Translation> {
         Box::new(TranslationChain {
             translations : self.factories.iter().map(|t| t.make_instance()).collect()
         })
-    
+
     }
-    
+
+    fn is_compatible(&self, model : &dyn ModelObject) -> bool {
+        todo!()
+    }
+
 }

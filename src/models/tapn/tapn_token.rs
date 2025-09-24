@@ -123,10 +123,10 @@ pub struct TAPNTokenListWriter<'a> {
 
 impl<'a> TAPNTokenListReader<'a> {
 
-    pub fn tokens(&self) -> impl Iterator<Item = TAPNTokenReader> {
+    pub fn tokens<'b>(&'b self) -> impl Iterator<Item = TAPNTokenReader<'b>> {
         self.tokens.iter().map(|t| TAPNTokenReader::from(t) )
     }
-    
+
     pub fn n_tokens(&self) -> i32 {
         self.tokens().map(|t| *t.count ).sum()
     }
@@ -150,7 +150,7 @@ impl<'a> TAPNTokenListReader<'a> {
 }
 impl<'a> TAPNTokenListWriter<'a> {
 
-    pub fn tokens(&mut self) -> impl Iterator<Item = TAPNTokenWriter> {
+    pub fn tokens<'b>(&'b mut self) -> impl Iterator<Item = TAPNTokenWriter<'b>> {
         self.tokens.iter_mut().map(|x| TAPNTokenWriter::from(x) )
     }
 
@@ -200,7 +200,7 @@ impl<'a> TAPNTokenListWriter<'a> {
         }
     }
 
-    pub fn get_token(&mut self, index : usize) -> TAPNTokenWriter {
+    pub fn get_token<'b>(&'b mut self, index : usize) -> TAPNTokenWriter<'b> {
         TAPNTokenWriter::from(&mut self.tokens[index])
     }
 
@@ -288,7 +288,7 @@ impl<'a> TAPNPlaceListReader<'a> {
         self.places.len()
     }
 
-    pub fn place(&self, place : usize) -> TAPNTokenListReader {
+    pub fn place<'b>(&'b self, place : usize) -> TAPNTokenListReader<'b> {
         TAPNTokenListReader::from(&self.places[place])
     }
 
@@ -311,7 +311,7 @@ impl<'a> TAPNPlaceListWriter<'a> {
         self.places.len()
     }
 
-    pub fn place(&mut self, place : usize) -> TAPNTokenListWriter {
+    pub fn place<'b>(&'b mut self, place : usize) -> TAPNTokenListWriter<'b> {
         TAPNTokenListWriter::from(&mut self.places[place])
     }
 

@@ -11,7 +11,7 @@ pub use query::Query;
 pub enum VerificationType {
     Analytical,
     Discrete,
-    SMC
+    Statistical
 }
 
 pub struct VerificationConfig {

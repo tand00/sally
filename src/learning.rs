@@ -1,5 +1,5 @@
 pub mod genetic;
-pub mod logic_2D;
+pub mod logic_2d;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum OptimizationObjective {
