@@ -168,12 +168,12 @@ impl PetriNet {
             places_down[place_index].push(Arc::clone(transition));
         }
         transition.input_edges.set(input_edges).unwrap();
-        for place in self.places.iter() {
+        for (place_index, place) in self.places.iter().enumerate() {
             let place_var = place.get_var();
             if !guard_vars.contains(place_var) {
                 continue;
             }
-            places_down[place.index].push(Arc::clone(transition));
+            places_down[place_index].push(Arc::clone(transition));
         }
         for place_to in to_labels.iter() {
             let place_index = self.places_dic[&place_to.0];
@@ -329,8 +329,7 @@ impl Model for PetriNet {
         let mut places_down = vec![Vec::new() ; self.places.len()];
         for (i, place) in self.places.iter().enumerate() {
             let mut compiled_place = PetriPlace::clone(place);
-            compiled_place.index = i;
-            self.places_dic.insert(compiled_place.get_label(), compiled_place.index);
+            self.places_dic.insert(compiled_place.get_label(), i);
             compiled_place.compile(context)?;
             compiled_places.push(Arc::new(compiled_place));
         }
@@ -345,8 +344,7 @@ impl Model for PetriNet {
             self.create_transition_edges(&compiled_transition, &mut places_down, &mut places_up);
             compiled_transitions.push(compiled_transition);
         }
-        for place in self.places.iter() {
-            let index = place.index;
+        for (index, place) in self.places.iter().enumerate() {
             place.out_transitions.set(places_down[index].clone()).unwrap();
             place.in_transitions.set(places_up[index].clone()).unwrap();
         }

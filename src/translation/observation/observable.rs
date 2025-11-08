@@ -49,7 +49,6 @@ impl Observable for Action {
         match self {
             Action::Epsilon => Action::Epsilon,
             Action::Base(_) => result,
-            Action::Sync(_, a, b) => result.sync(Action::clone(a), Action::clone(b)),
             Action::WithData(_, d) => result.with_data(d.clone())
         }
     }

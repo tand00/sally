@@ -14,7 +14,6 @@ pub enum Action {
     #[serde(rename = "_")]
     Epsilon,
     Base(usize),
-    Sync(usize, Box<Action>, Box<Action>),
     WithData(usize, ModelStorage)
 }
 
@@ -24,7 +23,6 @@ impl Action {
         match self {
             Self::Epsilon => UNMAPPED_ID,
             Self::Base(i) => *i,
-            Self::Sync(i, _, _) => *i,
             Self::WithData(i, _) => *i
         }
     }
@@ -52,27 +50,9 @@ impl Action {
         }
     }
 
-    pub fn extract_sync(self) -> Option<(Action, Action, Action)> {
-        match self {
-            Self::Sync(i, a1, a2) => Some((Self::Base(i), *a1, *a2)),
-            _ => None
-        }
-    }
-
-    pub fn sync(&self, a : Action, b : Action) -> Action {
-        Self::Sync(self.get_id(), Box::new(a), Box::new(b))
-    }
-
     pub fn has_data(&self) -> bool {
         match self {
             Self::WithData(_, _) => true,
-            _ => false
-        }
-    }
-
-    pub fn is_sync(&self) -> bool {
-        match self {
-            Self::Sync(_, _, _) => true,
             _ => false
         }
     }
@@ -90,7 +70,6 @@ impl Display for Action {
         match self {
             Self::Epsilon => write!(f, "_"),
             Self::Base(i) => write!(f, "Action({})", i),
-            Self::Sync(id, i, j) => write!(f, "Sync({},{},{})", id, i, j),
             Self::WithData(i, _) => write!(f, "WithData({})", i)
         }
     }
