@@ -6,41 +6,32 @@ use crate::computation::BitSet;
 
 use super::{model_storage::ModelStorage, UNMAPPED_ID};
 
-// Action enum :
-// Epsilon : No label nor ID, used for internal invisible transitions
+pub type ActionSymbol = u16;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Action {
-    #[serde(rename = "_")]
-    Epsilon,
-    Base(usize),
-    WithData(usize, ModelStorage)
+    Base(ActionSymbol),
+    WithData(ActionSymbol, ModelStorage)
 }
 
 impl Action {
 
-    pub fn get_id(&self) -> usize {
+    pub fn get_symbol(&self) -> ActionSymbol {
         match self {
-            Self::Epsilon => UNMAPPED_ID,
-            Self::Base(i) => *i,
-            Self::WithData(i, _) => *i
+            Action::Base(i) 
+            | Action::WithData(i, _) => *i
         }
-    }
-
-    pub fn is_epsilon(&self) -> bool {
-        *self == Self::Epsilon
     }
 
     pub fn base(&self) -> Action {
-        match self {
-            Self::Epsilon => Self::Epsilon,
-            Self::Base(_) => self.clone(),
-            _ => Self::Base(self.get_id())
-        }
+        Self::Base(self.get_symbol())
     }
 
     pub fn with_data(&self, data : ModelStorage) -> Action {
-        Self::WithData(self.get_id(), data)
+        match self {
+            Action::Base(i) 
+            | Action::WithData(i, _) => Action::WithData(*i, data),
+        }
     }
 
     pub fn extract_data(self) -> Option<(Action, ModelStorage)> {
@@ -61,14 +52,13 @@ impl Action {
 
 impl Default for Action {
     fn default() -> Self {
-        Self::Epsilon
+        Self::Base(0)
     }
 }
 
 impl Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Epsilon => write!(f, "_"),
             Self::Base(i) => write!(f, "Action({})", i),
             Self::WithData(i, _) => write!(f, "WithData({})", i)
         }
@@ -148,28 +138,24 @@ impl ActionPairs {
 
 #[derive(Debug, Clone)]
 pub struct ActionSet {
-    pub enabled : BitSet,
-    pub has_spe : BitSet,
-    pub specializations : HashMap<usize, HashSet<Action>>
+    pub enabled : HashSet<ActionSymbol>,
+    pub has_spe : HashSet<ActionSymbol>,
+    pub specializations : HashMap<ActionSymbol, HashSet<Action>>
 }
 
 impl ActionSet {
 
     pub fn is_enabled(&self, action : &Action) -> bool {
-        if action.is_epsilon() {
-            return false;
-        }
-        self.enabled.is_enabled(&action.get_id())
+        self.enabled.contains(&action.get_symbol())
     }
 
     pub fn add_action(&mut self, action : Action) {
         match action {
-            Action::Epsilon => (),
-            Action::Base(i) => self.enabled.enable(&i),
+            Action::Base(i) => { self.enabled.insert(i); },
             a => {
-                let id = a.get_id();
-                self.enabled.enable(&id);
-                self.has_spe.enable(&id);
+                let id = a.get_symbol();
+                self.enabled.insert(id);
+                self.has_spe.insert(id);
                 if self.specializations.contains_key(&id) {
                     self.specializations.get_mut(&id).unwrap().insert(a);
                 } else {

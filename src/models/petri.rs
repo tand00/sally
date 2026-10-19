@@ -4,10 +4,10 @@ use std::{
     sync::Arc,
 };
 
-use crate::{models::{class_graph::StateClassGenerator, digraph::search_strategy::BreadthFirst}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
+use crate::{models::{class_graph::StateClassGenerator, digraph::search_strategy::BreadthFirst}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
 
 use super::{
-    action::Action, lbl, model_characteristics::*, model_context::ModelContext, time::{ClockValue, RealTimeBound},
+    action::Action, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound},
     CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node, UNMAPPED_ID,
 };
 
@@ -298,13 +298,12 @@ impl Model for PetriNet {
         Some(state)
     }
 
-    fn get_meta() -> ModelMeta {
+    fn get_meta(&self) -> ModelMeta {
         ModelMeta {
             name: lbl("TPN"),
             description: String::from(
                 "Time Petri net, every transition is associated with a firing interval.",
             ),
-            characteristics: TIMED | CONTROLLABLE,
         }
     }
 
@@ -376,6 +375,24 @@ impl Model for PetriNet {
         iter.collect()
     }
 
+}
+
+impl Serialize for PetriNet {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer 
+    {
+        self.get_structure().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for PetriNet {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de> 
+    {
+        PetriStructure::deserialize(deserializer).into()
+    }
 }
 
 // Display implementations ---

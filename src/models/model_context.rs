@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
-use crate::computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory};
+use crate::{computation::virtual_memory::{EvaluationType, VariableDefiner, VirtualMemory}, models::ActionSymbol};
 
 use super::{action::Action, model_clock::ModelClock, model_storage::ModelStorage, model_var::{ModelVar, VarType}, Label, ModelObject, ModelState};
 
@@ -114,7 +114,7 @@ impl ModelContext {
     pub fn add_action(&mut self, name : Label) -> Action {
         let id = self.n_actions();
         let action_name = self.get_local_name(name.clone());
-        let action = Action::Base(id);
+        let action = Action::Base(id as ActionSymbol);
         self.actions.insert(action_name, action.clone());
         action
     }

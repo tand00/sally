@@ -8,9 +8,9 @@ pub use ta_state::TAState;
 use ta_transition::TAEdge;
 pub use ta_transition::TATransition;
 
-use crate::verification::{smc::RandomRunIterator, VerificationBound};
+use crate::{verification::{VerificationBound, smc::RandomRunIterator}};
 
-use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, TIMED, UNMAPPED_ID};
+use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
 
 pub struct TimedAutomaton {
     pub id: usize,
@@ -67,11 +67,10 @@ impl Model for TimedAutomaton {
         }).collect()
     }
 
-    fn get_meta() -> ModelMeta {
+    fn get_meta(&self) -> ModelMeta {
         ModelMeta {
             name: lbl("TimedAutomata"),
             description: "Generic timed automata with multiple clocks".to_owned(),
-            characteristics: TIMED | CONTROLLABLE
         }
     }
 

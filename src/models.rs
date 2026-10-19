@@ -29,7 +29,6 @@ pub use action::*;
 pub use node::Node;
 
 use num_traits::Zero;
-use rand::{seq::SliceRandom, thread_rng, Rng};
 use time::RealTimeBound;
 
 pub mod caching;
@@ -49,9 +48,7 @@ pub mod beliefs_graph;
 
 use crate::{computation::virtual_memory::EvaluationType, verification::VerificationBound};
 
-use self::{
-    model_characteristics::*, time::ClockValue,
-};
+use self::time::ClockValue;
 
 #[derive(Debug, Clone)]
 pub struct CompilationError;
@@ -61,71 +58,19 @@ pub type InitialMarking = HashMap<Label, EvaluationType>;
 
 pub const UNMAPPED_ID : usize = usize::MAX;
 
-pub mod model_characteristics {
-    use crate::flag;
-
-    use super::{lbl, Label};
-    pub type ModelCharacteristics = u16;
-    pub const NONE: ModelCharacteristics = 0;
-    pub const TIMED: ModelCharacteristics = flag!(0);
-    pub const CONTROLLABLE: ModelCharacteristics = flag!(1);
-    pub const STOCHASTIC: ModelCharacteristics = flag!(2);
-    pub const SYMBOLIC: ModelCharacteristics = flag!(3);
-
-    pub fn has_characteristic(
-        model_characteristics: ModelCharacteristics,
-        characteristic: ModelCharacteristics,
-    ) -> bool {
-        (model_characteristics & characteristic) != 0
-    }
-
-    pub fn characteristics_label(model: ModelCharacteristics) -> Label {
-        let mut characteritics: Vec<&str> = Vec::new();
-        if model == 0 {
-            return lbl("()");
-        }
-        if has_characteristic(model, TIMED) {
-            characteritics.push("Timed");
-        }
-        if has_characteristic(model, CONTROLLABLE) {
-            characteritics.push("Controllable");
-        }
-        if has_characteristic(model, STOCHASTIC) {
-            characteritics.push("Stochastic");
-        }
-        if has_characteristic(model, SYMBOLIC) {
-            characteritics.push("Symbolic");
-        }
-        Label::from(characteritics.join("|"))
-    }
-}
-
-pub use model_characteristics::ModelCharacteristics;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelMeta {
     pub name: Label,
     pub description: String,
-    pub characteristics: ModelCharacteristics,
-}
-impl ModelMeta {
-    pub fn is_timed(&self) -> bool {
-        has_characteristic(self.characteristics, TIMED)
-    }
-
-    pub fn is_stochastic(&self) -> bool {
-        has_characteristic(self.characteristics, STOCHASTIC)
-    }
 }
 
 impl std::fmt::Display for ModelMeta {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            " [.] Model ({})\n | - Description : \n | {}\n | - Characteristics : {}",
+            " [.] Model ({})\n | - Description : \n | {}\n",
             self.name,
             self.description,
-            characteristics_label(self.characteristics)
         )
     }
 }
@@ -153,11 +98,8 @@ pub trait Model: Any {
     }
 
     fn delay_next(&self, state: ModelState, dt: ClockValue, action: Action) -> Option<ModelState> {
-        if let Some(delayed) = self.delay(state, dt) {
-            self.next(delayed, action)
-        } else {
-            None
-        }
+        self.delay(state, dt)
+            .and_then(|state| self.next(state, action))
     }
 
     fn init_initial_clocks(&self, state: ModelState) -> ModelState {
@@ -168,9 +110,7 @@ pub trait Model: Any {
         state
     }
 
-    fn get_meta() -> ModelMeta
-    where
-        Self: Sized;
+    fn get_meta(&self) -> ModelMeta;
 
     fn is_timed(&self) -> bool;
 
@@ -179,7 +119,7 @@ pub trait Model: Any {
     // Default implementation of random_next sampler for SMC.
     // Should be overrided by stochastic models with a more relevant behaviour !
     fn random_next(&self, state: ModelState) -> (Option<ModelState>, ClockValue, Option<Action>) {
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let max_delay: ClockValue = self.available_delay(&state).into();
         let mut delayed_state = state;
         let mut delay = ClockValue::zero();
@@ -223,7 +163,7 @@ pub trait Model: Any {
 
     fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a>;
 
-    fn edges(&self) -> Vec<Edge<String,Label,Label>>;
+    fn edges(&self) -> Vec<Edge<String, Label, Label>>;
 
 }
 
@@ -231,7 +171,6 @@ pub trait Model: Any {
 pub trait ModelObject: Model + Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
-    fn get_model_meta(&self) -> ModelMeta;
     fn into_any(self) -> Box<dyn Any>;
     fn model_object(&self) -> &dyn ModelObject;
 }
@@ -242,9 +181,6 @@ impl<T: Model + Send + Sync> ModelObject for T {
     }
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
-    }
-    fn get_model_meta(&self) -> ModelMeta {
-        Self::get_meta()
     }
     fn into_any(self) -> Box<dyn Any> {
         Box::new(self)

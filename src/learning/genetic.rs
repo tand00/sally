@@ -1,6 +1,5 @@
 use std::time::Instant;
 
-use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
 use crate::computation::probability::ProbabilisticChoice;
@@ -19,10 +18,10 @@ pub struct GeneticOptimizer<T : Genetizable> {
 
 impl<T : Genetizable> GeneticOptimizer<T> {
 
-    pub fn new<F,G>(generator : F, fitness : G) -> Self
+    pub fn new<G,F>(generator : G, fitness : F) -> Self
         where 
-            F : (Fn() -> T) + Sync + Send + 'static,
-            G : (Fn(&T) -> f64) + Sync + Send + 'static
+            G : (Fn() -> T) + Sync + Send + 'static,
+            F : (Fn(&T) -> f64) + Sync + Send + 'static
     {
         GeneticOptimizer {
             generator : Box::new(generator),
@@ -67,7 +66,7 @@ impl<T : Genetizable> GeneticOptimizer<T> {
             let sampler = ProbabilisticChoice::new(candidates);
             let children_to_make = population - elite;
             let mut children : Vec<(T, f64)> = (0..children_to_make).into_par_iter().map(|_| {
-                let mut rng = thread_rng();
+                let mut rng = rand::rng();
                 let p1 = sampler.sample(&mut rng);
                 let p2 = sampler.sample(&mut rng);
                 let mut child = p1.cross(p2);

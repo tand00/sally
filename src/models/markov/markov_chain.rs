@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::probability::ProbabilisticChoice, models::{action::Action, lbl, model_context::ModelContext, model_var::{ModelVar, VarType}, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
+use crate::{computation::probability::ProbabilisticChoice, models::{CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node, UNMAPPED_ID, action::Action, lbl, model_context::ModelContext, model_var::{ModelVar, VarType}, time::ClockValue}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
 
 use super::markov_node::MarkovNode;
 
@@ -94,11 +94,10 @@ impl Model for MarkovChain {
         self.get_current_node(state).available_actions()
     }
 
-    fn get_meta() -> ModelMeta {
+    fn get_meta(&self) -> ModelMeta {
         ModelMeta {
-            name : lbl("MarkovChain"),
-            description : String::from("Generic Markov chain, can contain decision nodes"),
-            characteristics : CONTROLLABLE | STOCHASTIC
+            name: lbl("MarkovChain"),
+            description: String::from("Generic Markov chain, can contain decision nodes"),
         }
     }
 

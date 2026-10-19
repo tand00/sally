@@ -12,11 +12,11 @@ pub mod function;
 pub mod observable;
 
 pub struct PartialObservation<T : Model> {
-    pub id : usize,
-    pub observation_function : ObservationFunction,
-    pub obs_ctx : ObservationContext,
-    pub model : Option<T>,
-    pub initial_state : ModelState
+    pub id: usize,
+    pub observation_function: ObservationFunction,
+    pub obs_ctx: ObservationContext,
+    pub model: Option<T>,
+    pub initial_state: ModelState
 }
 
 impl<T : Model> PartialObservation<T> {

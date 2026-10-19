@@ -9,7 +9,7 @@ use tapn_transition::TAPNTransition;
 
 use crate::verification::VerificationBound;
 
-use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, TIMED, UNMAPPED_ID};
+use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
 
 pub mod tapn_place;
 pub mod tapn_edge;
@@ -151,11 +151,10 @@ impl TAPN {
 
 impl Model for TAPN {
 
-    fn get_meta() -> ModelMeta {
+    fn get_meta(&self) -> ModelMeta {
         ModelMeta {
             name: lbl("TAPN"),
             description: String::from("Timed-Arcs Petri net"),
-            characteristics: TIMED | CONTROLLABLE
         }
     }
 

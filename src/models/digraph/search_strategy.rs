@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, marker::PhantomData};
 
-use rand::{rngs::ThreadRng, thread_rng, Rng};
+use rand::rngs::ThreadRng;
 
 use super::{GraphEdge, GraphNode};
 
@@ -36,7 +36,7 @@ pub struct RandomSearch<T> {
 }
 impl<T> RandomSearch<T> {
     pub fn new() -> Self {
-        Self { vec : Vec::new(), rng : thread_rng() }
+        Self { vec : Vec::new(), rng : rand::rng() }
     }
 }
 

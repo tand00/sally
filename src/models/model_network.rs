@@ -2,9 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use num_traits::Zero;
 
-use crate::verification::{smc::RandomRunIterator, VerificationBound};
+use crate::{verification::{VerificationBound, smc::RandomRunIterator}};
 
-use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelObject, ModelState, Node, NONE};
+use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelObject, ModelState, Node};
 
 pub struct ModelNetwork {
     pub id : usize,
@@ -30,11 +30,10 @@ impl ModelNetwork {
 
 impl Model for ModelNetwork {
 
-    fn get_meta() -> ModelMeta {
+    fn get_meta(&self) -> ModelMeta {
         ModelMeta {
-            name : lbl("ModelNet"),
-            description : String::from("Network of generic heterogeneous models"),
-            characteristics : NONE
+            name: lbl("ModelNet"),
+            description: String::from("Network of generic heterogeneous models"),
         }
     }
 

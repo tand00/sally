@@ -5,7 +5,7 @@ use crate::models::{Action, ModelObject, ModelState};
 use super::arena::Player;
 
 pub trait Strategy {
-    fn play(&mut self, from : ModelState, actions : HashSet<Action>) -> (ModelState, Vec<Action>);
+    fn play(&mut self, from : &ModelState, actions : HashSet<Action>) -> Action;
 }
 
 pub trait PlayCombiner {

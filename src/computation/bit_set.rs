@@ -2,12 +2,13 @@ use std::collections::HashSet;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not};
 use std::cmp::min;
 
-const CELL_SIZE : usize = 64;
+type CellType = u64;
+const CELL_SIZE : usize = size_of::<CellType>() * 8;
 
 // Structure for fast operations on boolean sets : And, Or, Not... Complexity O(n) to retrieve indexs after computation
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct BitSet {
-    enabled: Vec<u64>
+    enabled: Vec<CellType>
 }
 impl BitSet {
 

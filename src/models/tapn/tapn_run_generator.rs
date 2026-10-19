@@ -6,7 +6,7 @@ use crate::{computation::{convex::{ContinuousSet, Delta, ToPositive}, probabilit
 
 use super::{tapn_transition::{FiringMode, TAPNTransition}, TAPNPlaceList, TAPNPlaceListReader, TAPN};
 
-use rand::{rngs::ThreadRng, seq::SliceRandom, thread_rng, Rng};
+use rand::rngs::ThreadRng;
 
 pub struct TAPNRunGenerator<'a> {
     pub tapn : &'a TAPN,
@@ -35,7 +35,7 @@ impl<'a> TAPNRunGenerator<'a> {
                 time : ClockValue::zero(),
                 maximal : false
             },
-            rng : thread_rng()
+            rng : rand::rng()
         };
         generator.refresh_intervals();
         generator

@@ -18,7 +18,7 @@ use super::digraph::search_strategy::{GraphTraversal, NeighborsFinder, SearchStr
 use super::model_context::ModelContext;
 use super::model_var::{ModelVar, VarType};
 use super::time::{Bound, ClockValue};
-use super::{lbl, Edge, Label, Model, ModelMeta, ModelState, Node, CONTROLLABLE, SYMBOLIC, TIMED, UNMAPPED_ID};
+use super::{lbl, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
 use super::petri::{PetriNet, PetriTransition};
 
 const CLASS_LIMIT : usize = u16::MAX as usize;
@@ -156,11 +156,10 @@ impl ClassGraph {
 
 impl Model for ClassGraph {
 
-    fn get_meta() -> ModelMeta {
+    fn get_meta(&self) -> ModelMeta {
         ModelMeta {
             name : lbl("ClassGraph"),
             description : String::from("Petri net Class graph, each node is associated with a DBM and is an aggregate of possible Petri states"),
-            characteristics : TIMED | CONTROLLABLE | SYMBOLIC,
         }
     }
 

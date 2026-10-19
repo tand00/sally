@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::probability::ProbabilisticChoice, models::{action::Action, lbl, model_context::ModelContext, model_var::ModelVar, time::ClockValue, CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, CONTROLLABLE, STOCHASTIC}, verification::{smc::RandomRunIterator, VerificationBound}};
+use crate::{computation::probability::ProbabilisticChoice, models::{CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, action::Action, lbl, model_context::ModelContext, model_var::ModelVar, time::ClockValue}, verification::{VerificationBound, smc::RandomRunIterator}};
 
 use std::rc::Rc;
 
@@ -26,11 +26,10 @@ impl Model for CTMarkovChain {
         todo!()
     }
 
-    fn get_meta() -> ModelMeta {
+    fn get_meta(&self) -> ModelMeta {
         ModelMeta {
-            name : lbl("CTMC"),
-            description : String::from("Continuous Time Markov chain, can contain decision nodes"),
-            characteristics : CONTROLLABLE | STOCHASTIC
+            name: lbl("CTMC"),
+            description: String::from("Continuous Time Markov chain, can contain decision nodes"),
         }
     }
 

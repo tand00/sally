@@ -12,7 +12,7 @@ pub struct TAState {
     pub invariants : Condition,
     pub var : ModelVar,
     pub accepting : bool,
-    pub downsteam : OnceLock<Vec<Arc<TAEdge>>>,
+    pub downstream : OnceLock<Vec<Arc<TAEdge>>>,
     pub upstream : OnceLock<Vec<Arc<TAEdge>>>,
     pub index : usize
 }
