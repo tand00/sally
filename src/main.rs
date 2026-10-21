@@ -37,6 +37,9 @@ use crate::verification::smc::{ProbabilityEstimation, SMCQueryVerification};
 
 use log::*;
 
+pub type InternalF = I16F48;
+pub type InternalI = i32;
+
 fn main() {
 
     println!(" [#] Sally Model Checker - v.1.0");

@@ -2,9 +2,7 @@ use std::{collections::{HashMap, HashSet}, fmt::Display, iter};
 
 use serde::{Deserialize, Serialize};
 
-use crate::computation::BitSet;
-
-use super::{model_storage::ModelStorage, UNMAPPED_ID};
+use super::model_storage::ModelStorage;
 
 pub type ActionSymbol = u16;
 
@@ -169,7 +167,7 @@ impl ActionSet {
 
     pub fn disable_action(&mut self, action : &Action) {
         if !self.is_enabled(action) { return }
-        let id = action.get_id();
+        let id = action.get_symbol();
         self.enabled.disable(&id);
         if self.has_spe.is_enabled(&id) {
             self.has_spe.disable(&id);

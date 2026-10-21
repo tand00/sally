@@ -1,12 +1,11 @@
 use std::{fmt::{self, Display}, ops::{Add, Mul, Neg, Sub}};
 use nalgebra::Scalar;
 use num_traits::{Bounded, One, Zero};
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::computation::convex::{Convex, Delta, Disjoint, Measurable, ToPositive};
+use crate::{computation::convex::{Convex, Delta, Disjoint, Measurable, ToPositive}, models::time::TimeType};
 
-use super::{clock_value::TimeType, Bound, ClockValue, RealTimeBound, TimeBound};
+use super::{Bound, ClockValue, TimeBound};
 
 use super::Bound::*;
 
@@ -14,37 +13,7 @@ use super::Bound::*;
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct Interval<T>(pub Bound<T>, pub Bound<T>);
 
-pub type TimeInterval = Interval<i32>;
-pub type RealTimeInterval = Interval<ClockValue>;
-
-impl TimeInterval {
-
-    pub fn random_date(&self, gen : &mut impl Rng) -> ClockValue {
-        if self.is_empty() {
-            return ClockValue::disabled();
-        }
-        let low = match self.0 {
-            Infinite => f64::NAN,
-            Large(x) | Strict(x) => x as f64,
-            MinusInfinite => f64::NEG_INFINITY
-        };
-        let high = match self.1 {
-            MinusInfinite => f64::NAN,
-            Large(x) | Strict(x) => x as f64,
-            Infinite => f64::INFINITY
-        };
-        let mut chosen = ClockValue::from(gen.gen_range(low..high));
-        while !self.contains(&chosen) {
-            chosen = ClockValue::from(gen.gen_range(low..high)); // If on strict bound
-        }
-        chosen
-    }
-
-    pub fn real(&self) -> RealTimeInterval {
-        Interval(self.0.clone().real(), self.1.clone().real())
-    }
-
-}
+pub type TimeInterval = Interval<ClockValue>;
 
 impl<T> Interval<T> {
 
@@ -323,13 +292,8 @@ impl Delta<TimeBound> for TimeInterval {
         self.1 += dx;
     }
 }
-impl Delta<RealTimeBound> for RealTimeInterval {
-    fn delta(&mut self, dx : RealTimeBound) {
-        self.0 += dx;
-        self.1 += dx;
-    }
-}
-impl Delta<ClockValue> for RealTimeInterval {
+
+impl Delta<ClockValue> for TimeInterval {
     fn delta(&mut self, dx : ClockValue) {
         self.0 += Large(dx);
         self.1 += Large(dx);

@@ -2,7 +2,6 @@ use std::fmt;
 use std::ops::Add;
 use std::ops::AddAssign;
 
-use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -35,10 +34,6 @@ impl Label {
     pub fn has_domain(&self, domain : &Label) -> bool {
         let prefix = domain.clone() + ".";
         return self.0.starts_with(&prefix.0)
-    }
-
-    pub fn new_random(rng : &mut impl Rng, len : usize) -> Self {
-        Self::from(Alphanumeric.sample_string(rng, len))
     }
 
 }

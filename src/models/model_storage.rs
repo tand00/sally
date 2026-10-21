@@ -1,12 +1,13 @@
 use std::hash::Hash;
 
+use fixed::types::I16F48;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModelStorage {
     EmptyStorage,
     Integer(i32),
-    Float(f64),
+    Float(I16F48),
     Bin(u64),
     Vector(Vec<ModelStorage>),
     Tuple(Box<ModelStorage>, Box<ModelStorage>)
@@ -23,15 +24,15 @@ impl ModelStorage {
     pub fn int(self) -> i32 {
         match self {
             Integer(i) => i,
-            Float(f) => f as i32,
+            Float(f) => f.to_num(),
             _ => panic!("Incorrect storage structure")
         }
     }
 
-    pub fn float(self) -> f64 {
+    pub fn float(self) -> I16F48 {
         match self {
             Float(f) => f,
-            Integer(i) => i as f64,
+            Integer(i) => ,
             _ => panic!("Incorrect storage structure")
         }
     }

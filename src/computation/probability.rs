@@ -1,8 +1,8 @@
 use num_traits::Zero;
-use rand::{distributions::{Distribution, WeightedIndex}, Rng};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use rand_distr::{Exp, Gamma, Geometric, Normal, Uniform};
+use rand_distr::{Exp, Gamma, Geometric, Normal, Uniform, weighted::WeightedIndex};
 
 use crate::models::time::ClockValue;
 

@@ -1,7 +1,9 @@
 use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}};
 use num_traits::{Bounded, One, Zero};
 use serde::{Deserialize, Serialize};
-use super::{clock_value::TimeType, ClockValue};
+use crate::models::time::TimeType;
+
+use super::ClockValue;
 
 use Bound::{Strict, Large, Infinite, MinusInfinite};
 
@@ -19,35 +21,19 @@ pub enum Bound<T> {
     MinusInfinite,
 }
 
-pub type TimeBound = Bound<i32>;
-pub type RealTimeBound = Bound<ClockValue>;
+pub type TimeBound = Bound<ClockValue>;
 
 impl TimeBound {
-    pub fn float(&self) -> f64 {
+    pub fn value(&self) -> ClockValue {
         match self {
-            Infinite => f64::INFINITY,
-            MinusInfinite => f64::NEG_INFINITY,
-            Strict(x) | Large(x) => *x as f64
-        }
-    }
-    pub fn value(&self) -> i32 {
-        match self {
-            Infinite => i32::MAX,
-            MinusInfinite => i32::MIN,
+            Infinite => ClockValue::infinity(),
+            MinusInfinite => ClockValue::neg_infinity(),
             Strict(x) | Large(x) => *x
-        }
-    }
-    pub fn real(&self) -> RealTimeBound {
-        match self {
-            Infinite => Infinite,
-            MinusInfinite => MinusInfinite,
-            Strict(x) => Strict((*x as f64).into()),
-            Large(x) => Large((*x as f64).into())
         }
     }
 }
 
-impl<T : TimeType> Bound<T> {
+impl<T : TimeType + Copy> Bound<T> {
     pub fn greater_than(&self, clock : &ClockValue) -> bool {
         match self {
             Infinite => true,
@@ -64,11 +50,11 @@ impl<T : TimeType> Bound<T> {
             MinusInfinite => true,
         }
     }
-    pub fn clock_value(&self) -> ClockValue {
+    pub fn clock_value(self) -> ClockValue {
         match self {
             Infinite => ClockValue::infinity(),
-            Strict(x) => (*x).into(),
-            Large(x) => (*x).into(),
+            Strict(x) => x.into(),
+            Large(x) => x.into(),
             MinusInfinite => ClockValue::neg_infinity(),
         }
     }
@@ -185,9 +171,10 @@ impl<T : PartialOrd + Mul<Output = T> + Zero> Mul<T> for Bound<T> {
     }
 }
 
-impl<T : PartialOrd + PartialEq + TimeType> MulAssign for Bound<T> {
+impl<T : PartialOrd + PartialEq> MulAssign for Bound<T> {
     fn mul_assign(&mut self, rhs: Self) {
-        *self = *self * rhs
+        let temp = std::mem::replace(self, Self::Infinite);
+        *self = temp * rhs;
     }
 }
 
@@ -275,26 +262,26 @@ impl<T : fmt::Display> fmt::Display for Bound<T> {
 }
 
 
-impl AddAssign<ClockValue> for RealTimeBound {
+impl AddAssign<ClockValue> for TimeBound {
     fn add_assign(&mut self, rhs: ClockValue) {
         *self += Large(rhs)
     }
 }
 
-impl SubAssign<ClockValue> for RealTimeBound {
+impl SubAssign<ClockValue> for TimeBound {
     fn sub_assign(&mut self, rhs: ClockValue) {
         *self -= Large(rhs)
     }
 }
 
-impl Add<ClockValue> for RealTimeBound {
+impl Add<ClockValue> for TimeBound {
     type Output = Self;
     fn add(self, rhs: ClockValue) -> Self::Output {
         self + Large(rhs)
     }
 }
 
-impl Sub<ClockValue> for RealTimeBound {
+impl Sub<ClockValue> for TimeBound {
     type Output = Self;
     fn sub(self, rhs: ClockValue) -> Self::Output {
         self - Large(rhs)

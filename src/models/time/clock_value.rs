@@ -1,53 +1,47 @@
 use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}};
 use num_traits::{Bounded, One, Zero};
-use rand::{distributions::{uniform::{SampleBorrow, SampleUniform, UniformFloat, UniformSampler}, Distribution, Standard}, Rng};
+use rand::Rng;
+use rand_distr::Distribution;
 use serde::{Deserialize, Serialize};
-use super::{RealTimeBound, TimeBound};
+use crate::{InternalF, InternalI, models::time::Bound};
+
+use super::TimeBound;
 
 // Wrapper for f64 to implement extern traits
-#[derive(PartialOrd, Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct ClockValue(f64);
+#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, Hash)]
+pub struct ClockValue(Option<InternalF>);
 
 impl ClockValue {
 
     pub fn infinity() -> Self {
-        ClockValue(f64::INFINITY)
+        ClockValue(Some(InternalF::MAX))
     }
 
     pub fn neg_infinity() -> Self {
-        ClockValue(f64::NEG_INFINITY)
+        ClockValue(Some(InternalF::MIN))
     }
 
     pub fn disabled() -> Self {
-        ClockValue(f64::NAN)
+        ClockValue(None)
     }
 
     pub fn is_infinite(&self) -> bool {
-        self.0.is_infinite()
+        match self.0 {
+            Some(f) => f == InternalF::MAX || f == InternalF::MIN,
+            None => false,
+        }
     }
 
     pub fn is_disabled(&self) -> bool {
-        self.0.is_nan()
+        self.0.is_none()
     }
 
     pub fn is_enabled(&self) -> bool {
-        !self.0.is_nan()
+        !self.0.is_some()
     }
 
     pub fn disable(&mut self) {
-        self.0 = f64::NAN
-    }
-
-    pub fn float(&self) -> f64 {
-        self.0
-    }
-
-    pub fn min(self, other : Self) -> Self {
-        if self <= other {
-            self
-        } else {
-            other
-        }
+        self.0 = None
     }
 
     #[inline]
@@ -64,20 +58,24 @@ impl ClockValue {
 
 }
 
-pub trait TimeType : Into<ClockValue> + Copy { }
-impl TimeType for ClockValue {}
-impl From<i32> for ClockValue {
-    fn from(value: i32) -> Self {
-        (value as f64).into()
-    }
-}
-impl TimeType for i32 {}
-impl TimeType for f64 {}
+pub trait TimeType : Into<ClockValue> {}
+impl<T : Into<ClockValue>> TimeType for T {}
 
 impl Add for ClockValue {
     type Output = ClockValue;
     fn add(self, rhs: Self) -> Self::Output {
-        ClockValue(self.0 + rhs.0)
+        if self.is_disabled() || rhs.is_disabled() {
+            return Self::disabled();
+        }
+        if self.is_infinite() && 
+            rhs.is_infinite() && 
+            self.0.unwrap().signum() != rhs.0.unwrap().signum() 
+        {
+            panic!("Indeterminate sum !");
+        }
+        ClockValue(
+            Some(self.0.unwrap().saturating_add(rhs.0.unwrap()))
+        )
     }
 }
 
@@ -90,7 +88,7 @@ impl AddAssign for ClockValue {
 impl Neg for ClockValue {
     type Output = ClockValue;
     fn neg(self) -> Self::Output {
-        ClockValue(-self.0)
+        ClockValue(self.0.map(|x| -x))
     }
 }
 
@@ -110,7 +108,12 @@ impl SubAssign for ClockValue {
 impl Mul for ClockValue {
     type Output = ClockValue;
     fn mul(self, rhs: Self) -> Self::Output {
-        ClockValue(self.0 * rhs.0)
+        if self.is_disabled() || rhs.is_disabled() {
+            return Self::disabled();
+        }
+        ClockValue(
+            Some(self.0.unwrap().saturating_mul(rhs.0.unwrap()))
+        )
     }
 }
 
@@ -120,45 +123,51 @@ impl MulAssign for ClockValue {
     }
 }
 
+impl Mul<i64> for ClockValue {
+    type Output = ClockValue;
+    fn mul(self, rhs: i64) -> Self::Output {
+        ClockValue(self.0.map(|c| c * rhs))
+    }
+}
+
+impl MulAssign<i64> for ClockValue {
+    fn mul_assign(&mut self, rhs: i64) {
+        *self = *self * rhs
+    }
+}
+
 impl Zero for ClockValue {
     fn zero() -> Self {
-        ClockValue(f64::zero())
+        ClockValue(Some(InternalF::ZERO))
     }
     fn is_zero(&self) -> bool {
-        self.0.is_zero()
+        match self.0 {
+            Some(f) => f.is_zero(),
+            None => false,
+        }
     }
 }
 
 impl One for ClockValue {
     fn one() -> Self {
-        ClockValue(f64::one())
+        ClockValue(Some(InternalF::ONE))
     }
     fn is_one(&self) -> bool {
-        self.0.is_one()
+        match self.0 {
+            Some(f) => f == InternalF::ONE,
+            None => false,
+        }
     }
 }
 
 impl fmt::Display for ClockValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Hash for ClockValue {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        ((self.0 * 100_000_000.0) as u64).hash(state)
-    }
-}
-
-impl PartialEq for ClockValue {
-    fn eq(&self, other: &Self) -> bool {
-        if self.is_disabled() && other.is_disabled() {
-            return true;
+        match self.0 {
+            Some(x) => x.fmt(f),
+            None => write!(f, "_"),
         }
-        return self.0 == other.0;
     }
 }
-impl Eq for ClockValue {}
 
 impl Bounded for ClockValue {
     fn min_value() -> Self {
@@ -169,83 +178,45 @@ impl Bounded for ClockValue {
     }
 }
 
-impl Distribution<ClockValue> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ClockValue {
-        let rand_f = rng.gen();
-        ClockValue(rand_f)
-    }
-}
-
-/*impl SampleRange<ClockValue> for Range<ClockValue> {
-    fn sample_single<R: RngCore + ?Sized>(self, rng: &mut R) -> ClockValue {
-        let f_range = (self.start.0)..(self.end.0);
-        let rand_f = rng.gen_range(f_range);
-        ClockValue(rand_f)
-    }
-    fn is_empty(&self) -> bool {
-        self.is_empty()
-    }
-}*/
-
-pub struct UniformClockValue(UniformFloat<f64>);
-
-impl UniformSampler for UniformClockValue {
-    type X = ClockValue;
-    fn new<B1, B2>(low: B1, high: B2) -> Self
-        where B1: SampleBorrow<Self::X> + Sized,
-              B2: SampleBorrow<Self::X> + Sized
-    {
-        UniformClockValue(UniformFloat::<f64>::new(low.borrow().0, high.borrow().0))
-    }
-    fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
-        where B1: SampleBorrow<Self::X> + Sized,
-              B2: SampleBorrow<Self::X> + Sized
-    {
-        UniformClockValue(UniformFloat::<f64>::new_inclusive(
-            low.borrow().0,
-            high.borrow().0,
-        ))
-    }
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::X {
-        ClockValue(self.0.sample(rng))
-    }
-}
-
-impl SampleUniform for ClockValue {
-    type Sampler = UniformClockValue;
-}
-
 impl Default for ClockValue {
     fn default() -> Self {
         ClockValue::zero()
     }
 }
 
-impl From<TimeBound> for ClockValue {
-    fn from(value: TimeBound) -> Self {
-        match value {
-            TimeBound::Infinite => ClockValue::infinity(),
-            TimeBound::MinusInfinite => ClockValue::neg_infinity(),
-            TimeBound::Large(x) => ClockValue(x as f64),
-            TimeBound::Strict(x) => ClockValue(x as f64)
-        }
-    }
-}
-
-impl From<RealTimeBound> for ClockValue {
-    fn from(value: RealTimeBound) -> Self {
-        match value {
-            RealTimeBound::Infinite => ClockValue::infinity(),
-            RealTimeBound::MinusInfinite => ClockValue::neg_infinity(),
-            RealTimeBound::Large(x) => x,
-            RealTimeBound::Strict(x) => x
-        }
-    }
-}
-
-
 impl From<f64> for ClockValue {
     fn from(value: f64) -> Self {
-        ClockValue(value)
+        if value.is_nan() {
+            Self(None)
+        } else if value == f64::INFINITY {
+            Self::infinity()
+        } else if value == f64::NEG_INFINITY {
+            Self::neg_infinity()
+        } else {
+            Self(Some(InternalF::from_num(value)))
+        }
+    }
+}
+
+impl From<InternalI> for ClockValue {
+    fn from(value: InternalI) -> Self {
+        if value == InternalI::MAX {
+            Self::infinity()
+        } else if value == InternalI::MIN {
+            Self::neg_infinity()
+        } else {
+            Self(Some(InternalF::from_num(value)))
+        }
+    }
+}
+
+impl<T : TimeType> From<Bound<T>> for ClockValue {
+    fn from(value: Bound<T>) -> Self {
+        match value {
+            Bound::Infinite => ClockValue::infinity(),
+            Bound::MinusInfinite => ClockValue::neg_infinity(),
+            Bound::Large(x) => x.into(),
+            Bound::Strict(x) => x.into()
+        }
     }
 }
