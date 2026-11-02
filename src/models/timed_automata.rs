@@ -8,9 +8,9 @@ pub use ta_state::TAState;
 use ta_transition::TAEdge;
 pub use ta_transition::TATransition;
 
-use crate::{verification::{VerificationBound, smc::RandomRunIterator}};
+use crate::{models::time::TimeBound, verification::{VerificationBound, smc::RandomRunIterator}};
 
-use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
+use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
 
 pub struct TimedAutomaton {
     pub id: usize,
@@ -61,7 +61,7 @@ impl Model for TimedAutomaton {
 
     fn available_actions(&self, state: &ModelState) -> HashSet<Action> {
         let place = self.get_active_place(state);
-        let transis = place.downsteam.get().unwrap();
+        let transis = place.downstream.get().unwrap();
         transis.iter().filter_map(|t| {
             if t.data().is_enabled(state) { Some(t.data().get_action()) } else { None }
         }).collect()
@@ -127,7 +127,7 @@ impl Model for TimedAutomaton {
         for state in self.states.iter() {
             let label = state.get_name();
             state.upstream.set(upstream.remove(&label).unwrap()).unwrap();
-            state.downsteam.set(downstream.remove(&label).unwrap()).unwrap();
+            state.downstream.set(downstream.remove(&label).unwrap()).unwrap();
         }
         self.state_cache = context.add_storage();
         Ok(())
@@ -137,9 +137,9 @@ impl Model for TimedAutomaton {
         self.id
     }
 
-    fn available_delay(&self, state: &ModelState) -> RealTimeBound {
+    fn available_delay(&self, state: &ModelState) -> TimeBound {
         if !self.is_timed() {
-            return RealTimeBound::Infinite;
+            return TimeBound::Infinite;
         }
         let place = self.get_active_place(state);
         place.remaining_time(state)

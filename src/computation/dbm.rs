@@ -7,7 +7,7 @@ use nalgebra::{DMatrix, DVector};
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
-use crate::models::time::{Bound, ClockValue, Interval};
+use crate::{InternalF, models::time::{Bound, ClockValue, Interval}};
 
 use super::convex::{ContinuousSet, Convex, Delta, Disjoint, Measurable};
 
@@ -397,16 +397,16 @@ impl Delta<IntBound> for DBM {
 
 /// Experimental measure, volume of the englobing square
 impl Measurable for DBM {
-    fn len(&self) -> f64 {
+    fn len(&self) -> InternalF {
         if self.is_empty() {
-            return 0.0;
+            return InternalF::ZERO;
         }
-        let mut s = 1.0f64;
+        let mut s = InternalF::ONE;
         for i in 0..self.vars_count() {
             let rect = self.rectangulars(i + 1);
             s *= rect.len();
             if s.is_zero() {
-                return 0.0;
+                return InternalF::ZERO;
             }
         }
         s

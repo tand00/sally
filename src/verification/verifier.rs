@@ -1,5 +1,5 @@
 use std::{hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
-use crate::{computation::virtual_memory::EvaluationType, models::{ModelClock, ModelContext, MappingResult, ModelVar}};
+use crate::{computation::virtual_memory::EvaluationType, models::{MappingResult, ModelClock, ModelContext, ModelVar, time::ClockValue}};
 
 use super::query::*;
 use serde::{Deserialize, Serialize};
@@ -109,8 +109,8 @@ impl Default for VerificationBound {
 
 pub trait Verifiable : Hash {
     fn evaluate_var(&self, var : &ModelVar) -> EvaluationType;
-    fn evaluate_clock(&self, _ : &ModelClock) -> f64 {
-        f64::NAN
+    fn evaluate_clock(&self, _ : &ModelClock) -> ClockValue {
+        ClockValue::disabled()
     }
     fn is_deadlocked(&self) -> bool;
     fn as_verifiable(&self) -> &impl Verifiable

@@ -3,7 +3,7 @@ use nalgebra::Scalar;
 use num_traits::{Bounded, One, Zero};
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::convex::{Convex, Delta, Disjoint, Measurable, ToPositive}, models::time::TimeType};
+use crate::{InternalF, computation::convex::{Convex, Delta, Disjoint, Measurable, ToPositive}, models::time::TimeType};
 
 use super::{Bound, ClockValue, TimeBound};
 
@@ -13,12 +13,12 @@ use super::Bound::*;
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct Interval<T>(pub Bound<T>, pub Bound<T>);
 
-pub type TimeInterval = Interval<ClockValue>;
+pub type TimeInterval = Interval<InternalF>;
 
 impl<T> Interval<T> {
 
     pub fn new(a : Bound<T>, b : Bound<T>) -> Self
-        where T : TimeType + Scalar + PartialOrd + Bounded
+        where T : TimeType + Copy + Scalar + PartialOrd + Bounded
     {
         let res = Interval(a,b);
         if res.is_empty() {
@@ -28,7 +28,7 @@ impl<T> Interval<T> {
         }
     }
 
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         Interval(Infinite, MinusInfinite)
     }
 
@@ -52,21 +52,21 @@ impl<T> Interval<T> {
 
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Bounded + Add<Output = T>> Add for Interval<T> { // Intersection
+impl<T : TimeType + Copy + Scalar + PartialOrd + Bounded + Add<Output = T>> Add for Interval<T> { // Intersection
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
         Interval(self.0 + rhs.0, self.1 + rhs.1)
     }
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Bounded + Sub<Output = T>> Sub for Interval<T> {
+impl<T : TimeType + Copy + Scalar + PartialOrd + Bounded + Sub<Output = T>> Sub for Interval<T> {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
         Interval(self.0 - rhs.1, self.1 - rhs.0)
     }
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Bounded> Mul for Interval<T> {
+impl<T : TimeType + Copy + Scalar + PartialOrd + Bounded> Mul for Interval<T> {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         self.intersection(rhs)
@@ -84,14 +84,14 @@ impl<T : PartialOrd + Mul<Output = T> + Zero + Clone> Mul<T> for Interval<T> {
     }
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Neg<Output = T> + Bounded> Neg for Interval<T> {
+impl<T : TimeType + Copy + Scalar + PartialOrd + Neg<Output = T> + Bounded> Neg for Interval<T> {
     type Output = Self;
     fn neg(self) -> Self::Output {
         Interval(-self.1, -self.0)
     }
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Bounded> One for Interval<T> {
+impl<T : TimeType + Copy + Scalar + PartialOrd + Bounded> One for Interval<T> {
     fn one() -> Self {
         Interval::full()
     }
@@ -100,7 +100,7 @@ impl<T : TimeType + Scalar + PartialOrd + Bounded> One for Interval<T> {
     }
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Bounded> Default for Interval<T> {
+impl<T : TimeType + Copy + Scalar + PartialOrd + Bounded> Default for Interval<T> {
     fn default() -> Self {
         Interval::full()
     }
@@ -127,7 +127,7 @@ impl Display for TimeInterval {
     }
 }
 
-impl<T : TimeType + Scalar + PartialOrd + Bounded> Convex<ClockValue> for Interval<T> {
+impl<T : TimeType + Copy + Scalar + PartialOrd + Bounded> Convex<ClockValue> for Interval<T> {
 
     fn contains(&self, elem : &ClockValue) -> bool {
         self.0.lower_than(elem) && self.1.greater_than(elem)
@@ -268,13 +268,8 @@ impl<T : TimeType + Scalar + PartialOrd + Bounded> Convex<ClockValue> for Interv
 }
 
 impl Measurable for TimeInterval {
-    fn len(&self) -> f64 {
-        ClockValue::from(self.1 - self.0).float()
-    }
-}
-impl Measurable for RealTimeInterval {
-    fn len(&self) -> f64 {
-        ClockValue::from(self.1 - self.0).float()
+    fn len(&self) -> InternalF {
+        (self.1 - self.0).value()
     }
 }
 

@@ -29,7 +29,6 @@ pub use action::*;
 pub use node::Node;
 
 use num_traits::Zero;
-use time::RealTimeBound;
 
 pub mod caching;
 pub mod class_graph;
@@ -46,7 +45,7 @@ pub mod time;
 pub mod timed_automata;
 pub mod beliefs_graph;
 
-use crate::{computation::virtual_memory::EvaluationType, verification::VerificationBound};
+use crate::{computation::virtual_memory::EvaluationType, models::time::TimeBound, verification::VerificationBound};
 
 use self::time::ClockValue;
 
@@ -82,12 +81,12 @@ pub trait Model: Any {
 
     fn available_actions(&self, state: &ModelState) -> HashSet<Action>;
 
-    fn available_delay(&self, state: &ModelState) -> RealTimeBound {
+    fn available_delay(&self, state: &ModelState) -> TimeBound {
         let _ = state;
         if self.is_timed() {
-            RealTimeBound::zero()
+            TimeBound::zero()
         } else {
-            RealTimeBound::Infinite
+            TimeBound::Infinite
         }
     }
 

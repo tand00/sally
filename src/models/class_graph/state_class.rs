@@ -5,7 +5,7 @@ use nalgebra::DVector;
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::{convex::{Convex, Measurable}, virtual_memory::{EvaluationType, VirtualMemory}, DBM}, models::{action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue, Label, ModelState, Node, UNMAPPED_ID}, verification::Verifiable};
+use crate::{InternalF, computation::{DBM, convex::{Convex, Measurable}, virtual_memory::{EvaluationType, VirtualMemory}}, models::{Label, ModelState, Node, UNMAPPED_ID, action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue}, verification::Verifiable};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StateClass {
@@ -166,7 +166,7 @@ impl Clone for StateClass {
 }
 
 impl Measurable for StateClass {
-    fn len(&self) -> f64 {
+    fn len(&self) -> InternalF {
         self.dbm.len()
     }
 }

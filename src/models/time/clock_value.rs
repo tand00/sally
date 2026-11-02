@@ -198,6 +198,21 @@ impl From<f64> for ClockValue {
     }
 }
 
+impl From<InternalF> for ClockValue {
+    fn from(value: InternalF) -> Self {
+        Self(Some(value))
+    }
+}
+
+impl From<ClockValue> for InternalF {
+    fn from(value: ClockValue) -> Self {
+        match value.0 {
+            Some(x) => x,
+            None => InternalF::ZERO,
+        }
+    }
+}
+
 impl From<InternalI> for ClockValue {
     fn from(value: InternalI) -> Self {
         if value == InternalI::MAX {

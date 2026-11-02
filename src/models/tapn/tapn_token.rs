@@ -2,7 +2,7 @@
 
 use std::fmt::Display;
 
-use crate::models::{model_storage::ModelStorage, time::ClockValue};
+use crate::{InternalF, models::{model_storage::ModelStorage, time::ClockValue}};
 
 // ----- Token -----
 
@@ -30,11 +30,11 @@ impl Display for TAPNToken {
 
 pub struct TAPNTokenReader<'a> {
     pub count : &'a i32,
-    pub age : &'a f64
+    pub age : &'a InternalF
 }
 pub struct TAPNTokenWriter<'a> {
     pub count : &'a mut i32,
-    pub age : &'a mut f64
+    pub age : &'a mut InternalF
 }
 
 impl<'a> TAPNTokenReader<'a> {
@@ -210,7 +210,7 @@ impl<'a> TAPNTokenListWriter<'a> {
 
     pub fn delta(&mut self, dt : ClockValue) {
         for tok in self.tokens() {
-            *tok.age += dt.float()
+            *tok.age += InternalF::from(dt)
         }
     }
 

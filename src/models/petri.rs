@@ -4,10 +4,10 @@ use std::{
     sync::Arc,
 };
 
-use crate::{models::{class_graph::StateClassGenerator, digraph::search_strategy::BreadthFirst}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
+use crate::{models::{class_graph::StateClassGenerator, digraph::search_strategy::BreadthFirst, time::TimeBound}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
 
 use super::{
-    action::Action, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound},
+    action::Action, lbl, model_context::ModelContext, time::ClockValue,
     CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node, UNMAPPED_ID,
 };
 
@@ -265,22 +265,22 @@ impl Model for PetriNet {
         res
     }
 
-    fn available_delay(&self, state: &ModelState) -> RealTimeBound {
+    fn available_delay(&self, state: &ModelState) -> TimeBound {
         if !self.is_timed() {
-            return RealTimeBound::Infinite;
+            return TimeBound::Infinite;
         }
         let m = self.transitions.iter()
             .filter_map(|t| {
                 let c = state.get_clock_value(t.get_clock());
                 if c.is_enabled() {
-                    Some(t.interval.1.real() - c)
+                    Some(t.interval.1 - c)
                 } else {
                     None
                 }
             })
             .reduce(|a,b| if a < b { a } else { b });
         match m {
-            None => RealTimeBound::zero(),
+            None => TimeBound::zero(),
             Some(c) => c,
         }
     }
@@ -391,7 +391,7 @@ impl<'de> Deserialize<'de> for PetriNet {
     where
         D: serde::Deserializer<'de> 
     {
-        PetriStructure::deserialize(deserializer).into()
+        Ok(PetriStructure::deserialize(deserializer)?.into())
     }
 }
 

@@ -1,7 +1,7 @@
 use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}};
 use num_traits::{Bounded, One, Zero};
 use serde::{Deserialize, Serialize};
-use crate::models::time::TimeType;
+use crate::{InternalF, models::time::TimeType};
 
 use super::ClockValue;
 
@@ -21,14 +21,14 @@ pub enum Bound<T> {
     MinusInfinite,
 }
 
-pub type TimeBound = Bound<ClockValue>;
+pub type TimeBound = Bound<InternalF>;
 
 impl TimeBound {
-    pub fn value(&self) -> ClockValue {
+    pub fn value(&self) -> InternalF {
         match self {
-            Infinite => ClockValue::infinity(),
-            MinusInfinite => ClockValue::neg_infinity(),
-            Strict(x) | Large(x) => *x
+            Infinite => InternalF::MAX,
+            MinusInfinite => InternalF::MIN,
+            Strict(x) | Large(x) => (*x).into()
         }
     }
 }
@@ -262,28 +262,28 @@ impl<T : fmt::Display> fmt::Display for Bound<T> {
 }
 
 
-impl AddAssign<ClockValue> for TimeBound {
-    fn add_assign(&mut self, rhs: ClockValue) {
+impl AddAssign<InternalF> for TimeBound {
+    fn add_assign(&mut self, rhs: InternalF) {
         *self += Large(rhs)
     }
 }
 
-impl SubAssign<ClockValue> for TimeBound {
-    fn sub_assign(&mut self, rhs: ClockValue) {
+impl SubAssign<InternalF> for TimeBound {
+    fn sub_assign(&mut self, rhs: InternalF) {
         *self -= Large(rhs)
     }
 }
 
-impl Add<ClockValue> for TimeBound {
+impl Add<InternalF> for TimeBound {
     type Output = Self;
-    fn add(self, rhs: ClockValue) -> Self::Output {
+    fn add(self, rhs: InternalF) -> Self::Output {
         self + Large(rhs)
     }
 }
 
-impl Sub<ClockValue> for TimeBound {
+impl Sub<InternalF> for TimeBound {
     type Output = Self;
-    fn sub(self, rhs: ClockValue) -> Self::Output {
+    fn sub(self, rhs: InternalF) -> Self::Output {
         self - Large(rhs)
     }
 }

@@ -80,7 +80,7 @@ impl Run {
         let mut res = Run::new();
         for elem in self.elements.iter() {
             match elem {
-                Step(a) => if !a.is_epsilon() {
+                Step(a) => {
                     res.add(Step(a.clone()));
                 },
                 Delay(d) => {
@@ -102,7 +102,6 @@ impl Run {
     pub fn actions<'a>(&'a self) -> impl Iterator<Item = &'a Action> {
         self.elements.iter().filter_map(|x|
             match x {
-                Step(Action::Epsilon) => None,
                 Step(a) => Some(a),
                 _ => None
             }

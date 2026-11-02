@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Display},
     marker::PhantomData,
-    ops::{Add, Sub},
+    ops::Add,
 };
 
 use nalgebra::Scalar;
@@ -67,7 +67,7 @@ pub trait Convex<T: Scalar>: Scalar {
 }
 
 pub trait Measurable {
-    fn len(&self) -> f64;
+    fn len(&self) -> InternalF;
 }
 pub trait Delta<T: Scalar + Add<Output = T>> {
     fn delta(&mut self, dx: T);
@@ -198,7 +198,7 @@ impl<T: Scalar, U: Convex<T>> Disjoint<T, U> {
 }
 
 impl<T: Scalar, U: Convex<T> + Measurable> Measurable for Disjoint<T, U> {
-    fn len(&self) -> f64 {
+    fn len(&self) -> InternalF {
         self.intervals.iter().map(|i| i.len()).sum()
     }
 }
@@ -376,12 +376,12 @@ impl<T: Scalar + PartialOrd + Bounded> Convex<T> for (T, T) {
     }
 }
 
-impl<T: Scalar + PartialOrd + Sub<Output = T> + Into<f64>> Measurable for (T, T) {
-    fn len(&self) -> f64 {
+impl Measurable for (InternalF, InternalF) {
+    fn len(&self) -> InternalF {
         if self.1 < self.0 {
-            return f64::zero();
+            return InternalF::ZERO;
         }
-        (self.1.clone() - self.0.clone()).into()
+        self.1.clone() - self.0.clone()
     }
 }
 
@@ -405,6 +405,8 @@ pub enum ContinuousSet<T: Scalar, U: Convex<T>> {
 }
 
 use ContinuousSet::*;
+
+use crate::InternalF;
 
 impl<T: Scalar, U: Convex<T>> ContinuousSet<T, U> {
     pub fn new() -> Self {
@@ -620,9 +622,9 @@ impl<'a, T: Scalar, U: Convex<T>> Iterator for ConvexIterator<'a, T, U> {
 }
 
 impl<T: Scalar, U: Convex<T> + Measurable> Measurable for ContinuousSet<T, U> {
-    fn len(&self) -> f64 {
+    fn len(&self) -> InternalF {
         match self {
-            EmptySet => f64::zero(),
+            EmptySet => InternalF::ZERO,
             ConvexSet(c) => c.len(),
             DisjointSet(d) => d.len(),
         }

@@ -141,8 +141,8 @@ impl Verifiable for ModelState {
         self.get_marking(var)
     }
 
-    fn evaluate_clock(&self, clock : &ModelClock) -> f64 {
-        self.get_clock_value(clock).float()
+    fn evaluate_clock(&self, clock : &ModelClock) -> ClockValue {
+        self.get_clock_value(clock)
     }
 
     fn is_deadlocked(&self) -> bool {
