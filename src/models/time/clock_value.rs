@@ -3,23 +3,15 @@ use num_traits::{Bounded, One, Zero};
 use rand::Rng;
 use rand_distr::Distribution;
 use serde::{Deserialize, Serialize};
-use crate::{InternalF, InternalI, models::time::Bound};
+use crate::{models::time::Bound, real::Real};
 
 use super::TimeBound;
 
 // Wrapper for f64 to implement extern traits
 #[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, Hash)]
-pub struct ClockValue(Option<InternalF>);
+pub struct ClockValue(Option<Real>);
 
 impl ClockValue {
-
-    pub fn infinity() -> Self {
-        ClockValue(Some(InternalF::MAX))
-    }
-
-    pub fn neg_infinity() -> Self {
-        ClockValue(Some(InternalF::MIN))
-    }
 
     pub fn disabled() -> Self {
         ClockValue(None)

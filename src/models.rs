@@ -29,6 +29,7 @@ pub use action::*;
 pub use node::Node;
 
 use num_traits::Zero;
+use rand::RngExt;
 
 pub mod caching;
 pub mod class_graph;
@@ -45,7 +46,7 @@ pub mod time;
 pub mod timed_automata;
 pub mod beliefs_graph;
 
-use crate::{computation::virtual_memory::EvaluationType, models::time::TimeBound, verification::VerificationBound};
+use crate::{component_id::ComponentID, computation::virtual_memory::EvaluationType, models::time::TimeBound, real::Real, verification::VerificationBound};
 
 use self::time::ClockValue;
 
@@ -83,11 +84,7 @@ pub trait Model: Any {
 
     fn available_delay(&self, state: &ModelState) -> TimeBound {
         let _ = state;
-        if self.is_timed() {
-            TimeBound::zero()
-        } else {
-            TimeBound::Infinite
-        }
+        TimeBound::Infinite
     }
 
     fn delay(&self, state: ModelState, dt: ClockValue) -> Option<ModelState> {
@@ -119,12 +116,12 @@ pub trait Model: Any {
     // Should be overrided by stochastic models with a more relevant behaviour !
     fn random_next(&self, state: ModelState) -> (Option<ModelState>, ClockValue, Option<Action>) {
         let mut rng = rand::rng();
-        let max_delay: ClockValue = self.available_delay(&state).into();
+        let max_delay = self.available_delay(&state);
         let mut delayed_state = state;
-        let mut delay = ClockValue::zero();
+        let mut delay = Real::zero();
         if !max_delay.is_zero() && self.is_timed() {
-            let delay_range = (ClockValue::zero())..(max_delay);
-            delay = rng.gen_range(delay_range);
+            let delay_range = (InternalF::ZERO)..(max_delay);
+            delay = rng.random_range(delay_range).into();
             delayed_state = self.delay(delayed_state, delay).unwrap();
         }
         let actions: Vec<Action> = self.available_actions(&delayed_state).into_iter().collect();
@@ -154,10 +151,10 @@ pub trait Model: Any {
         Ok(ctx)
     }
 
-    fn get_id(&self) -> usize;
+    fn get_id(&self) -> ComponentID;
 
     fn is_compiled(&self) -> bool {
-        self.get_id() != UNMAPPED_ID
+        self.get_id().is_mapped()
     }
 
     fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a>;

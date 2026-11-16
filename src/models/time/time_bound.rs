@@ -1,9 +1,7 @@
 use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}};
 use num_traits::{Bounded, One, Zero};
 use serde::{Deserialize, Serialize};
-use crate::{InternalF, models::time::TimeType};
-
-use super::ClockValue;
+use crate::real::Real;
 
 use Bound::{Strict, Large, Infinite, MinusInfinite};
 
@@ -21,41 +19,35 @@ pub enum Bound<T> {
     MinusInfinite,
 }
 
-pub type TimeBound = Bound<InternalF>;
+pub type TimeBound = Bound<Real>;
 
-impl TimeBound {
-    pub fn value(&self) -> InternalF {
-        match self {
-            Infinite => InternalF::MAX,
-            MinusInfinite => InternalF::MIN,
-            Strict(x) | Large(x) => (*x).into()
-        }
+impl<T: Zero> Bound<T> {
+    pub fn zero() -> Self {
+        Bound::Large(T::zero())
     }
 }
 
-impl<T : TimeType + Copy> Bound<T> {
-    pub fn greater_than(&self, clock : &ClockValue) -> bool {
+impl<T: One> Bound<T> {
+    pub fn one() -> Self {
+        Bound::Large(T::one())
+    }
+}
+
+impl<T : PartialOrd> Bound<T> {
+    pub fn greater_than(&self, y : &T) -> bool {
         match self {
             Infinite => true,
-            Strict(x) => (*x).into() > *clock,
-            Large(x) => (*x).into() >= *clock,
+            Strict(x) => *x > *y,
+            Large(x) => *x >= *y,
             MinusInfinite => false,
         }
     }
-    pub fn lower_than(&self, clock : &ClockValue) -> bool {
+    pub fn lower_than(&self, y : &T) -> bool {
         match self {
             Infinite => false,
-            Strict(x) => (*x).into() < *clock,
-            Large(x) => (*x).into() <= *clock,
+            Strict(x) => *x < *y,
+            Large(x) => *x <= *y,
             MinusInfinite => true,
-        }
-    }
-    pub fn clock_value(self) -> ClockValue {
-        match self {
-            Infinite => ClockValue::infinity(),
-            Strict(x) => x.into(),
-            Large(x) => x.into(),
-            MinusInfinite => ClockValue::neg_infinity(),
         }
     }
 }
@@ -222,30 +214,12 @@ impl<T : Ord> Ord for Bound<T> {
     }
 }
 
-impl<T : Zero + PartialEq> Zero for Bound<T> {
-    fn zero() -> Self {
-        Large(T::zero())
-    }
-    fn is_zero(&self) -> bool {
-        *self == Large(T::zero())
-    }
-}
-
 impl<T : Bounded> Bounded for Bound<T> {
     fn max_value() -> Self {
         Infinite
     }
     fn min_value() -> Self {
         MinusInfinite
-    }
-}
-
-impl<T : PartialEq + PartialOrd> One for Bound<T> {
-    fn one() -> Self {
-        Infinite
-    }
-    fn is_one(&self) -> bool {
-        *self == Infinite
     }
 }
 
@@ -262,28 +236,28 @@ impl<T : fmt::Display> fmt::Display for Bound<T> {
 }
 
 
-impl AddAssign<InternalF> for TimeBound {
-    fn add_assign(&mut self, rhs: InternalF) {
+impl AddAssign<Real> for TimeBound {
+    fn add_assign(&mut self, rhs: Real) {
         *self += Large(rhs)
     }
 }
 
-impl SubAssign<InternalF> for TimeBound {
-    fn sub_assign(&mut self, rhs: InternalF) {
+impl SubAssign<Real> for TimeBound {
+    fn sub_assign(&mut self, rhs: Real) {
         *self -= Large(rhs)
     }
 }
 
-impl Add<InternalF> for TimeBound {
+impl Add<Real> for TimeBound {
     type Output = Self;
-    fn add(self, rhs: InternalF) -> Self::Output {
+    fn add(self, rhs: Real) -> Self::Output {
         self + Large(rhs)
     }
 }
 
-impl Sub<InternalF> for TimeBound {
+impl Sub<Real> for TimeBound {
     type Output = Self;
-    fn sub(self, rhs: InternalF) -> Self::Output {
+    fn sub(self, rhs: Real) -> Self::Output {
         self - Large(rhs)
     }
 }

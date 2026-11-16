@@ -8,22 +8,16 @@ use nalgebra::Scalar;
 use num_traits::{Bounded, Zero};
 
 // Either complement or difference MUST be implemented !
-pub trait Convex<T: Scalar>: Scalar {
+pub trait Convex<T> {
     fn contains(&self, elem: &T) -> bool;
 
-    fn intersection(self, other: Self) -> Self
-    where
-        Self: Sized;
+    fn intersection(self, other: Self) -> Self;
 
-    fn full() -> Self
-    where
-        Self: Sized;
+    fn full() -> Self;
 
     fn is_empty(&self) -> bool;
 
-    fn union(self, other: Self) -> Disjoint<T, Self>
-    where
-        Self: Sized;
+    fn union(self, other: Self) -> Disjoint<T, Self>;
 
     fn complement(self) -> Disjoint<T, Self>
     where
@@ -67,17 +61,11 @@ pub trait Convex<T: Scalar>: Scalar {
 }
 
 pub trait Measurable {
-    fn len(&self) -> InternalF;
+    fn len(&self) -> Len;
 }
-pub trait Delta<T: Scalar + Add<Output = T>> {
-    fn delta(&mut self, dx: T);
-}
+
 pub trait ToPositive {
     fn positive(self) -> Self;
-
-    fn into_positive(&mut self) where Self : Clone {
-        *self = self.clone().positive();
-    }
 }
 
 // VERY UNOPTIMIZED FOR NOW !
@@ -406,7 +394,7 @@ pub enum ContinuousSet<T: Scalar, U: Convex<T>> {
 
 use ContinuousSet::*;
 
-use crate::InternalF;
+use crate::{InternalF, real::{Len, Real}};
 
 impl<T: Scalar, U: Convex<T>> ContinuousSet<T, U> {
     pub fn new() -> Self {

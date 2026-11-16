@@ -273,7 +273,7 @@ impl Model for PetriNet {
             .filter_map(|t| {
                 let c = state.get_clock_value(t.get_clock());
                 if c.is_enabled() {
-                    Some(t.interval.1 - c)
+                    Some(t.interval.1 - c.into())
                 } else {
                     None
                 }
