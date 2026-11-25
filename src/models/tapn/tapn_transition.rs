@@ -5,13 +5,15 @@ use std::sync::OnceLock;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
+use crate::computation::Interval;
 use crate::computation::combinatory::{CartesianProduct, KInVec};
 use crate::computation::convex::{ContinuousSet, Convex, Delta, ToPositive};
 use crate::computation::probability::RealDistribution;
 use crate::models::action::Action;
 use crate::models::model_context::ModelContext;
-use crate::models::time::{ClockValue, TimeInterval};
+use crate::models::time::ClockValue;
 use crate::models::{CompilationResult, Label, Node};
+use crate::real::Real;
 
 use super::{tapn_edge::*, TAPNPlaceList, TAPNPlaceListReader, TAPNTokenList, TAPNTokenListReader};
 
@@ -93,7 +95,7 @@ impl TAPNTransition {
         self.inhibitor_edges.get().unwrap()
     }
 
-    fn has_enough(interval : &TimeInterval, weight : i32, token_list : TAPNTokenListReader) -> bool {
+    fn has_enough(interval : &Interval<Real>, weight : i32, token_list : TAPNTokenListReader) -> bool {
         let mut remaining = weight;
         for token in token_list.tokens() {
             if interval.contains(&token.get_age()) {
@@ -133,7 +135,7 @@ impl TAPNTransition {
         true
     }
 
-    fn combinations_for(interval : &TimeInterval, weight : usize, token_list : TAPNTokenListReader) -> Vec<TAPNTokenList> {
+    fn combinations_for(interval : &Interval<Real>, weight : usize, token_list : TAPNTokenListReader) -> Vec<TAPNTokenList> {
         let mut fireable = TAPNTokenList::new();
         for token in token_list.tokens() {
             if interval.contains(&token.get_age()) {
@@ -203,13 +205,13 @@ impl TAPNTransition {
         res
     }
 
-    fn arc_dates(interval : &TimeInterval, weight : usize, token_list : TAPNTokenListReader) -> ContinuousSet<ClockValue, TimeInterval> {
+    fn arc_dates(interval : &Interval<Real>, weight : usize, token_list : TAPNTokenListReader) -> ContinuousSet<Real, Interval<Real>> {
         if weight == 0 {
             return ContinuousSet::full();
         }
         let mut dates = ContinuousSet::EmptySet;
         let tokens = token_list.tokens();
-        let mut ages : VecDeque<ClockValue> = VecDeque::new();
+        let mut ages : VecDeque<Real> = VecDeque::new();
         for token in tokens {
             for _ in 0..(*token.count) {
                 ages.push_back(token.get_age());
@@ -219,7 +221,7 @@ impl TAPNTransition {
                 if ages.len() == weight {
                     let mut set_dates = ContinuousSet::full();
                     for age in ages.iter() {
-                        let mut shifted = interval.real();
+                        let mut shifted = interval;
                         shifted.delta(-*age);
                         set_dates = set_dates.intersection(shifted.positive());
                     }
@@ -230,7 +232,7 @@ impl TAPNTransition {
         dates
     }
 
-    pub fn firing_dates(&self, place_list : &TAPNPlaceListReader) -> ContinuousSet<ClockValue, TimeInterval> {
+    pub fn firing_dates(&self, place_list : &TAPNPlaceListReader) -> ContinuousSet<Real, Interval<Real>> {
         let mut dates = ContinuousSet::full();
         for edge in self.get_inhibitors().iter() {
             let place_index = edge.get_node_from().index;
@@ -252,7 +254,7 @@ impl TAPNTransition {
         }
         for edge in self.get_transports().iter() {
             let place_index = edge.get_node_from().index;
-            let target_inv = TimeInterval::invariant(edge.get_node_to().invariant);
+            let target_inv = Interval::invariant(edge.get_node_to().invariant);
             let tokens = place_list.place(place_index);
             let interval = edge.data().interval.clone().intersection(target_inv);
             let intervals = Self::arc_dates(&interval, edge.data().weight as usize, tokens);

@@ -8,29 +8,29 @@ pub use ta_state::TAState;
 use ta_transition::TAEdge;
 pub use ta_transition::TATransition;
 
-use crate::{component_id::ComponentID, computation::Bound, real::Real, verification::{VerificationBound, smc::RandomRunIterator}};
+use crate::{computation::Bound, real::Real, verification::{VerificationBound, smc::RandomRunIterator}};
 
 use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node};
 
 pub struct TimedAutomaton {
-    pub id: ComponentID,
+    pub id: Option<usize>,
     pub states: Vec<Arc<TAState>>,
     pub transitions: Vec<Arc<TAEdge>>,
     pub clocks: Vec<ModelClock>,
     pub actions_dic: HashMap<Action, usize>,
-    pub state_cache: ComponentID // Store current active state, speed optimization at the cost of space. Might be worst
+    pub state_cache: Option<usize> // Store current active state, speed optimization at the cost of space. Might be worst
 }
 
 impl TimedAutomaton {
 
     pub fn new(states : Vec<TAState>, transitions : Vec<TAEdge>, clocks : Vec<Label>) -> Self {
         TimedAutomaton {
-            id : ComponentID::Unmapped,
+            id: None,
             states: states.into_iter().map(Arc::new).collect(),
             transitions: transitions.into_iter().map(Arc::new).collect(),
             clocks: clocks.into_iter().map(ModelClock::name).collect(),
             actions_dic: HashMap::new(),
-            state_cache: ComponentID::Unmapped
+            state_cache: None
         }
     }
 
@@ -133,7 +133,7 @@ impl Model for TimedAutomaton {
         Ok(())
     }
 
-    fn get_id(&self) -> ComponentID {
+    fn get_id(&self) -> Option<usize> {
         self.id
     }
 

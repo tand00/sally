@@ -113,13 +113,13 @@ impl<T: Display + PartialOrd> Display for Interval<T> {
         if self.is_empty() {
             return write!(f, "{{}}");
         }
-        let first_bound = match self.0 {
+        let first_bound = match &self.0 {
             Infinite => String::from("(inf"),
             MinusInfinite => String::from("(-inf"),
             Large(x) => format!("[{}", x),
             Strict(x) => format!("]{}", x)
         };
-        let second_bound = match self.1 {
+        let second_bound = match &self.1 {
             Infinite => String::from("inf)"),
             MinusInfinite => String::from("-inf)"),
             Large(x) => format!("{}]", x),
@@ -278,7 +278,16 @@ impl Measurable for Interval<Real> {
     }
 }
 
-impl<T : Clone + PartialOrd + Bounded + Zero> ToPositive for Interval<T> {
+impl Measurable for Interval<i32> {
+    fn len(&self) -> Len {
+        match self.1 - self.0 {
+            Strict(x) | Large(x) => Real::from(x).into(),
+            _ => Len::Infinite
+        }
+    }
+}
+
+impl<T : Clone + PartialOrd + Zero> ToPositive for Interval<T> {
 
     fn positive(self) -> Self {
         self.intersection(Interval(Large(T::zero()), Infinite))

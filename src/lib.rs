@@ -14,7 +14,6 @@ pub mod solution;
 pub mod io;
 pub mod log;
 pub mod real;
-pub mod component_id;
 
 pub fn sally_solver() -> ModelSolvingGraph {
     let mut solver = ModelSolvingGraph::new();

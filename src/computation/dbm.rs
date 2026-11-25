@@ -11,13 +11,13 @@ use crate::{computation::{Bound, Interval}, real::{Len, Real}};
 
 use super::convex::{ContinuousSet, Convex, Delta, Disjoint, Measurable};
 
-pub type IntBound = Bound<i32>;
-pub type IntInterval = Interval<i32>;
+pub type DBMBound = Bound<Real>;
+pub type DBMInterval = Interval<Real>;
 pub type DatesVector = DVector<Real>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DBM {
-    constraints: DMatrix<IntBound>,
+    constraints: DMatrix<DBMBound>,
 }
 
 // We add an imaginary variable, always equal to zero, at the beginning of the matrix. That way, we can encode rectangular constraints
@@ -28,15 +28,15 @@ impl DBM {
         DBM {
             constraints: DMatrix::from_fn(vars + 1, vars + 1, |i, j| {
                 if i == j {
-                    IntBound::zero()
+                    Bound::zero()
                 } else {
-                    IntBound::Infinite
+                    Bound::Infinite
                 }
             }),
         }
     }
 
-    pub fn from(constraints: DMatrix<IntBound>) -> Self {
+    pub fn from(constraints: DMatrix<DBMBound>) -> Self {
         if !constraints.is_square() {
             panic!("Constraints matrix not square, can't construct DBM !");
         }
@@ -47,20 +47,20 @@ impl DBM {
 
     pub fn empty(vars: usize) -> Self {
         DBM {
-            constraints: DMatrix::from_element(vars + 1, vars + 1, IntBound::MinusInfinite),
+            constraints: DMatrix::from_element(vars + 1, vars + 1, Bound::MinusInfinite),
         }
     }
 
-    pub fn at(&self, i: usize, j: usize) -> IntBound {
+    pub fn at(&self, i: usize, j: usize) -> DBMBound {
         self[(i, j)]
     }
 
-    pub fn rectangulars(&self, i: usize) -> IntInterval {
-        IntInterval::new(-self.constraints[(0, i)], self.constraints[(i, 0)])
+    pub fn rectangulars(&self, i: usize) -> DBMInterval {
+        DBMInterval::new(-self.constraints[(0, i)], self.constraints[(i, 0)])
     }
 
-    pub fn diagonals(&self, i: usize, j: usize) -> IntInterval {
-        IntInterval::new(-self.constraints[(j, i)], self.constraints[(i, j)])
+    pub fn diagonals(&self, i: usize, j: usize) -> DBMInterval {
+        DBMInterval::new(-self.constraints[(j, i)], self.constraints[(i, j)])
     }
 
     pub fn vars_count(&self) -> usize {
@@ -73,11 +73,11 @@ impl DBM {
         canonical
     }
 
-    pub fn set_upper_bound(&mut self, var_i: usize, bound: IntBound) {
+    pub fn set_upper_bound(&mut self, var_i: usize, bound: DBMBound) {
         self.add(var_i, 0, bound)
     }
 
-    pub fn set_lower_bound(&mut self, var_i: usize, bound: IntBound) {
+    pub fn set_lower_bound(&mut self, var_i: usize, bound: DBMBound) {
         self.add(0, var_i, -bound)
     }
 
@@ -87,17 +87,17 @@ impl DBM {
                 continue;
             }
             self.constraints[(i, var_i)] = self.constraints[(i, 0)];
-            self.constraints[(var_i, i)] = IntBound::Infinite;
+            self.constraints[(var_i, i)] = Bound::Infinite;
         }
     }
 
     pub fn make_empty(&mut self) {
         //*self = Self::empty(self.vars_count());
-        self[(0,0)] = IntBound::MinusInfinite;
+        self[(0,0)] = Bound::MinusInfinite;
     }
 
-    pub fn add(&mut self, var_i: usize, var_j: usize, constraint: IntBound) {
-        if self.constraints[(var_j, var_i)] + constraint < IntBound::zero() {
+    pub fn add(&mut self, var_i: usize, var_j: usize, constraint: DBMBound) {
+        if self.constraints[(var_j, var_i)] + constraint < Bound::zero() {
             self.make_empty();
         }
         let current = &mut self.constraints[(var_i, var_j)];
@@ -119,11 +119,11 @@ impl DBM {
         }
     }
 
-    pub fn add_sup(&mut self, var_i : usize, constraint : IntBound) {
+    pub fn add_sup(&mut self, var_i : usize, constraint : DBMBound) {
         self.add(var_i, 0, constraint);
     }
     
-    pub fn add_inf(&mut self, var_i : usize, constraint : IntBound) {
+    pub fn add_inf(&mut self, var_i : usize, constraint : DBMBound) {
         self.add(0, var_i, -constraint);
     }
 
@@ -150,7 +150,7 @@ impl DBM {
         DBM { constraints }
     }
 
-    pub fn universal_projection(&self, other : &DBM, vars : &Vec<usize>) -> ContinuousSet<DatesVector,DBM> {
+    pub fn universal_projection(&self, other : &DBM, vars : &Vec<usize>) -> ContinuousSet<DatesVector, DBM> {
         let interm = ContinuousSet::from(other.clone()).complement();
         let mut interm = interm.intersection(self.clone());
 
@@ -167,7 +167,7 @@ impl DBM {
         let n = before + nvars;
         let mut constraints = self.constraints.resize(n, n, Bound::Infinite);
         for i in 0..nvars {
-            constraints[(before + i, before + i)] = Bound::Large(0);
+            constraints[(before + i, before + i)] = Bound::zero();
         }
         DBM { constraints }
     }
@@ -186,7 +186,7 @@ impl DBM {
         let n = before + nvars;
         self.constraints.resize_mut(n, n, Bound::Infinite);
         for i in 0..nvars {
-            self.constraints[(before + i, before + i)] = Bound::Large(0);
+            self.constraints[(before + i, before + i)] = Bound::zero();
         }
     }
 
@@ -207,7 +207,7 @@ impl DBM {
                         self.constraints[(i, j)],
                         self.constraints[(i, k)] + self.constraints[(k, j)],
                     );
-                    if i == j && self.constraints[(i, j)] < IntBound::zero() {
+                    if i == j && self.constraints[(i, j)] < Bound::zero() {
                         self.make_empty();
                         return;
                     }
@@ -222,7 +222,7 @@ impl DBM {
         if res.is_empty() { return res; }
         let max_delta = self.constraints.column(0).iter().min().unwrap().clone();
         for i in 1..(self.vars_count() + 1) {
-            res.constraints[(0, i)] = min(IntBound::zero(), self.constraints[(0, i)] + max_delta);
+            res.constraints[(0, i)] = min(Bound::zero(), self.constraints[(0, i)] + max_delta);
         }
         res
     }
@@ -231,7 +231,7 @@ impl DBM {
         let mut res = self.clone();
         if res.is_empty() { return res; }
         for i in 1..(self.vars_count() + 1) {
-            res.constraints[(i, 0)] = IntBound::Infinite;
+            res.constraints[(i, 0)] = Bound::Infinite;
         }
         res
     }
@@ -239,7 +239,7 @@ impl DBM {
 }
 
 impl Index<(usize, usize)> for DBM {
-    type Output = IntBound;
+    type Output = DBMBound;
     fn index(&self, index: (usize, usize)) -> &Self::Output {
         &self.constraints[index] // Index + 1 because virtual var at 0
     }
@@ -299,7 +299,7 @@ impl Convex<DatesVector> for DBM {
     }
 
     fn is_empty(&self) -> bool {
-        self.constraints[(0, 0)] < IntBound::zero()
+        self.constraints[(0, 0)] < Bound::zero()
     }
 
     fn union(mut self, mut other: Self) -> Disjoint<DatesVector, Self> {
@@ -328,7 +328,7 @@ impl Convex<DatesVector> for DBM {
         for i in 0..n {
             for j in 0..n {
                 let constraint = self[(i,j)];
-                if (i == j) || (constraint == IntBound::Infinite) {
+                if (i == j) || (constraint == Bound::Infinite) {
                     continue;
                 }
                 let mut negated = base.clone();
@@ -385,8 +385,8 @@ impl Convex<DatesVector> for DBM {
 
 }
 
-impl Delta<IntBound> for DBM {
-    fn delta(&mut self, dx: IntBound) {
+impl Delta<DBMBound> for DBM {
+    fn delta(&mut self, dx: DBMBound) {
         if self.is_empty() { return; }
         for i in 1..(self.vars_count() + 1) {
             self.constraints[(i, 0)] += dx;
@@ -401,7 +401,7 @@ impl Measurable for DBM {
         if self.is_empty() {
             return Len::zero();
         }
-        let mut s = Real::one();
+        let mut s = Len::one();
         for i in 0..self.vars_count() {
             let rect = self.rectangulars(i + 1);
             s *= rect.len();

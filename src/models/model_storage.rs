@@ -1,13 +1,14 @@
 use std::hash::Hash;
 
-use fixed::types::I16F48;
 use serde::{Deserialize, Serialize};
+
+use crate::real::Real;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ModelStorage {
     EmptyStorage,
     Integer(i32),
-    Float(I16F48),
+    Real(Real),
     Bin(u64),
     Vector(Vec<ModelStorage>),
     Tuple(Box<ModelStorage>, Box<ModelStorage>)
@@ -24,15 +25,15 @@ impl ModelStorage {
     pub fn int(self) -> i32 {
         match self {
             Integer(i) => i,
-            Float(f) => f.to_num(),
+            Real(f) => f.value(),
             _ => panic!("Incorrect storage structure")
         }
     }
 
-    pub fn float(self) -> InternalF {
+    pub fn real(self) -> Real {
         match self {
-            Float(f) => f,
-            Integer(i) => InternalF::from_num(i),
+            Real(f) => f,
+            Integer(i) => i.into(),
             _ => panic!("Incorrect storage structure")
         }
     }
@@ -67,9 +68,9 @@ impl ModelStorage {
         }
     }
 
-    pub fn mut_float(&mut self) -> &mut InternalF {
+    pub fn mut_real(&mut self) -> &mut Real {
         match self {
-            Float(f) => f,
+            Real(f) => f,
             _ => panic!("Incorrect storage structure")
         }
     }
@@ -102,9 +103,9 @@ impl ModelStorage {
         }
     }
 
-    pub fn ref_float(&self) -> &InternalF {
+    pub fn ref_real(&self) -> &Real {
         match self {
-            Float(f) => f,
+            Real(f) => f,
             _ => panic!("Incorrect storage structure")
         }
     }
@@ -137,9 +138,9 @@ impl ModelStorage {
         }
     }
 
-    pub fn is_float(&self) -> bool {
+    pub fn is_real(&self) -> bool {
         match self {
-            Float(_) => true,
+            Real(_) => true,
             _ => false
         }
     }
@@ -179,9 +180,9 @@ impl From<i32> for ModelStorage {
     }
 }
 
-impl From<InternalF> for ModelStorage {
-    fn from(value: InternalF) -> Self {
-        Float(value)
+impl From<Real> for ModelStorage {
+    fn from(value: Real) -> Self {
+        Real(value)
     }
 }
 

@@ -46,7 +46,7 @@ pub mod time;
 pub mod timed_automata;
 pub mod beliefs_graph;
 
-use crate::{component_id::ComponentID, computation::{Bound, virtual_memory::EvaluationType}, real::Real, verification::VerificationBound};
+use crate::{computation::{Bound, virtual_memory::EvaluationType}, real::Real, verification::VerificationBound};
 
 use self::time::ClockValue;
 
@@ -149,10 +149,10 @@ pub trait Model: Any {
         Ok(ctx)
     }
 
-    fn get_id(&self) -> ComponentID;
+    fn get_id(&self) -> Option<usize>;
 
     fn is_compiled(&self) -> bool {
-        self.get_id().is_mapped()
+        self.get_id().is_some()
     }
 
     fn nodes_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a dyn Node> + 'a>;

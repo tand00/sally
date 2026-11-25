@@ -5,7 +5,7 @@ use nalgebra::DVector;
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 
-use crate::{InternalF, computation::{DBM, convex::{Convex, Measurable}, virtual_memory::{EvaluationType, VirtualMemory}}, models::{Label, ModelState, Node, UNMAPPED_ID, action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue}, verification::Verifiable};
+use crate::{computation::{DBM, convex::{Convex, Measurable}, virtual_memory::{EvaluationType, VirtualMemory}}, models::{Label, ModelState, Node, action::Action, model_var::ModelVar, petri::PetriNet, time::ClockValue}, real::Len, verification::Verifiable};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StateClass {
@@ -27,7 +27,7 @@ impl StateClass {
         let deadlocked = self.is_deadlocked();
         let clocks : Vec<ClockValue> = self.to_dbm_index.iter().enumerate().map(|(_, i)| {
             if *i == 0 {
-                ClockValue::disabled()
+                ClockValue::Disabled
             } else {
                 ClockValue::zero()
             }
@@ -139,7 +139,7 @@ impl fmt::Display for StateClass {
         }
         let preds = self.predecessors.read().unwrap().iter().map(|(p, a)| {
             let p = Weak::upgrade(p);
-            format!("(Class_{}:{})", p.unwrap().index, a.get_id())
+            format!("(Class_{}:{})", p.unwrap().index, a.get_symbol())
         }).collect::<Vec<String>>();
         let preds = preds.join(",");
         write!(f, "Class_{}\n- Marking {}\n- Transitions\n  [{}]\n- Predecessors\n  [{}]\n\n- {}", self.index, self.discrete, transitions, preds, self.dbm)
@@ -159,14 +159,14 @@ impl Clone for StateClass {
             dbm : self.dbm.clone(),
             to_dbm_index : self.to_dbm_index.clone(),
             from_dbm_index : self.from_dbm_index.clone(),
-            index : UNMAPPED_ID,
+            index : usize::MAX,
             predecessors : Default::default(),
         }
     }
 }
 
 impl Measurable for StateClass {
-    fn len(&self) -> InternalF {
+    fn len(&self) -> Len {
         self.dbm.len()
     }
 }

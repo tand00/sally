@@ -2,12 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use num_traits::Zero;
 
-use crate::{component_id::ComponentID, computation::Bound, real::Real, verification::{VerificationBound, smc::RandomRunIterator}};
+use crate::{computation::Bound, real::Real, verification::{VerificationBound, smc::RandomRunIterator}};
 
 use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMeta, ModelObject, ModelState, Node};
 
 pub struct ModelNetwork {
-    pub id : ComponentID,
+    pub id : Option<usize>,
     pub models : Vec<Box<dyn ModelObject>>,
     pub models_map : HashMap<Label, usize>,
     pub actions_map : HashMap<usize, usize>,
@@ -102,7 +102,7 @@ impl Model for ModelNetwork {
             model.compile(context)?;
             let model_actions = context.get_local_actions();
             for action in model_actions {
-                self.actions_map.insert(action.get_id(), *model_index);
+                self.actions_map.insert(action.get_symbol(), *model_index);
             }
             context.parent();
         }
@@ -115,7 +115,7 @@ impl Model for ModelNetwork {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
-    fn get_id(&self) -> ComponentID {
+    fn get_id(&self) -> Option<usize> {
         self.id
     }
 

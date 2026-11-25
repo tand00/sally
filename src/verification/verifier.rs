@@ -110,7 +110,7 @@ impl Default for VerificationBound {
 pub trait Verifiable : Hash {
     fn evaluate_var(&self, var : &ModelVar) -> EvaluationType;
     fn evaluate_clock(&self, _ : &ModelClock) -> ClockValue {
-        ClockValue::disabled()
+        ClockValue::Disabled
     }
     fn is_deadlocked(&self) -> bool;
     fn as_verifiable(&self) -> &impl Verifiable

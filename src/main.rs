@@ -9,7 +9,6 @@ pub mod solution;
 pub mod io;
 pub mod log;
 pub mod real;
-pub mod component_id;
 
 use std::collections::HashMap;
 

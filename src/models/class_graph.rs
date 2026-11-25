@@ -9,7 +9,7 @@ use num_traits::Zero;
 
 use crate::computation::convex::Convex;
 use crate::computation::virtual_memory::EvaluationType;
-use crate::computation::DBM;
+use crate::computation::{Bound, DBM};
 use crate::verification::smc::RandomRunIterator;
 use crate::verification::{Verifiable, VerificationBound};
 
@@ -17,15 +17,15 @@ use super::action::Action;
 use super::digraph::search_strategy::{GraphTraversal, NeighborsFinder, SearchStrategy};
 use super::model_context::ModelContext;
 use super::model_var::{ModelVar, VarType};
-use super::time::{Bound, ClockValue};
-use super::{lbl, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
+use super::time::ClockValue;
+use super::{lbl, Edge, Label, Model, ModelMeta, ModelState, Node};
 use super::petri::{PetriNet, PetriTransition};
 
 const CLASS_LIMIT : usize = u16::MAX as usize;
 
 #[derive(Clone)]
 pub struct ClassGraph {
-    pub id : usize,
+    pub id : Option<usize>,
     pub classes : Vec<Arc<StateClass>>,
     pub edges : Vec<Edge<Action, StateClass, StateClass>>,
     pub current_class : ModelVar,
@@ -36,7 +36,7 @@ impl ClassGraph {
 
     pub fn compute(p_net : &PetriNet, initial_state : &ModelState) -> Self {
         let mut cg = ClassGraph {
-            id : UNMAPPED_ID,
+            id : None,
             classes : Vec::new(),
             edges : Vec::new(),
             current_class : ModelVar::name(lbl("CurrentClass")),
@@ -243,7 +243,7 @@ impl Model for ClassGraph {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
-    fn get_id(&self) -> usize {
+    fn get_id(&self) -> Option<usize> {
         self.id
     }
 

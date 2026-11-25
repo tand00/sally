@@ -2,14 +2,14 @@
 
 use std::fmt::Display;
 
-use crate::{InternalF, models::{model_storage::ModelStorage, time::ClockValue}};
+use crate::{models::{model_storage::ModelStorage}, real::Real};
 
 // ----- Token -----
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq)]
 pub struct TAPNToken {
     pub count : i32,
-    pub age : ClockValue
+    pub age : Real
 }
 
 impl TAPNToken {
@@ -30,11 +30,11 @@ impl Display for TAPNToken {
 
 pub struct TAPNTokenReader<'a> {
     pub count : &'a i32,
-    pub age : &'a InternalF
+    pub age : &'a Real
 }
 pub struct TAPNTokenWriter<'a> {
     pub count : &'a mut i32,
-    pub age : &'a mut InternalF
+    pub age : &'a mut Real
 }
 
 impl<'a> TAPNTokenReader<'a> {
@@ -42,12 +42,12 @@ impl<'a> TAPNTokenReader<'a> {
     pub fn get(&self) -> TAPNToken {
         TAPNToken {
             count : *self.count,
-            age : ClockValue::from(*self.age)
+            age : *self.age
         }
     }
 
-    pub fn get_age(&self) -> ClockValue {
-        ClockValue::from(*self.age)
+    pub fn get_age(&self) -> Real {
+        *self.age
     }
 
 }
@@ -56,12 +56,12 @@ impl<'a> TAPNTokenWriter<'a> {
     pub fn get(&self) -> TAPNToken {
         TAPNToken {
             count : *self.count,
-            age : ClockValue::from(*self.age)
+            age : *self.age
         }
     }
 
-    pub fn get_age(&self) -> ClockValue {
-        ClockValue::from(*self.age)
+    pub fn get_age(&self) -> Real {
+        *self.age
     }
 
 }
@@ -70,30 +70,28 @@ impl From<ModelStorage> for TAPNToken {
     fn from(value: ModelStorage) -> Self {
         let (count, age) = value.tuple();
         let count = count.int();
-        let age = ClockValue::from(age.float());
-        TAPNToken { count, age }
+        TAPNToken { count, age: age.real() }
     }
 }
 impl<'a> From<&'a ModelStorage> for TAPNTokenReader<'a> {
     fn from(value: &'a ModelStorage) -> Self {
         let (count, age) = value.ref_tuple();
         let count = count.ref_int();
-        let age = age.ref_float();
-        TAPNTokenReader { count, age }
+        TAPNTokenReader { count, age: age.ref_real() }
     }
 }
 impl<'a> From<&'a mut ModelStorage> for TAPNTokenWriter<'a> {
     fn from(value: &'a mut ModelStorage) -> Self {
         let (count, age) = value.mut_tuple();
         let count = count.mut_int();
-        let age = age.mut_float();
+        let age = age.mut_real();
         TAPNTokenWriter { count, age }
     }
 }
 impl From<TAPNToken> for ModelStorage {
     fn from(value: TAPNToken) -> Self {
         let count = ModelStorage::from(value.count);
-        let age = ModelStorage::from(value.age.float());
+        let age = ModelStorage::from(value.age);
         (count, age).into()
     }
 }
@@ -135,12 +133,12 @@ impl<'a> TAPNTokenListReader<'a> {
         self.tokens().map(|t| t.get()).collect()
     }
 
-    pub fn max_age(&self) -> ClockValue {
+    pub fn max_age(&self) -> Option<Real> {
         if self.tokens.len() == 0 {
-            return ClockValue::neg_infinity();
+            return None;
         }
-        let last_age = *self.tokens.last().unwrap().ref_tuple().1.ref_float();
-        ClockValue::from(last_age)
+        let last_age = self.tokens.last().unwrap().ref_tuple().1.clone().real();
+        Some(last_age)
     }
 
     pub fn list_len(&self) -> usize {
@@ -208,9 +206,9 @@ impl<'a> TAPNTokenListWriter<'a> {
         self.tokens.iter().map(|t| *t.ref_tuple().0.ref_int() ).sum()
     }
 
-    pub fn delta(&mut self, dt : ClockValue) {
+    pub fn delta(&mut self, dt : Real) {
         for tok in self.tokens() {
-            *tok.age += InternalF::from(dt)
+            *tok.age += dt
         }
     }
 
@@ -218,12 +216,12 @@ impl<'a> TAPNTokenListWriter<'a> {
         self.tokens.iter().map(|t| TAPNToken::from(t.clone()) ).collect()
     }
 
-    pub fn max_age(&self) -> ClockValue {
+    pub fn max_age(&self) -> Option<Real> {
         if self.tokens.len() == 0 {
-            return ClockValue::neg_infinity();
+            return None;
         }
-        let last_age = self.tokens.last().unwrap().ref_tuple().1;
-        ClockValue::from(*last_age.ref_float())
+        let last_age = self.tokens.last().unwrap().ref_tuple().1.clone().real();
+        Some(last_age)
     }
 
     pub fn list_len(&self) -> usize {
@@ -300,7 +298,7 @@ impl<'a> TAPNPlaceListReader<'a> {
 }
 impl<'a> TAPNPlaceListWriter<'a> {
 
-    pub fn delta(&mut self, dt : ClockValue) {
+    pub fn delta(&mut self, dt : Real) {
         for place in self.places.iter_mut() {
             let mut token_list = TAPNTokenListWriter::from(place);
             token_list.delta(dt)

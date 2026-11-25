@@ -61,23 +61,23 @@ impl PetriTransition {
         label : Label, 
         from : Vec<(Label, i32)>, 
         to : Vec<(Label, i32)>, 
-        interval : Interval<Real>
+        interval : Interval<i32>
     ) -> Self {
         PetriTransition {
             label,
             from, to,
-            interval,
+            interval: interval.cast(),
             guard : Condition::True,
             ..Default::default()
         }
     }
 
-    pub fn safe(label : Label, from : Vec<Label>, to : Vec<Label>, interval : Interval<Real>) -> Self {
+    pub fn safe(label : Label, from : Vec<Label>, to : Vec<Label>, interval : Interval<i32>) -> Self {
         PetriTransition {
             label,
             from : from.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(),
             to : to.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(),
-            interval,
+            interval: interval.cast(),
             guard : Condition::True,
             ..Default::default()
         }
@@ -97,12 +97,12 @@ impl PetriTransition {
         label : Label, 
         from : Vec<(Label, i32)>, 
         to : Vec<(Label, i32)>, 
-        interval : Interval<Real>
+        interval : Interval<i32>
     ) -> Self {
         PetriTransition {
             label,
             from, to,
-            interval,
+            interval: interval.cast(),
             guard : Condition::True,
             ..Default::default()
         }
@@ -131,7 +131,7 @@ impl PetriTransition {
         let clockvalue = state.get_clock_value(self.get_clock());
         match clockvalue {
             ClockValue::Disabled => false,
-            ClockValue::Enabled(real) => self.interval.contains(&real),
+            ClockValue::Enabled(real) => self.interval.cast().contains(&real),
         }
     }
 

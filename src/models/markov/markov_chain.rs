@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::probability::ProbabilisticChoice, models::{CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node, UNMAPPED_ID, action::Action, lbl, model_context::ModelContext, model_var::{ModelVar, VarType}, time::ClockValue}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
+use crate::{computation::probability::ProbabilisticChoice, models::{CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node, action::Action, lbl, model_context::ModelContext, model_var::{ModelVar, VarType}, time::ClockValue}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
 
 use super::markov_node::MarkovNode;
 
@@ -14,7 +14,7 @@ pub struct MarkovChain {
     #[serde(skip)]
     pub nodes_dic : HashMap<Label, usize>,
     #[serde(skip)]
-    pub id : usize,
+    pub id : Option<usize>,
     #[serde(skip)]
     pub current_node : ModelVar
 }
@@ -25,7 +25,7 @@ impl MarkovChain {
         MarkovChain {
             nodes,
             nodes_dic : HashMap::new(),
-            id : UNMAPPED_ID,
+            id : None,
             current_node : ModelVar::new()
         }
     }
@@ -133,7 +133,7 @@ impl Model for MarkovChain {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
-    fn get_id(&self) -> usize {
+    fn get_id(&self) -> Option<usize> {
         self.id
     }
 

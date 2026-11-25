@@ -27,7 +27,7 @@ impl<'a> TAPNRunGenerator<'a> {
             initial_state,
             bound,
             intervals : vec![ContinuousSet::EmptySet ; tapn.transitions.len()],
-            firing_dates : vec![ClockValue::disabled() ; tapn.transitions.len()],
+            firing_dates : vec![ClockValue::Disabled ; tapn.transitions.len()],
             started : false,
             run_status : RunStatus {
                 current_state : Rc::new(initial_state.clone()),

@@ -7,7 +7,7 @@ use tapn_run_generator::TAPNRunGenerator;
 use tapn_token::*;
 use tapn_transition::TAPNTransition;
 
-use crate::{component_id::ComponentID, computation::Bound, real::Real, verification::VerificationBound};
+use crate::{computation::Bound, real::Real, verification::VerificationBound};
 
 use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
 
@@ -24,8 +24,8 @@ pub struct TAPNStructure {
 }
 
 pub struct TAPN {
-    pub id : ComponentID,
-    pub tokens_storage : ComponentID,
+    pub id : Option<usize>,
+    pub tokens_storage : Option<usize>,
     pub places : Vec<Arc<TAPNPlace>>,
     pub transitions : Vec<Arc<TAPNTransition>>,
     pub places_dic : HashMap<Label, usize>,
@@ -36,8 +36,8 @@ impl TAPN {
 
     pub fn new(places : Vec<TAPNPlace>, transitions : Vec<TAPNTransition>) -> Self {
         TAPN {
-            id: ComponentID::Unmapped,
-            tokens_storage: ComponentID::Unmapped,
+            id: None,
+            tokens_storage: None,
             places: places.into_iter().map(Arc::new).collect(),
             transitions: transitions.into_iter().map(Arc::new).collect(),
             places_dic: HashMap::new(),
@@ -212,7 +212,7 @@ impl Model for TAPN {
         Box::new(TAPNRunGenerator::generate(self, initial, bound))
     }
 
-    fn get_id(&self) -> ComponentID {
+    fn get_id(&self) -> Option<usize> {
         self.id
     }
 

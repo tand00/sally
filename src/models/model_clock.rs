@@ -2,25 +2,25 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-use super::{model_context::ModelContext, model_var::{MappingError, MappingResult}, Label, UNMAPPED_ID};
+use super::{model_context::ModelContext, model_var::{MappingError, MappingResult}, Label};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ModelClock {
     pub name : Label,
-    pub index : usize
+    pub index : Option<usize>
 }
 
 impl ModelClock {
 
     pub fn new() -> ModelClock {
         ModelClock {
-            name : Label::new(), index : UNMAPPED_ID
+            name : Label::new(), index : None
         }
     }
 
     pub fn name(name : Label) -> ModelClock {
         ModelClock {
-            name, index : UNMAPPED_ID
+            name, index : None
         }
     }
 
@@ -28,12 +28,12 @@ impl ModelClock {
         self.name.clone()
     }
 
-    pub fn get_index(&self) -> usize {
+    pub fn get_index(&self) -> Option<usize> {
         self.index
     }
 
     pub fn is_mapped(&self) -> bool {
-        self.index != UNMAPPED_ID
+        self.index.is_some()
     }
 
     pub fn apply_to(&self, ctx : &ModelContext) -> MappingResult<ModelClock> {

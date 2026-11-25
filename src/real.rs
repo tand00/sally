@@ -1,4 +1,4 @@
-use std::{fmt::Display, iter::Sum, ops::{Add, AddAssign, Div, Mul, Neg, Rem, Sub}};
+use std::{fmt::Display, iter::Sum, ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Rem, Sub, SubAssign}};
 
 use fixed::{traits::{FromFixed, ToFixed}, types::I16F48};
 use num_traits::{One, Zero};
@@ -63,11 +63,23 @@ impl Sub for Real {
     }
 }
 
+impl SubAssign for Real {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 -= rhs.0
+    }
+}
+
 impl Mul for Real {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
         Real(self.0 * rhs.0)
+    }
+}
+
+impl MulAssign for Real {
+    fn mul_assign(&mut self, rhs: Self) {
+        self.0 *= rhs.0
     }
 }
 
@@ -178,6 +190,18 @@ impl AddAssign for Len {
             | (x @ Len::Finite(_), Len::Infinite) 
                 => *x = Len::Infinite,
             (Len::Finite(r1), Len::Finite(r2)) => *r1 += r2,
+        }
+    }
+}
+
+impl MulAssign for Len {
+    fn mul_assign(&mut self, rhs: Self) {
+        match (self, rhs) {
+            (x @ Len::Infinite, Len::Infinite) 
+            | (x @ Len::Infinite, Len::Finite(_)) 
+            | (x @ Len::Finite(_), Len::Infinite) 
+                => *x = Len::Infinite,
+            (Len::Finite(r1), Len::Finite(r2)) => *r1 *= r2,
         }
     }
 }

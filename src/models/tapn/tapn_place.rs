@@ -3,7 +3,7 @@ use std::{fmt, sync::{Arc, OnceLock}};
 use num_traits::Zero;
 use serde::{Serialize, Deserialize};
 
-use crate::models::{model_context::ModelContext, model_var::{ModelVar, VarType}, time::TimeBound, CompilationResult, Label, ModelState, Node};
+use crate::{computation::Bound, models::{CompilationResult, Label, ModelState, Node, model_context::ModelContext, model_var::{ModelVar, VarType}}, real::Real};
 use super::{tapn_transition::TAPNTransition, TAPNTokenListReader};
 
 const TAPN_PLACE_VAR_TYPE : VarType = VarType::VarU8;
@@ -12,7 +12,7 @@ const TAPN_PLACE_VAR_TYPE : VarType = VarType::VarU8;
 pub struct TAPNPlace {
     pub name : Label,
 
-    pub invariant : TimeBound,
+    pub invariant : Bound<Real>,
 
     #[serde(skip)]
     pub index : usize,
@@ -32,7 +32,7 @@ impl TAPNPlace {
     pub fn new(lbl : Label) -> Self {
         TAPNPlace {
             name : lbl,
-            invariant : TimeBound::Infinite,
+            invariant : Bound::Infinite,
             index : 0,
             in_transitions : OnceLock::new(),
             out_transitions : OnceLock::new(),
@@ -40,10 +40,10 @@ impl TAPNPlace {
         }
     }
 
-    pub fn new_with_invariant(lbl : Label, inv : TimeBound) -> Self {
+    pub fn new_with_invariant(lbl : Label, inv : Bound<i32>) -> Self {
         TAPNPlace {
             name : lbl,
-            invariant : inv,
+            invariant : inv.cast(),
             index : 0,
             in_transitions : OnceLock::new(),
             out_transitions : OnceLock::new(),
@@ -79,12 +79,13 @@ impl TAPNPlace {
         state.tokens(self.get_var())
     }
 
-    pub fn available_delay(&self, tokens : &TAPNTokenListReader) -> TimeBound {
-        let max_age = tokens.max_age();
-        let inv = self.invariant;
-        let translated = inv - max_age;
-        if translated < TimeBound::zero() {
-            TimeBound::MinusInfinite
+    pub fn available_delay(&self, tokens : &TAPNTokenListReader) -> Bound<Real> {
+        let Some(max_age) = tokens.max_age() else {
+            return Bound::Infinite;
+        };
+        let translated = self.invariant - max_age;
+        if translated < Bound::zero() {
+            Bound::MinusInfinite
         } else {
             translated
         }

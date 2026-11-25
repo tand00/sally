@@ -1,5 +1,5 @@
 use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}};
-use num_traits::{One, Zero};
+use num_traits::{Bounded, One, Zero};
 use serde::{Deserialize, Serialize};
 
 use Bound::{Strict, Large, Infinite, MinusInfinite};
@@ -218,6 +218,16 @@ impl<T> Not for Bound<T> {
             Strict(x) => Large(x),
             _ => self
         }
+    }
+}
+
+impl<T> Bounded for Bound<T> {
+    fn min_value() -> Self {
+        Bound::MinusInfinite
+    }
+
+    fn max_value() -> Self {
+        Bound::Infinite
     }
 }
 

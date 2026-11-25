@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{component_id::ComponentID, computation::Bound, models::{class_graph::StateClassGenerator, digraph::search_strategy::BreadthFirst}, real::Real, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
+use crate::{computation::Bound, models::{class_graph::StateClassGenerator, digraph::search_strategy::BreadthFirst}, real::Real, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
 
 use super::{
     action::Action, lbl, model_context::ModelContext, time::ClockValue,
@@ -27,7 +27,7 @@ pub struct PetriStructure {
 
 #[derive(Debug, Clone)]
 pub struct PetriNet {
-    pub id: ComponentID,
+    pub id: Option<usize>,
     pub places: Vec<Arc<PetriPlace>>,
     pub transitions: Vec<Arc<PetriTransition>>,
     pub places_dic: HashMap<Label, usize>,
@@ -40,7 +40,7 @@ impl PetriNet {
 
     pub fn new(places: Vec<PetriPlace>, transitions: Vec<PetriTransition>) -> Self {
         let petri = PetriNet {
-            id: ComponentID::Unmapped,
+            id: None,
             places: places.into_iter().map(Arc::new).collect(),
             transitions: transitions.into_iter().map(Arc::new).collect(),
             places_dic: HashMap::new(),
@@ -357,7 +357,7 @@ impl Model for PetriNet {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
-    fn get_id(&self) -> ComponentID {
+    fn get_id(&self) -> Option<usize> {
         self.id
     }
 

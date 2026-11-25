@@ -8,6 +8,7 @@ use super::{action::Action, model_clock::ModelClock, model_storage::ModelStorage
 pub struct ModelContext {
     n_models : usize,
     n_storages : usize,
+    
     vars : HashMap<Label, ModelVar>,
     actions : HashMap<Label, Action>,
     clocks : HashMap<Label, ModelClock>,
@@ -35,16 +36,16 @@ impl ModelContext {
         self.n_models
     }
 
-    pub fn new_model(&mut self) -> usize {
+    pub fn new_model(&mut self) -> Option<usize> {
         let id = self.n_models;
         self.n_models += 1;
-        id
+        Some(id)
     }
 
-    pub fn add_storage(&mut self) -> usize {
+    pub fn add_storage(&mut self) -> Option<usize> {
         let id = self.n_storages;
         self.n_storages += 1;
-        id
+        Some(id)
     }
 
     pub fn n_storages(&self) -> usize {
@@ -140,7 +141,7 @@ impl ModelContext {
     pub fn add_clock(&mut self, name : Label) -> ModelClock {
         let clock_name = self.get_local_name(name);
         let mut clock = ModelClock::name(clock_name);
-        clock.index = self.n_clocks();
+        clock.index = Some(self.n_clocks());
         self.clocks.insert(clock.name.clone(), clock.clone());
         clock
     }
@@ -291,7 +292,7 @@ impl Display for ModelContext {
         }
         write!(f, " | - Clocks :\n")?;
         for (name, clock) in self.clocks.iter() {
-            write!(f, " | {} [{}]\n", name, clock.get_index())?;
+            write!(f, " | {} [{}]\n", name, clock.get_index().unwrap())?;
         }
         write!(f, " | - Actions :\n")?;
         for (name, action) in self.actions.iter() {

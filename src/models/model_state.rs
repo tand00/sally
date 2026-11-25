@@ -20,7 +20,7 @@ impl ModelState {
     pub fn new(discrete_size : usize, clocks : usize) -> Self {
         ModelState {
             discrete : VirtualMemory::from_size(discrete_size),
-            clocks :  DVector::from_element(clocks, ClockValue::disabled()),
+            clocks :  DVector::from_element(clocks, ClockValue::Disabled),
             storages : Vec::new(),
             deadlocked : false
         }
@@ -39,7 +39,7 @@ impl ModelState {
     }
 
     pub fn disable_clock(&mut self, clock : &ModelClock) {
-        self.clocks[clock.get_index()] = ClockValue::disabled()
+        self.clocks[clock.get_index()] = ClockValue::Disabled
     }
 
     pub fn is_enabled(&self, clock : &ModelClock) -> bool {
@@ -122,7 +122,7 @@ impl ModelState {
     }
 
     pub fn create_clocks(&mut self, clocks : usize) {
-        self.clocks = DVector::from_element(clocks, ClockValue::disabled())
+        self.clocks = DVector::from_element(clocks, ClockValue::Disabled)
     }
 
     pub fn storage(&self, index : &usize) -> &ModelStorage {

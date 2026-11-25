@@ -2,8 +2,8 @@ use std::fmt::Display;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
 use std::{collections::HashSet, hash::Hash, ops::Not};
 
-use crate::InternalF;
 use crate::models::time::ClockValue;
+use crate::real::Real;
 use crate::verification::query::{Query, QueryVisitor};
 
 use crate::verification::{Verifiable, VerificationStatus};
@@ -295,7 +295,7 @@ impl Condition {
                 }
             },
             ClockComparison(prop_type, clock, value) => {
-                let value = InternalF::from_num(*value);
+                let value = Real::from(*value);
                 let value = ClockValue::from(value);
                 let prop_res = match prop_type {
                     EQ => state.evaluate_clock(clock) == value,

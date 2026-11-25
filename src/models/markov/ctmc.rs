@@ -14,7 +14,7 @@ pub struct CTMarkovChain {
     #[serde(skip)]
     pub nodes_dic : HashMap<Label, usize>,
     #[serde(skip)]
-    pub id : usize
+    pub id : Option<usize>
 }
 
 impl Model for CTMarkovChain {
@@ -51,7 +51,7 @@ impl Model for CTMarkovChain {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
-    fn get_id(&self) -> usize {
+    fn get_id(&self) -> Option<usize> {
         self.id
     }
 

@@ -4,9 +4,9 @@ use nalgebra::{DMatrix, Scalar};
 use num_traits::{Bounded, Zero};
 use search_strategy::GraphTraversal;
 
-use crate::computation::DBM;
+use crate::computation::{Bound, DBM};
 
-use super::{node::{Node, DataNode}, time::TimeBound, Edge};
+use super::{node::{Node, DataNode}, Edge};
 
 // T is the type to be stored in Nodes, while U is the type of edges weights
 
@@ -527,7 +527,7 @@ impl<T, U> Default for Digraph<T,U> {
     }
 }
 
-impl From<DBM> for Digraph<usize, TimeBound> {
+impl From<DBM> for Digraph<usize, Bound<i32>> {
     fn from(matrix: DBM) -> Self {
         let mut graph = Digraph::new();
         for i in 0..(matrix.vars_count() + 1) {
@@ -542,8 +542,8 @@ impl From<DBM> for Digraph<usize, TimeBound> {
     }
 }
 
-impl From<Digraph<usize, TimeBound>> for DBM {
-    fn from(graph: Digraph<usize, TimeBound>) -> Self {
+impl From<Digraph<usize, Bound<i32>>> for DBM {
+    fn from(graph: Digraph<usize, Bound<i32>>) -> Self {
         DBM::from(graph.get_matrix())
     }
 }

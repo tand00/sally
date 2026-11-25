@@ -2,13 +2,13 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-use crate::models::{time::TimeInterval, Edge};
+use crate::{computation::Interval, models::Edge, real::Real};
 
 use super::{TAPNPlace, TAPNTransition};
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct TAPNEdgeData {
-    pub interval : TimeInterval,
+    pub interval : Interval<Real>,
     pub weight : i32
 }
 
