@@ -203,7 +203,7 @@ impl TAPNTransition {
         res
     }
 
-    fn arc_dates(interval : &TimeInterval, weight : usize, token_list : TAPNTokenListReader) -> ContinuousSet<ClockValue, RealTimeInterval> {
+    fn arc_dates(interval : &TimeInterval, weight : usize, token_list : TAPNTokenListReader) -> ContinuousSet<ClockValue, TimeInterval> {
         if weight == 0 {
             return ContinuousSet::full();
         }
@@ -230,7 +230,7 @@ impl TAPNTransition {
         dates
     }
 
-    pub fn firing_dates(&self, place_list : &TAPNPlaceListReader) -> ContinuousSet<ClockValue, RealTimeInterval> {
+    pub fn firing_dates(&self, place_list : &TAPNPlaceListReader) -> ContinuousSet<ClockValue, TimeInterval> {
         let mut dates = ContinuousSet::full();
         for edge in self.get_inhibitors().iter() {
             let place_index = edge.get_node_from().index;

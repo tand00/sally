@@ -3,13 +3,15 @@ use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 
+use crate::computation::Interval;
 use crate::computation::convex::Convex;
 use crate::models::action::Action;
 use crate::models::model_clock::ModelClock;
 use crate::models::model_context::ModelContext;
-use crate::models::time::TimeInterval;
+use crate::models::time::ClockValue;
 use crate::models::{CompilationError, CompilationResult, Edge, Label, ModelState, Node};
 use crate::models::expressions::Condition;
+use crate::real::Real;
 
 use super::PetriPlace;
 
@@ -21,7 +23,7 @@ pub struct PetriTransition {
     pub label: Label,
     pub from: Vec<(Label, i32)>,
     pub to: Vec<(Label, i32)>,
-    pub interval: TimeInterval,
+    pub interval: Interval<Real>,
 
     #[serde(skip_serializing_if="Condition::is_default", default)]
     pub guard : Condition,
@@ -55,7 +57,12 @@ impl Node for PetriTransition {
 
 impl PetriTransition {
 
-    pub fn new(label : Label, from : Vec<(Label, i32)>, to : Vec<(Label, i32)>, interval : TimeInterval) -> Self {
+    pub fn new(
+        label : Label, 
+        from : Vec<(Label, i32)>, 
+        to : Vec<(Label, i32)>, 
+        interval : Interval<Real>
+    ) -> Self {
         PetriTransition {
             label,
             from, to,
@@ -65,7 +72,7 @@ impl PetriTransition {
         }
     }
 
-    pub fn safe(label : Label, from : Vec<Label>, to : Vec<Label>, interval : TimeInterval) -> Self {
+    pub fn safe(label : Label, from : Vec<Label>, to : Vec<Label>, interval : Interval<Real>) -> Self {
         PetriTransition {
             label,
             from : from.into_iter().map(|l| (l,1)).collect::<Vec<(Label, i32)>>(),
@@ -80,13 +87,18 @@ impl PetriTransition {
         PetriTransition {
             label,
             from, to,
-            interval : TimeInterval::full(),
+            interval : Interval::full(),
             guard : Condition::True,
             ..Default::default()
         }
     }
 
-    pub fn new_uncontrollable(label : Label, from : Vec<(Label, i32)>, to : Vec<(Label, i32)>, interval : TimeInterval) -> Self {
+    pub fn new_uncontrollable(
+        label : Label, 
+        from : Vec<(Label, i32)>, 
+        to : Vec<(Label, i32)>, 
+        interval : Interval<Real>
+    ) -> Self {
         PetriTransition {
             label,
             from, to,
@@ -117,10 +129,10 @@ impl PetriTransition {
 
     pub fn is_fireable(&self, state : &ModelState) -> bool {
         let clockvalue = state.get_clock_value(self.get_clock());
-        if clockvalue.is_disabled() {
-            return false;
+        match clockvalue {
+            ClockValue::Disabled => false,
+            ClockValue::Enabled(real) => self.interval.contains(&real),
         }
-        self.interval.contains(&clockvalue)
     }
 
     pub fn clear_edges(&mut self) {
@@ -175,7 +187,7 @@ impl PetriTransition {
             label: self.label.clone(),
             from: self.from.clone(),
             to: self.to.clone(),
-            interval: TimeInterval::full(),
+            interval: Interval::full(),
             guard : self.guard.clone(),
             index : self.index,
             ..Default::default()

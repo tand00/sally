@@ -46,7 +46,7 @@ pub mod time;
 pub mod timed_automata;
 pub mod beliefs_graph;
 
-use crate::{component_id::ComponentID, computation::virtual_memory::EvaluationType, models::time::TimeBound, real::Real, verification::VerificationBound};
+use crate::{component_id::ComponentID, computation::{Bound, virtual_memory::EvaluationType}, real::Real, verification::VerificationBound};
 
 use self::time::ClockValue;
 
@@ -55,8 +55,6 @@ pub struct CompilationError;
 pub type CompilationResult<T> = Result<T, CompilationError>;
 
 pub type InitialMarking = HashMap<Label, EvaluationType>;
-
-pub const UNMAPPED_ID : usize = usize::MAX;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModelMeta {
@@ -82,9 +80,9 @@ pub trait Model: Any {
 
     fn available_actions(&self, state: &ModelState) -> HashSet<Action>;
 
-    fn available_delay(&self, state: &ModelState) -> TimeBound {
+    fn available_delay(&self, state: &ModelState) -> Bound<Real> {
         let _ = state;
-        TimeBound::Infinite
+        Bound::Infinite
     }
 
     fn delay(&self, state: ModelState, dt: ClockValue) -> Option<ModelState> {

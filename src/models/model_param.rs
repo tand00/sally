@@ -2,14 +2,16 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::{time::{TimeBound, TimeInterval}, Label};
+use crate::{computation::{Bound, Interval}, real::Real};
+
+use super::{Label};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ModelParam {
     IntParam(i32),
     FloatParam(f64),
-    TimeIntervalParam(TimeInterval),
-    TimeBoundParam(TimeBound),
+    IntervalParam(Interval<Real>),
+    BoundParam(Bound<Real>),
     StringParam(String)
 }
 

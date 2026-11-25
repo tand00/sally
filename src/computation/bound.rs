@@ -1,11 +1,9 @@
 use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Not, Sub, SubAssign}};
-use num_traits::{Bounded, One, Zero};
+use num_traits::{One, Zero};
 use serde::{Deserialize, Serialize};
-use crate::real::Real;
 
 use Bound::{Strict, Large, Infinite, MinusInfinite};
 
-/// Integer / Infinite time bound, represents a "</<=" integer constraint
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Deserialize, Serialize, Default)]
 pub enum Bound<T> {
     #[serde(rename="<")]
@@ -19,21 +17,23 @@ pub enum Bound<T> {
     MinusInfinite,
 }
 
-pub type TimeBound = Bound<Real>;
-
-impl<T: Zero> Bound<T> {
-    pub fn zero() -> Self {
+impl<T: Zero + PartialEq> Zero for Bound<T> {
+    
+    fn zero() -> Self {
         Bound::Large(T::zero())
     }
-}
-
-impl<T: One> Bound<T> {
-    pub fn one() -> Self {
-        Bound::Large(T::one())
+    
+    fn is_zero(&self) -> bool {
+        if let Self::Large(b) = self {
+            return *b == T::zero();
+        }
+        false
     }
+
 }
 
 impl<T : PartialOrd> Bound<T> {
+
     pub fn greater_than(&self, y : &T) -> bool {
         match self {
             Infinite => true,
@@ -42,6 +42,7 @@ impl<T : PartialOrd> Bound<T> {
             MinusInfinite => false,
         }
     }
+
     pub fn lower_than(&self, y : &T) -> bool {
         match self {
             Infinite => false,
@@ -50,13 +51,8 @@ impl<T : PartialOrd> Bound<T> {
             MinusInfinite => true,
         }
     }
-}
 
-impl<T> Bound<T> {
-
-    pub fn intersection(self, other : Self) -> Self
-        where T : PartialOrd
-    {
+    pub fn intersection(self, other : Self) -> Self {
         if self <= other {
             self
         } else {
@@ -64,10 +60,29 @@ impl<T> Bound<T> {
         }
     }
 
+    pub fn mut_intersection(&mut self, other : Self) {
+        if *self > other {
+            *self = other
+        } 
+    }
+
+}
+
+impl<T> Bound<T> {
+
     pub fn unit() -> Self
         where T : One
     {
         Large(T::one())
+    }
+
+    pub fn cast<U: From<T>>(self) -> Bound<U> {
+        match self {
+            Strict(x) => Strict(x.into()),
+            Large(x) => Large(x.into()),
+            Infinite => Infinite,
+            MinusInfinite => MinusInfinite,
+        }
     }
 
 }
@@ -139,6 +154,38 @@ impl<T : PartialOrd> Mul for Bound<T> {
     }
 }
 
+impl<T: Add<Output = T>> AddAssign<T> for Bound<T> {
+    fn add_assign(&mut self, rhs: T) {
+        *self += Large(rhs)
+    }
+}
+
+impl<T: Sub<Output = T>> SubAssign<T> for Bound<T> {
+    fn sub_assign(&mut self, rhs: T) {
+        *self -= Large(rhs)
+    }
+}
+
+impl<T : PartialOrd> MulAssign for Bound<T> {
+    fn mul_assign(&mut self, rhs: Self) {
+        self.mut_intersection(rhs);
+    }
+}
+
+impl<T: Add<Output = T>> Add<T> for Bound<T> {
+    type Output = Self;
+    fn add(self, rhs: T) -> Self::Output {
+        self + Large(rhs)
+    }
+}
+
+impl<T: Sub<Output = T>> Sub<T> for Bound<T> {
+    type Output = Self;
+    fn sub(self, rhs: T) -> Self::Output {
+        self - Large(rhs)
+    }
+}
+
 impl<T : PartialOrd + Mul<Output = T> + Zero> Mul<T> for Bound<T> {
     type Output = Self;
     fn mul(self, rhs: T) -> Self::Output {
@@ -160,13 +207,6 @@ impl<T : PartialOrd + Mul<Output = T> + Zero> Mul<T> for Bound<T> {
                 MinusInfinite
             },
         }
-    }
-}
-
-impl<T : PartialOrd + PartialEq> MulAssign for Bound<T> {
-    fn mul_assign(&mut self, rhs: Self) {
-        let temp = std::mem::replace(self, Self::Infinite);
-        *self = temp * rhs;
     }
 }
 
@@ -214,15 +254,6 @@ impl<T : Ord> Ord for Bound<T> {
     }
 }
 
-impl<T : Bounded> Bounded for Bound<T> {
-    fn max_value() -> Self {
-        Infinite
-    }
-    fn min_value() -> Self {
-        MinusInfinite
-    }
-}
-
 impl<T : fmt::Display> fmt::Display for Bound<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let to_print = match self {
@@ -235,29 +266,3 @@ impl<T : fmt::Display> fmt::Display for Bound<T> {
     }
 }
 
-
-impl AddAssign<Real> for TimeBound {
-    fn add_assign(&mut self, rhs: Real) {
-        *self += Large(rhs)
-    }
-}
-
-impl SubAssign<Real> for TimeBound {
-    fn sub_assign(&mut self, rhs: Real) {
-        *self -= Large(rhs)
-    }
-}
-
-impl Add<Real> for TimeBound {
-    type Output = Self;
-    fn add(self, rhs: Real) -> Self::Output {
-        self + Large(rhs)
-    }
-}
-
-impl Sub<Real> for TimeBound {
-    type Output = Self;
-    fn sub(self, rhs: Real) -> Self::Output {
-        self - Large(rhs)
-    }
-}

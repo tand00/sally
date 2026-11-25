@@ -4,16 +4,16 @@ use std::{
 };
 
 use nalgebra::{DMatrix, DVector};
-use num_traits::Zero;
+use num_traits::{One, Zero};
 use serde::{Deserialize, Serialize};
 
-use crate::{InternalF, models::time::{Bound, ClockValue, Interval}};
+use crate::{computation::{Bound, Interval}, real::{Len, Real}};
 
 use super::convex::{ContinuousSet, Convex, Delta, Disjoint, Measurable};
 
 pub type IntBound = Bound<i32>;
 pub type IntInterval = Interval<i32>;
-pub type DatesVector = DVector<ClockValue>;
+pub type DatesVector = DVector<Real>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DBM {
@@ -269,12 +269,12 @@ impl Convex<DatesVector> for DBM {
         }
         let vars = elem.len();
         for i in 0..vars {
-            if !self.rectangulars(i + 1).contains(&elem[i]) {
+            if !self.rectangulars(i + 1).cast().contains(&elem[i]) {
                 return false;
             }
             for j in (i + 1)..vars {
                 let diag = elem[i] - elem[j];
-                if !self.diagonals(i + 1, j + 1).contains(&diag) {
+                if !self.diagonals(i + 1, j + 1).cast().contains(&diag) {
                     return false;
                 }
             }
@@ -397,16 +397,16 @@ impl Delta<IntBound> for DBM {
 
 /// Experimental measure, volume of the englobing square
 impl Measurable for DBM {
-    fn len(&self) -> InternalF {
+    fn len(&self) -> Len {
         if self.is_empty() {
-            return InternalF::ZERO;
+            return Len::zero();
         }
-        let mut s = InternalF::ONE;
+        let mut s = Real::one();
         for i in 0..self.vars_count() {
             let rect = self.rectangulars(i + 1);
             s *= rect.len();
             if s.is_zero() {
-                return InternalF::ZERO;
+                return Len::zero();
             }
         }
         s

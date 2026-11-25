@@ -15,8 +15,6 @@ pub enum ModelStorage {
 
 use ModelStorage::*;
 
-use crate::InternalF;
-
 impl ModelStorage {
 
     pub fn is_empty(&self) -> bool {

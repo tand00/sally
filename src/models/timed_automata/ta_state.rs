@@ -1,6 +1,6 @@
 use std::{sync::{Arc, OnceLock}, usize};
 
-use crate::models::{expressions::Condition, model_context::ModelContext, model_var::{ModelVar, VarType}, time::TimeBound, CompilationError, CompilationResult, Label, ModelState, Node};
+use crate::{computation::Bound, models::{CompilationError, CompilationResult, Label, ModelState, Node, expressions::Condition, model_context::ModelContext, model_var::{ModelVar, VarType}}, real::Real};
 
 use super::ta_transition::TAEdge;
 
@@ -35,9 +35,9 @@ impl TAState {
         &self.var
     }
 
-    pub fn remaining_time(&self, state : &ModelState) -> TimeBound {
+    pub fn remaining_time(&self, state : &ModelState) -> Bound<Real> {
         let conds = self.invariants.conjunctions();
-        let max_time = TimeBound::Infinite;
+        let max_time = Bound::Infinite;
         for cond in conds {
             todo!()
         }

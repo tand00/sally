@@ -3,7 +3,7 @@
 use function::{ObservationContext, ObservationFunction, VarPolicy};
 use observable::Observable;
 
-use crate::{computation::virtual_memory::EvaluationType, models::{Action, class_graph::StateClass, lbl, ModelClock, ModelContext, ModelVar, time::{ClockValue, RealTimeBound}, CompilationError, CompilationResult, Label, Model, ModelMeta, ModelObject, ModelState, UNMAPPED_ID}, verification::{smc::RandomRunIterator, Verifiable, VerificationBound}};
+use crate::{component_id::ComponentID, computation::virtual_memory::EvaluationType, models::{Action, CompilationError, CompilationResult, Label, Model, ModelClock, ModelContext, ModelMeta, ModelObject, ModelState, ModelVar, class_graph::StateClass, lbl, time::ClockValue}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
 use crate::log;
 
 use super::{Translation, TranslationError, TranslationMeta, TranslationResult, TranslationType};
@@ -12,7 +12,7 @@ pub mod function;
 pub mod observable;
 
 pub struct PartialObservation<T : Model> {
-    pub id: usize,
+    pub id: ComponentID,
     pub observation_function: ObservationFunction,
     pub obs_ctx: ObservationContext,
     pub model: Option<T>,
@@ -23,11 +23,11 @@ impl<T : Model> PartialObservation<T> {
 
     pub fn new(obs : ObservationFunction) -> PartialObservation<T> {
         PartialObservation {
-            id : UNMAPPED_ID,
-            observation_function : obs,
-            obs_ctx : Default::default(),
-            model : Default::default(),
-            initial_state : Default::default()
+            id: ComponentID::Unmapped,
+            observation_function: obs,
+            obs_ctx: Default::default(),
+            model: Default::default(),
+            initial_state: Default::default()
         }
     }
 

@@ -8,29 +8,29 @@ pub use ta_state::TAState;
 use ta_transition::TAEdge;
 pub use ta_transition::TATransition;
 
-use crate::{models::time::TimeBound, verification::{VerificationBound, smc::RandomRunIterator}};
+use crate::{component_id::ComponentID, computation::Bound, real::Real, verification::{VerificationBound, smc::RandomRunIterator}};
 
-use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
+use super::{action::Action, lbl, model_clock::ModelClock, model_context::ModelContext, model_storage::ModelStorage, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node};
 
 pub struct TimedAutomaton {
-    pub id: usize,
+    pub id: ComponentID,
     pub states: Vec<Arc<TAState>>,
     pub transitions: Vec<Arc<TAEdge>>,
     pub clocks: Vec<ModelClock>,
     pub actions_dic: HashMap<Action, usize>,
-    pub state_cache: usize // Store current active state, speed optimization at the cost of space. Might be worst
+    pub state_cache: ComponentID // Store current active state, speed optimization at the cost of space. Might be worst
 }
 
 impl TimedAutomaton {
 
     pub fn new(states : Vec<TAState>, transitions : Vec<TAEdge>, clocks : Vec<Label>) -> Self {
         TimedAutomaton {
-            id : UNMAPPED_ID,
+            id : ComponentID::Unmapped,
             states: states.into_iter().map(Arc::new).collect(),
             transitions: transitions.into_iter().map(Arc::new).collect(),
             clocks: clocks.into_iter().map(ModelClock::name).collect(),
             actions_dic: HashMap::new(),
-            state_cache: UNMAPPED_ID
+            state_cache: ComponentID::Unmapped
         }
     }
 
@@ -133,13 +133,13 @@ impl Model for TimedAutomaton {
         Ok(())
     }
 
-    fn get_id(&self) -> usize {
+    fn get_id(&self) -> ComponentID {
         self.id
     }
 
-    fn available_delay(&self, state: &ModelState) -> TimeBound {
+    fn available_delay(&self, state: &ModelState) -> Bound<Real> {
         if !self.is_timed() {
-            return TimeBound::Infinite;
+            return Bound::Infinite;
         }
         let place = self.get_active_place(state);
         place.remaining_time(state)

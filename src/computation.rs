@@ -1,5 +1,7 @@
 mod bit_set;
 mod dbm;
+mod bound;
+mod interval;
 
 pub mod virtual_memory;
 pub mod combinatory;
@@ -9,6 +11,8 @@ pub mod fix_point;
 
 pub use bit_set::BitSet;
 pub use dbm::DBM;
+pub use bound::Bound;
+pub use interval::Interval;
 
 #[macro_export]
 macro_rules! flag {

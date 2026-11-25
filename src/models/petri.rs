@@ -4,11 +4,11 @@ use std::{
     sync::Arc,
 };
 
-use crate::{models::{class_graph::StateClassGenerator, digraph::search_strategy::BreadthFirst, time::TimeBound}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
+use crate::{component_id::ComponentID, computation::Bound, models::{class_graph::StateClassGenerator, digraph::search_strategy::BreadthFirst}, real::Real, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
 
 use super::{
     action::Action, lbl, model_context::ModelContext, time::ClockValue,
-    CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node, UNMAPPED_ID,
+    CompilationResult, Edge, Label, Model, ModelMaker, ModelMeta, ModelState, Node,
 };
 
 mod petri_place;
@@ -27,7 +27,7 @@ pub struct PetriStructure {
 
 #[derive(Debug, Clone)]
 pub struct PetriNet {
-    pub id: usize,
+    pub id: ComponentID,
     pub places: Vec<Arc<PetriPlace>>,
     pub transitions: Vec<Arc<PetriTransition>>,
     pub places_dic: HashMap<Label, usize>,
@@ -40,7 +40,7 @@ impl PetriNet {
 
     pub fn new(places: Vec<PetriPlace>, transitions: Vec<PetriTransition>) -> Self {
         let petri = PetriNet {
-            id: UNMAPPED_ID,
+            id: ComponentID::Unmapped,
             places: places.into_iter().map(Arc::new).collect(),
             transitions: transitions.into_iter().map(Arc::new).collect(),
             places_dic: HashMap::new(),
@@ -265,9 +265,9 @@ impl Model for PetriNet {
         res
     }
 
-    fn available_delay(&self, state: &ModelState) -> TimeBound {
+    fn available_delay(&self, state: &ModelState) -> Bound<Real> {
         if !self.is_timed() {
-            return TimeBound::Infinite;
+            return Bound::Infinite;
         }
         let m = self.transitions.iter()
             .filter_map(|t| {
@@ -280,7 +280,7 @@ impl Model for PetriNet {
             })
             .reduce(|a,b| if a < b { a } else { b });
         match m {
-            None => TimeBound::zero(),
+            None => Bound::zero(),
             Some(c) => c,
         }
     }
@@ -357,7 +357,7 @@ impl Model for PetriNet {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
-    fn get_id(&self) -> usize {
+    fn get_id(&self) -> ComponentID {
         self.id
     }
 

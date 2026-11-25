@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use num_traits::Zero;
 
-use crate::{computation::{convex::{ContinuousSet, Delta, ToPositive}, probability::ProbabilisticChoice}, models::{action::Action, run::RunStatus, time::{ClockValue, RealTimeInterval}, Model, ModelState}, verification::VerificationBound};
+use crate::{computation::{convex::{ContinuousSet, Delta, ToPositive}, probability::ProbabilisticChoice}, models::{action::Action, run::RunStatus, time::{ClockValue, TimeInterval}, Model, ModelState}, verification::VerificationBound};
 
 use super::{tapn_transition::{FiringMode, TAPNTransition}, TAPNPlaceList, TAPNPlaceListReader, TAPN};
 
@@ -12,7 +12,7 @@ pub struct TAPNRunGenerator<'a> {
     pub tapn : &'a TAPN,
     pub initial_state : &'a ModelState,
     pub bound : VerificationBound,
-    pub intervals : Vec<ContinuousSet<ClockValue, RealTimeInterval>>,
+    pub intervals : Vec<ContinuousSet<ClockValue, TimeInterval>>,
     pub firing_dates : Vec<ClockValue>,
     pub started : bool,
     pub run_status : RunStatus,
@@ -55,7 +55,7 @@ impl<'a> TAPNRunGenerator<'a> {
     pub fn refresh_intervals(&mut self) {
         let state = &self.run_status.current_state;
         let avail_delay = self.tapn.available_delay(&self.run_status.current_state);
-        let avail_delay : ContinuousSet<ClockValue, RealTimeInterval> = RealTimeInterval::invariant(avail_delay).into();
+        let avail_delay : ContinuousSet<ClockValue, TimeInterval> = TimeInterval::invariant(avail_delay).into();
         let place_list = TAPNPlaceListReader::from(state.storage(&self.tapn.tokens_storage));
         for transition in self.tapn.transitions.iter() {
             let dates = transition.firing_dates(&place_list).intersection(avail_delay.clone());

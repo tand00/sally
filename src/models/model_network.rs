@@ -2,12 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use num_traits::Zero;
 
-use crate::{verification::{VerificationBound, smc::RandomRunIterator}};
+use crate::{component_id::ComponentID, computation::Bound, real::Real, verification::{VerificationBound, smc::RandomRunIterator}};
 
-use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::{ClockValue, RealTimeBound}, CompilationResult, Edge, Label, Model, ModelMeta, ModelObject, ModelState, Node};
+use super::{action::{Action, ActionPairs}, lbl, model_context::ModelContext, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMeta, ModelObject, ModelState, Node};
 
 pub struct ModelNetwork {
-    pub id : usize,
+    pub id : ComponentID,
     pub models : Vec<Box<dyn ModelObject>>,
     pub models_map : HashMap<Label, usize>,
     pub actions_map : HashMap<usize, usize>,
@@ -67,8 +67,8 @@ impl Model for ModelNetwork {
         actions
     }
 
-    fn available_delay(&self, state : &ModelState) -> RealTimeBound {
-        let mut min_delay = RealTimeBound::Infinite;
+    fn available_delay(&self, state : &ModelState) -> Bound<Real> {
+        let mut min_delay = Bound::Infinite;
         let mut is_timed = false;
         for model in self.models.iter() {
             if !model.is_timed() {
@@ -83,7 +83,7 @@ impl Model for ModelNetwork {
         if is_timed {
             min_delay
         } else {
-            RealTimeBound::zero()
+            Bound::zero()
         }
     }
 
@@ -115,7 +115,7 @@ impl Model for ModelNetwork {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
 
-    fn get_id(&self) -> usize {
+    fn get_id(&self) -> ComponentID {
         self.id
     }
 

@@ -7,7 +7,7 @@ use tapn_run_generator::TAPNRunGenerator;
 use tapn_token::*;
 use tapn_transition::TAPNTransition;
 
-use crate::{models::time::TimeBound, verification::VerificationBound};
+use crate::{component_id::ComponentID, computation::Bound, real::Real, verification::VerificationBound};
 
 use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
 
@@ -24,8 +24,8 @@ pub struct TAPNStructure {
 }
 
 pub struct TAPN {
-    pub id : usize,
-    pub tokens_storage : usize,
+    pub id : ComponentID,
+    pub tokens_storage : ComponentID,
     pub places : Vec<Arc<TAPNPlace>>,
     pub transitions : Vec<Arc<TAPNTransition>>,
     pub places_dic : HashMap<Label, usize>,
@@ -36,8 +36,8 @@ impl TAPN {
 
     pub fn new(places : Vec<TAPNPlace>, transitions : Vec<TAPNTransition>) -> Self {
         TAPN {
-            id: UNMAPPED_ID,
-            tokens_storage: UNMAPPED_ID,
+            id: ComponentID::Unmapped,
+            tokens_storage: ComponentID::Unmapped,
             places: places.into_iter().map(Arc::new).collect(),
             transitions: transitions.into_iter().map(Arc::new).collect(),
             places_dic: HashMap::new(),
@@ -172,7 +172,7 @@ impl Model for TAPN {
         let storage = state.mut_storage(&self.tokens_storage);
         let mut place_list = TAPNPlaceListWriter::from(storage);
         place_list.delta(dt);
-        if self.available_delay(&state) == TimeBound::MinusInfinite {
+        if self.available_delay(&state) == Bound::MinusInfinite {
             return None;
         }
         Some(state)
@@ -189,14 +189,14 @@ impl Model for TAPN {
         actions
     }
 
-    fn available_delay(&self, state: &ModelState) -> TimeBound {
+    fn available_delay(&self, state: &ModelState) -> Bound<Real> {
         let storage = state.storage(&self.tokens_storage);
         let place_list = TAPNPlaceListReader::from(storage);
-        let mut min_delay = TimeBound::Infinite;
+        let mut min_delay = Bound::Infinite;
         for place in self.places.iter() {
             let tokens = place_list.place(place.index);
             let avail = place.available_delay(&tokens);
-            if avail == TimeBound::MinusInfinite {
+            if avail == Bound::MinusInfinite {
                 return avail;
             }
             if avail < min_delay {
@@ -212,7 +212,7 @@ impl Model for TAPN {
         Box::new(TAPNRunGenerator::generate(self, initial, bound))
     }
 
-    fn get_id(&self) -> usize {
+    fn get_id(&self) -> ComponentID {
         self.id
     }
 

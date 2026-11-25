@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
+use std::{fmt::Display, iter::Sum, ops::{Add, AddAssign, Div, Mul, Neg, Rem, Sub}};
 
 use fixed::{traits::{FromFixed, ToFixed}, types::I16F48};
 use num_traits::{One, Zero};
@@ -29,6 +29,12 @@ impl Real {
 
 }
 
+impl Display for Real {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 impl<T: ToFixed> From<T> for Real {
     fn from(value: T) -> Self {
         Real(InternalType::from_num(value))
@@ -40,6 +46,12 @@ impl Add for Real {
 
     fn add(self, rhs: Self) -> Self::Output {
         Real(self.0 + rhs.0)
+    }
+}
+
+impl AddAssign for Real {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0
     }
 }
 
@@ -103,4 +115,79 @@ impl One for Real {
 pub enum Len {
     Infinite,
     Finite(Real)
+}
+
+impl From<Real> for Len {
+    fn from(value: Real) -> Self {
+        Len::Finite(value)
+    }
+}
+
+impl Zero for Len {
+    fn zero() -> Self {
+        Real::zero().into()
+    }
+
+    fn is_zero(&self) -> bool {
+        match self {
+            Len::Finite(r) => r.is_zero(),
+            _ => false,
+        }
+    }
+}
+
+impl One for Len {
+    fn one() -> Self {
+        Real::one().into()
+    }
+}
+
+impl Add for Len {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Len::Infinite, Len::Infinite) 
+            | (Len::Infinite, Len::Finite(_)) 
+            | (Len::Finite(_), Len::Infinite) 
+                => Len::Infinite,
+            (Len::Finite(r1), Len::Finite(r2)) => Len::Finite(r1 + r2),
+        }
+    }
+}
+
+impl Mul for Len {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Len::Infinite, Len::Infinite) 
+            | (Len::Infinite, Len::Finite(_)) 
+            | (Len::Finite(_), Len::Infinite) 
+                => Len::Infinite,
+            (Len::Finite(r1), Len::Finite(r2)) => Len::Finite(r1 * r2),
+        }
+    }
+}
+
+impl AddAssign for Len {
+    fn add_assign(&mut self, rhs: Self) {
+        match (self, rhs) {
+            (x @ Len::Infinite, Len::Infinite) 
+            | (x @ Len::Infinite, Len::Finite(_)) 
+            | (x @ Len::Finite(_), Len::Infinite) 
+                => *x = Len::Infinite,
+            (Len::Finite(r1), Len::Finite(r2)) => *r1 += r2,
+        }
+    }
+}
+
+impl Sum for Len {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        let mut res = Len::Finite(Real::zero());
+        for i in iter {
+            res += i;
+        }
+        res
+    }
 }

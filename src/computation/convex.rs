@@ -1,14 +1,13 @@
 use std::{
-    fmt::{self, Display},
-    marker::PhantomData,
-    ops::Add,
+    fmt::{self, Display}, marker::PhantomData, ops::AddAssign,
 };
 
-use nalgebra::Scalar;
 use num_traits::{Bounded, Zero};
 
+use crate::real::{Len, Real};
+
 // Either complement or difference MUST be implemented !
-pub trait Convex<T> {
+pub trait Convex<T> : Clone {
     fn contains(&self, elem: &T) -> bool;
 
     fn intersection(self, other: Self) -> Self;
@@ -34,12 +33,12 @@ pub trait Convex<T> {
         disj.intersection(self)
     }
 
-    fn intersects(&self, other: &Self) -> bool
-    where
-        Self: Clone,
-    {
-        !self.clone().intersection(other.clone()).is_empty()
-    }
+    fn intersects(&self, other: &Self) -> bool;
+    // where
+    //     Self: Clone,
+    // {
+    //     !self.clone().intersection(other.clone()).is_empty()
+    // }
 
     fn mut_intersect(&mut self, other: Self)
     where
@@ -48,9 +47,10 @@ pub trait Convex<T> {
         *self = self.clone().intersection(other)
     }
 
-    fn covers(&self, other: &Self) -> bool {
-        other.clone().difference(self.clone()).is_empty()
-    }
+    fn covers(&self, other: &Self) -> bool;
+    // {
+    //     other.clone().difference(self.clone()).is_empty()
+    // }
 
     fn fuse(set: &mut Vec<Self>, elem: Self)
     where
@@ -58,6 +58,10 @@ pub trait Convex<T> {
     {
         set.push(elem)
     }
+}
+
+pub trait Delta<T> {
+    fn delta(&mut self, dx: T);
 }
 
 pub trait Measurable {
@@ -69,13 +73,13 @@ pub trait ToPositive {
 }
 
 // VERY UNOPTIMIZED FOR NOW !
-#[derive(Debug, PartialEq, Clone)]
-pub struct Disjoint<T: Scalar, U: Convex<T>> {
+#[derive(Debug, PartialEq)]
+pub struct Disjoint<T, U: Convex<T>> {
     pub intervals: Vec<U>,
     phantom: PhantomData<T>,
 }
 
-impl<T: Scalar, U: Convex<T>> Disjoint<T, U> {
+impl<T, U: Convex<T>> Disjoint<T, U> {
     pub fn new() -> Self {
         Self {
             intervals: Vec::new(),
@@ -185,13 +189,19 @@ impl<T: Scalar, U: Convex<T>> Disjoint<T, U> {
     }
 }
 
-impl<T: Scalar, U: Convex<T> + Measurable> Measurable for Disjoint<T, U> {
-    fn len(&self) -> InternalF {
+impl<T, U: Convex<T>> Clone for Disjoint<T,U> {
+    fn clone(&self) -> Self {
+        Self { intervals: self.intervals.clone(), phantom: self.phantom.clone() }
+    }
+}
+
+impl<T, U: Convex<T> + Measurable> Measurable for Disjoint<T, U> {
+    fn len(&self) -> Len {
         self.intervals.iter().map(|i| i.len()).sum()
     }
 }
 
-impl<T: Scalar + Add<Output = T> + Clone, U: Convex<T> + Delta<T>> Delta<T> for Disjoint<T, U> {
+impl<T: Clone, U: Convex<T> + Delta<T>> Delta<T> for Disjoint<T, U> {
     fn delta(&mut self, dx: T) {
         for i in self.intervals.iter_mut() {
             i.delta(dx.clone())
@@ -199,7 +209,7 @@ impl<T: Scalar + Add<Output = T> + Clone, U: Convex<T> + Delta<T>> Delta<T> for 
     }
 }
 
-impl<T: Scalar, U: Convex<T> + ToPositive> ToPositive for Disjoint<T, U> {
+impl<T, U: Convex<T> + ToPositive> ToPositive for Disjoint<T, U> {
     fn positive(self) -> Self {
         let mut res = Self::new();
         for i in self.intervals {
@@ -209,7 +219,7 @@ impl<T: Scalar, U: Convex<T> + ToPositive> ToPositive for Disjoint<T, U> {
     }
 }
 
-impl<T: Scalar, U: Convex<T>> From<U> for Disjoint<T, U> {
+impl<T, U: Convex<T>> From<U> for Disjoint<T, U> {
     fn from(value: U) -> Self {
         if value.is_empty() {
             return Disjoint::new();
@@ -221,7 +231,7 @@ impl<T: Scalar, U: Convex<T>> From<U> for Disjoint<T, U> {
     }
 }
 
-impl<T: Scalar, U: Convex<T>> From<Vec<U>> for Disjoint<T, U> {
+impl<T, U: Convex<T>> From<Vec<U>> for Disjoint<T, U> {
     fn from(value: Vec<U>) -> Self {
         Disjoint {
             intervals: value,
@@ -230,7 +240,7 @@ impl<T: Scalar, U: Convex<T>> From<Vec<U>> for Disjoint<T, U> {
     }
 }
 
-impl<T: Scalar, U: Convex<T>> From<(U, U)> for Disjoint<T, U> {
+impl<T, U: Convex<T>> From<(U, U)> for Disjoint<T, U> {
     fn from(value: (U, U)) -> Self {
         Disjoint {
             intervals: vec![value.0, value.1],
@@ -239,7 +249,7 @@ impl<T: Scalar, U: Convex<T>> From<(U, U)> for Disjoint<T, U> {
     }
 }
 
-impl<T: Scalar, U: Convex<T> + Display> Display for Disjoint<T, U> {
+impl<T, U: Convex<T> + Display> Display for Disjoint<T, U> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let intervals: Vec<String> = self.intervals.iter().map(|i| i.to_string()).collect();
         let intervals = intervals.join(",");
@@ -247,7 +257,7 @@ impl<T: Scalar, U: Convex<T> + Display> Display for Disjoint<T, U> {
     }
 }
 
-impl<T: Scalar + PartialOrd + Bounded> Convex<T> for (T, T) {
+impl<T: PartialOrd + Bounded + Clone> Convex<T> for (T, T) {
     fn contains(&self, elem: &T) -> bool {
         (self.0 <= *elem) && (*elem <= self.1)
     }
@@ -298,10 +308,7 @@ impl<T: Scalar + PartialOrd + Bounded> Convex<T> for (T, T) {
         }
     }
 
-    fn intersects(&self, other: &Self) -> bool
-    where
-        Self: Clone,
-    {
+    fn intersects(&self, other: &Self) -> bool {
         (other.0 <= self.1) && (other.1 >= self.0)
     }
 
@@ -364,29 +371,29 @@ impl<T: Scalar + PartialOrd + Bounded> Convex<T> for (T, T) {
     }
 }
 
-impl Measurable for (InternalF, InternalF) {
-    fn len(&self) -> InternalF {
+impl Measurable for (Real, Real) {
+    fn len(&self) -> Len {
         if self.1 < self.0 {
-            return InternalF::ZERO;
+            return Real::zero().into();
         }
-        self.1.clone() - self.0.clone()
+        (self.1.clone() - self.0.clone()).into()
     }
 }
 
-impl<T: Scalar + Add<Output = T>> Delta<T> for (T, T) {
+impl<T: AddAssign + Clone> Delta<T> for (T, T) {
     fn delta(&mut self, dx: T) {
-        self.0 = self.0.clone() + dx.clone();
-        self.1 = self.1.clone() + dx;
+        self.0 += dx.clone();
+        self.1 += dx;
     }
 }
 
-impl<T: Scalar + Zero + Bounded + PartialOrd> ToPositive for (T, T) {
+impl<T: Clone + Zero + Bounded + PartialOrd> ToPositive for (T, T) {
     fn positive(self) -> Self {
         self.intersection((T::zero(), T::max_value()))
     }
 }
 
-pub enum ContinuousSet<T: Scalar, U: Convex<T>> {
+pub enum ContinuousSet<T, U: Convex<T>> {
     EmptySet,
     ConvexSet(U),
     DisjointSet(Disjoint<T, U>),
@@ -394,9 +401,7 @@ pub enum ContinuousSet<T: Scalar, U: Convex<T>> {
 
 use ContinuousSet::*;
 
-use crate::{InternalF, real::{Len, Real}};
-
-impl<T: Scalar, U: Convex<T>> ContinuousSet<T, U> {
+impl<T, U: Convex<T>> ContinuousSet<T, U> {
     pub fn new() -> Self {
         EmptySet
     }
@@ -490,7 +495,7 @@ impl<T: Scalar, U: Convex<T>> ContinuousSet<T, U> {
     }
 
     pub fn convert_convexs<W,X>(self) -> ContinuousSet<W,X>
-        where W : Scalar, X : Convex<W> + From<U>
+        where X : Convex<W> + From<U>
     {
         match self {
             EmptySet => EmptySet,
@@ -530,7 +535,7 @@ impl<T: Scalar, U: Convex<T>> ContinuousSet<T, U> {
 
 }
 
-impl<T: Scalar, U: Convex<T>> From<U> for ContinuousSet<T, U> {
+impl<T, U: Convex<T>> From<U> for ContinuousSet<T, U> {
     fn from(value: U) -> Self {
         if value.is_empty() {
             EmptySet
@@ -540,7 +545,7 @@ impl<T: Scalar, U: Convex<T>> From<U> for ContinuousSet<T, U> {
     }
 }
 
-impl<T: Scalar, U: Convex<T>> From<Disjoint<T, U>> for ContinuousSet<T, U> {
+impl<T, U: Convex<T>> From<Disjoint<T, U>> for ContinuousSet<T, U> {
     fn from(value: Disjoint<T, U>) -> Self {
         if value.is_empty() {
             EmptySet
@@ -552,14 +557,14 @@ impl<T: Scalar, U: Convex<T>> From<Disjoint<T, U>> for ContinuousSet<T, U> {
     }
 }
 
-impl<T: Scalar, U: Convex<T>> From<Vec<U>> for ContinuousSet<T, U> {
+impl<T, U: Convex<T>> From<Vec<U>> for ContinuousSet<T, U> {
     fn from(value: Vec<U>) -> Self {
         let d: Disjoint<T, U> = value.into();
         d.into()
     }
 }
 
-impl<T: Scalar, U: Convex<T> + Display> Display for ContinuousSet<T, U> {
+impl<T, U: Convex<T> + Display> Display for ContinuousSet<T, U> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EmptySet => write!(f, "{{}}"),
@@ -569,12 +574,12 @@ impl<T: Scalar, U: Convex<T> + Display> Display for ContinuousSet<T, U> {
     }
 }
 
-pub struct ConvexIterator<'a, T: Scalar, U: Convex<T>> {
+pub struct ConvexIterator<'a, T, U: Convex<T>> {
     set: &'a ContinuousSet<T, U>,
     current: usize,
 }
 
-impl<'a, T: Scalar, U: Convex<T>> From<&'a ContinuousSet<T, U>> for ConvexIterator<'a, T, U> {
+impl<'a, T, U: Convex<T>> From<&'a ContinuousSet<T, U>> for ConvexIterator<'a, T, U> {
     fn from(value: &'a ContinuousSet<T, U>) -> Self {
         ConvexIterator {
             set: value,
@@ -583,7 +588,7 @@ impl<'a, T: Scalar, U: Convex<T>> From<&'a ContinuousSet<T, U>> for ConvexIterat
     }
 }
 
-impl<'a, T: Scalar, U: Convex<T>> Iterator for ConvexIterator<'a, T, U> {
+impl<'a, T, U: Convex<T>> Iterator for ConvexIterator<'a, T, U> {
     type Item = &'a U;
     fn next(&mut self) -> Option<Self::Item> {
         match self.set {
@@ -609,17 +614,17 @@ impl<'a, T: Scalar, U: Convex<T>> Iterator for ConvexIterator<'a, T, U> {
     }
 }
 
-impl<T: Scalar, U: Convex<T> + Measurable> Measurable for ContinuousSet<T, U> {
-    fn len(&self) -> InternalF {
+impl<T, U: Convex<T> + Measurable> Measurable for ContinuousSet<T, U> {
+    fn len(&self) -> Len {
         match self {
-            EmptySet => InternalF::ZERO,
+            EmptySet => Real::zero().into(),
             ConvexSet(c) => c.len(),
             DisjointSet(d) => d.len(),
         }
     }
 }
 
-impl<T: Scalar + Add<Output = T>, U: Convex<T> + Delta<T>> Delta<T> for ContinuousSet<T, U> {
+impl<T: AddAssign + Clone, U: Convex<T> + Delta<T>> Delta<T> for ContinuousSet<T, U> {
     fn delta(&mut self, dx: T) {
         match self {
             EmptySet => (),
@@ -629,7 +634,7 @@ impl<T: Scalar + Add<Output = T>, U: Convex<T> + Delta<T>> Delta<T> for Continuo
     }
 }
 
-impl<T: Scalar, U: Convex<T> + ToPositive> ToPositive for ContinuousSet<T, U> {
+impl<T, U: Convex<T> + ToPositive> ToPositive for ContinuousSet<T, U> {
     fn positive(self) -> Self {
         match self {
             EmptySet => EmptySet,
@@ -639,7 +644,7 @@ impl<T: Scalar, U: Convex<T> + ToPositive> ToPositive for ContinuousSet<T, U> {
     }
 }
 
-impl<T : Scalar + Clone, U : Convex<T> + Clone> Clone for ContinuousSet<T,U> {
+impl<T, U: Convex<T>> Clone for ContinuousSet<T,U> {
     fn clone(&self) -> Self {
         match self {
             EmptySet => EmptySet,

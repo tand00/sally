@@ -26,6 +26,13 @@ impl ComponentID {
         matches!(self, Self::Mapped(_))
     }
 
+    pub fn unwrap(self) -> usize {
+        match self {
+            ComponentID::Unmapped => panic!("Failed to unwrap Unmapped ID"),
+            ComponentID::Mapped(x) => x,
+        }
+    }
+
 }
 
 impl From<usize> for ComponentID {
