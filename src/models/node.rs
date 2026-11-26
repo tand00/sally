@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::{Arc, RwLock}};
+use std::{collections::HashMap, io, sync::{Arc, RwLock}};
 
 use quick_xml::{events::BytesText, ElementWriter, Writer};
 
@@ -29,7 +29,7 @@ pub trait Node {
 
     fn design_node<'a>(&self, elem : ElementWriter<OutBuff>) {
         let label = self.get_label();
-        let _ = elem.write_inner_content(|writer| -> Result<(), quick_xml::Error> {
+        let _ = elem.write_inner_content(|writer: &mut Writer<Vec<u8>>| -> Result<(), io::Error> {
             writer.create_element("circle")
                 .with_attributes(vec![("r","50"),("stroke","black"),("stroke-width","5")]);
             writer.create_element("text")

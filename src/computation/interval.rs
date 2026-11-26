@@ -1,5 +1,6 @@
 use std::{fmt::{self, Display}, ops::{Add, AddAssign, BitAnd, Mul, Neg, Sub, SubAssign}};
 use num_traits::{Bounded, Zero};
+use rand_distr::uniform::SampleRange;
 use serde::{Deserialize, Serialize};
 
 use crate::{computation::convex::{Convex, Delta, Disjoint, Measurable, ToPositive}, real::{Len, Real}};
@@ -325,6 +326,16 @@ impl<T : Clone + PartialOrd> Convex<T> for Interval<T> {
         }
     }
 
+}
+
+impl<T: PartialOrd> SampleRange<T> for Interval<T> {
+    fn sample_single<R: rand::prelude::Rng + ?Sized>(self, rng: &mut R) -> Result<T, rand_distr::uniform::Error> {
+        todo!()
+    }
+
+    fn is_empty(&self) -> bool {
+        check_emptiness(self)
+    }
 }
 
 impl<T: Zero + PartialEq> From<Bound<T>> for Interval<T> {
