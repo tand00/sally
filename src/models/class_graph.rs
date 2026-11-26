@@ -10,6 +10,7 @@ use num_traits::Zero;
 use crate::computation::convex::Convex;
 use crate::computation::virtual_memory::EvaluationType;
 use crate::computation::{Bound, DBM};
+use crate::real::Real;
 use crate::verification::smc::RandomRunIterator;
 use crate::verification::{Verifiable, VerificationBound};
 
@@ -108,7 +109,7 @@ impl ClassGraph {
                     dbm[(fired_i, previous_index)],
                     std::cmp::min(
                         dbm[(0, previous_index)] + dbm[(fired_i, 0)],
-                        Bound::Large(0) // useless I think
+                        Bound::Large(Real::zero()) // useless I think
                     )
                 );
             } else if newen.contains(&transi) {
@@ -238,7 +239,7 @@ impl Model for ClassGraph {
     }
 
     fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
-        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, Real, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
@@ -268,11 +269,11 @@ impl<'a> StateClassGenerator<'a> {
     pub fn classes<S : SearchStrategy<Arc<StateClass>>>(strategy : S, net : &'a PetriNet, initial_state : &ModelState)
         -> GraphTraversal<Arc<StateClass>, S, Self>
     {
-        let mut gen = Self::from(net);
+        let mut generator = Self::from(net);
         let initial = Arc::new(StateClass::compute_class(net, initial_state));
         let hash = initial.get_hash();
-        gen.seen.insert(hash);
-        GraphTraversal::new(initial, strategy, gen)
+        generator.seen.insert(hash);
+        GraphTraversal::new(initial, strategy, generator)
     }
 
 }

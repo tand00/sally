@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::probability::ProbabilisticChoice, models::{CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, action::Action, lbl, model_context::ModelContext, model_var::ModelVar, time::ClockValue}, verification::{VerificationBound, smc::RandomRunIterator}};
+use crate::{computation::probability::ProbabilisticChoice, models::{CompilationResult, Label, Model, ModelMaker, ModelMeta, ModelState, Node, action::Action, lbl, model_context::ModelContext, model_var::ModelVar, time::ClockValue}, real::Real, verification::{VerificationBound, smc::RandomRunIterator}};
 
 use std::rc::Rc;
 
@@ -46,7 +46,7 @@ impl Model for CTMarkovChain {
     }
 
     fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
-        -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
+        -> Box<dyn Iterator<Item = (Rc<ModelState>, Real, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use num_traits::Zero;
 
-use crate::{models::{Action, run::RunStatus, time::ClockValue, Model, ModelState}, verification::VerificationBound};
+use crate::{models::{Action, Model, ModelState, run::RunStatus}, real::Real, verification::VerificationBound};
 
 pub struct RandomRunIterator<'a, T : Model> {
     pub model : &'a T,
@@ -21,7 +21,7 @@ impl<'a, T : Model> RandomRunIterator<'a, T> {
             run_status : RunStatus {
                 current_state : Rc::new(initial.clone()),
                 steps : 0,
-                time : ClockValue::zero(),
+                time : Real::zero(),
                 maximal : false
             },
             bound,
@@ -33,7 +33,7 @@ impl<'a, T : Model> RandomRunIterator<'a, T> {
         self.run_status = RunStatus {
             current_state : Rc::new(self.initial_state.clone()),
             steps : 0,
-            time : ClockValue::zero(),
+            time : Real::zero(),
             maximal : false
         };
         self.started = false;
@@ -43,13 +43,13 @@ impl<'a, T : Model> RandomRunIterator<'a, T> {
 
 impl<'a, T : Model> Iterator for RandomRunIterator<'a, T> {
 
-    type Item = (Rc<ModelState>, ClockValue, Option<Action>);
+    type Item = (Rc<ModelState>, Real, Option<Action>);
 
     fn next(&mut self) -> Option<Self::Item> {
         
         if !self.started { // Yield the initial state
             self.started = true;
-            return Some((Rc::clone(&self.run_status.current_state), ClockValue::zero(), None));
+            return Some((Rc::clone(&self.run_status.current_state), Real::zero(), None));
         }
 
         if self.run_status.maximal {

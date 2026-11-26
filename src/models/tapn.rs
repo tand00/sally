@@ -9,7 +9,7 @@ use tapn_transition::TAPNTransition;
 
 use crate::{computation::Bound, real::Real, verification::VerificationBound};
 
-use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, time::ClockValue, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node, UNMAPPED_ID};
+use super::{action::Action, lbl, model_context::ModelContext, model_storage::ModelStorage, CompilationResult, Edge, Label, Model, ModelMeta, ModelState, Node};
 
 pub mod tapn_place;
 pub mod tapn_edge;
@@ -77,7 +77,7 @@ impl TAPN {
             let target = edge.get_node_to();
             vars_updates.push((target.clone(), edge.weight));
             let mut target_tokens = places_tokens.place(target.index);
-            target_tokens.insert(TAPNToken { count: edge.weight, age: ClockValue::zero() });
+            target_tokens.insert(TAPNToken { count: edge.weight, age: Real::zero() });
         }
         for (place, delta) in vars_updates {
             state.mark(place.get_var(), delta);
@@ -168,7 +168,7 @@ impl Model for TAPN {
         Some(next_state)
     }
 
-    fn delay(&self, mut state : ModelState, dt : ClockValue) -> Option<ModelState> {
+    fn delay(&self, mut state : ModelState, dt : Real) -> Option<ModelState> {
         let storage = state.mut_storage(&self.tokens_storage);
         let mut place_list = TAPNPlaceListWriter::from(storage);
         place_list.delta(dt);
@@ -207,7 +207,7 @@ impl Model for TAPN {
     }
 
     fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
-        -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
+        -> Box<dyn Iterator<Item = (Rc<ModelState>, Real, Option<Action>)> + 'a>
     {
         Box::new(TAPNRunGenerator::generate(self, initial, bound))
     }
@@ -232,7 +232,7 @@ impl Model for TAPN {
         for (i, place) in self.places.iter().enumerate() {
             let n_tokens = state.tokens(place.get_var());
             if n_tokens > 0 {
-                let token = TAPNToken { count : n_tokens, age : ClockValue::zero() };
+                let token = TAPNToken { count : n_tokens, age : Real::zero() };
                 place_list.places[i].push(token);
             }
         }

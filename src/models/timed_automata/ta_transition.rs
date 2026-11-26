@@ -68,7 +68,7 @@ impl TATransition {
 
 impl TAEdge {
 
-    pub fn fire(&self, mut state : ModelState, cache : &usize) -> ModelState {
+    pub fn fire(&self, mut state : ModelState, cache : &Option<usize>) -> ModelState {
         for clock in self.data().resets.iter() {
             state.set_clock(clock, ClockValue::zero());
         }

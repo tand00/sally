@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use rand::RngExt;
 use rayon::prelude::*;
 
 use crate::computation::probability::ProbabilisticChoice;
@@ -70,7 +71,7 @@ impl<T : Genetizable> GeneticOptimizer<T> {
                 let p1 = sampler.sample(&mut rng);
                 let p2 = sampler.sample(&mut rng);
                 let mut child = p1.cross(p2);
-                if rng.gen::<f64>() < mutation_rate {
+                if rng.random::<f64>() < mutation_rate {
                     child.mutate();
                 }
                 (child, 0.0)

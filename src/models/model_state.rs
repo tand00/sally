@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use nalgebra::DVector;
 use serde::{Deserialize, Serialize};
 
-use crate::{computation::virtual_memory::{EvaluationType, VirtualMemory}, verification::Verifiable};
+use crate::{computation::virtual_memory::{EvaluationType, VirtualMemory}, real::Real, verification::Verifiable};
 
 use super::{model_clock::ModelClock, model_storage::ModelStorage, model_var::ModelVar, time::ClockValue};
 
@@ -35,33 +35,33 @@ impl ModelState {
     }
 
     pub fn enable_clock(&mut self, clock : &ModelClock, value : ClockValue) {
-        self.clocks[clock.get_index()] = value
+        self.clocks[clock.get_index().unwrap()] = value
     }
 
     pub fn disable_clock(&mut self, clock : &ModelClock) {
-        self.clocks[clock.get_index()] = ClockValue::Disabled
+        self.clocks[clock.get_index().unwrap()].disable();
     }
 
     pub fn is_enabled(&self, clock : &ModelClock) -> bool {
-        !self.clocks[clock.get_index()].is_disabled()
+        !self.clocks[clock.get_index().unwrap()].is_disabled()
     }
 
     pub fn set_clock(&mut self, clock : &ModelClock, value : ClockValue) {
-        self.clocks[clock.get_index()] = value
+        self.clocks[clock.get_index().unwrap()] = value
     }
 
-    pub fn step_clock(&mut self, clock : &ModelClock, delta : ClockValue) {
-        self.clocks[clock.get_index()] += delta;
+    pub fn step_clock(&mut self, clock : &ModelClock, delta : Real) {
+        self.clocks[clock.get_index().unwrap()] += delta;
     }
 
-    pub fn step_clocks<'a>(&mut self, clocks : impl Iterator<Item = &'a ModelClock>, delta : ClockValue) {
+    pub fn step_clocks<'a>(&mut self, clocks : impl Iterator<Item = &'a ModelClock>, delta : Real) {
         for clock in clocks {
             self.step_clock(clock, delta)
         }
     }
 
     pub fn get_clock_value(&self, clock : &ModelClock) -> ClockValue {
-        self.clocks[clock.get_index()]
+        self.clocks[clock.get_index().unwrap()]
     }
 
     pub fn set_var(&mut self, var : &ModelVar, value : EvaluationType) {
@@ -125,12 +125,12 @@ impl ModelState {
         self.clocks = DVector::from_element(clocks, ClockValue::Disabled)
     }
 
-    pub fn storage(&self, index : &usize) -> &ModelStorage {
-        &self.storages[*index]
+    pub fn storage(&self, index : &Option<usize>) -> &ModelStorage {
+        &self.storages[index.unwrap()]
     }
 
-    pub fn mut_storage(&mut self, index : &usize) -> &mut ModelStorage {
-        &mut self.storages[*index]
+    pub fn mut_storage(&mut self, index : &Option<usize>) -> &mut ModelStorage {
+        &mut self.storages[index.unwrap()]
     }
 
 }

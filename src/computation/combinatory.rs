@@ -57,13 +57,13 @@ impl<'a, T> Iterator for KInVec<'a, T> {
 }
 
 pub struct CartesianProduct<'a, T> {
-    vecs : &'a [Vec<T>],
+    vecs : &'a [ Vec<T> ],
     chosen : Vec<usize>
 }
 
 impl<'a, T> CartesianProduct<'a, T> {
 
-    pub fn of(value: &'a [Vec<T>]) -> Self {
+    pub fn of(value: &'a [ Vec<T> ]) -> Self {
         CartesianProduct {
             vecs : value,
             chosen : vec![0 ; value.len()]

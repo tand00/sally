@@ -1,5 +1,5 @@
 use std::{hash::Hash, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not}};
-use crate::{computation::virtual_memory::EvaluationType, models::{MappingResult, ModelClock, ModelContext, ModelVar, time::ClockValue}};
+use crate::{computation::virtual_memory::EvaluationType, models::{MappingResult, ModelClock, ModelContext, ModelVar, time::ClockValue}, real::Real};
 
 use super::query::*;
 use serde::{Deserialize, Serialize};
@@ -81,7 +81,7 @@ impl Default for VerificationStatus {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationBound {
     #[serde(rename = "time_bound")]
-    TimeRunBound(u32),
+    TimeRunBound(Real),
     #[serde(rename = "steps_bound")]
     StepsRunBound(usize),
     #[serde(rename = "var_bound")]

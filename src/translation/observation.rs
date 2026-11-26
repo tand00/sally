@@ -3,7 +3,7 @@
 use function::{ObservationContext, ObservationFunction, VarPolicy};
 use observable::Observable;
 
-use crate::{component_id::ComponentID, computation::virtual_memory::EvaluationType, models::{Action, CompilationError, CompilationResult, Label, Model, ModelClock, ModelContext, ModelMeta, ModelObject, ModelState, ModelVar, class_graph::StateClass, lbl, time::ClockValue}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
+use crate::{computation::virtual_memory::EvaluationType, models::{Action, CompilationError, CompilationResult, Label, Model, ModelClock, ModelContext, ModelMeta, ModelObject, ModelState, ModelVar, class_graph::StateClass, lbl, time::ClockValue}, verification::{Verifiable, VerificationBound, smc::RandomRunIterator}};
 use crate::log;
 
 use super::{Translation, TranslationError, TranslationMeta, TranslationResult, TranslationType};
@@ -12,7 +12,7 @@ pub mod function;
 pub mod observable;
 
 pub struct PartialObservation<T : Model> {
-    pub id: ComponentID,
+    pub id: Option<usize>,
     pub observation_function: ObservationFunction,
     pub obs_ctx: ObservationContext,
     pub model: Option<T>,
@@ -23,7 +23,7 @@ impl<T : Model> PartialObservation<T> {
 
     pub fn new(obs : ObservationFunction) -> PartialObservation<T> {
         PartialObservation {
-            id: ComponentID::Unmapped,
+            id: None,
             observation_function: obs,
             obs_ctx: Default::default(),
             model: Default::default(),

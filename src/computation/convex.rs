@@ -393,7 +393,9 @@ impl<T: Clone + Zero + Bounded + PartialOrd> ToPositive for (T, T) {
     }
 }
 
+#[derive(Debug, Default)]
 pub enum ContinuousSet<T, U: Convex<T>> {
+    #[default]
     EmptySet,
     ConvexSet(U),
     DisjointSet(Disjoint<T, U>),

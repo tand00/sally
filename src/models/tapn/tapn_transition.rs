@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::computation::Interval;
 use crate::computation::combinatory::{CartesianProduct, KInVec};
-use crate::computation::convex::{ContinuousSet, Convex, Delta, ToPositive};
+use crate::computation::convex::{ContinuousSet, Convex, ToPositive};
 use crate::computation::probability::RealDistribution;
 use crate::models::action::Action;
 use crate::models::model_context::ModelContext;
@@ -205,7 +205,9 @@ impl TAPNTransition {
         res
     }
 
-    fn arc_dates(interval : &Interval<Real>, weight : usize, token_list : TAPNTokenListReader) -> ContinuousSet<Real, Interval<Real>> {
+    fn arc_dates(interval : &Interval<Real>, weight : usize, token_list : TAPNTokenListReader) 
+        -> ContinuousSet<Real, Interval<Real>> 
+    {
         if weight == 0 {
             return ContinuousSet::full();
         }
@@ -221,8 +223,8 @@ impl TAPNTransition {
                 if ages.len() == weight {
                     let mut set_dates = ContinuousSet::full();
                     for age in ages.iter() {
-                        let mut shifted = interval;
-                        shifted.delta(-*age);
+                        let mut shifted = *interval;
+                        shifted -= *age;
                         set_dates = set_dates.intersection(shifted.positive());
                     }
                     dates = dates.union(set_dates);
@@ -254,7 +256,7 @@ impl TAPNTransition {
         }
         for edge in self.get_transports().iter() {
             let place_index = edge.get_node_from().index;
-            let target_inv = Interval::invariant(edge.get_node_to().invariant);
+            let target_inv = Interval::from(edge.get_node_to().invariant);
             let tokens = place_list.place(place_index);
             let interval = edge.data().interval.clone().intersection(target_inv);
             let intervals = Self::arc_dates(&interval, edge.data().weight as usize, tokens);

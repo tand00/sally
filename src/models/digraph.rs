@@ -4,7 +4,7 @@ use nalgebra::{DMatrix, Scalar};
 use num_traits::{Bounded, Zero};
 use search_strategy::GraphTraversal;
 
-use crate::computation::{Bound, DBM};
+use crate::{computation::{Bound, DBM}, real::Real};
 
 use super::{node::{Node, DataNode}, Edge};
 
@@ -527,7 +527,7 @@ impl<T, U> Default for Digraph<T,U> {
     }
 }
 
-impl From<DBM> for Digraph<usize, Bound<i32>> {
+impl From<DBM> for Digraph<usize, Bound<Real>> {
     fn from(matrix: DBM) -> Self {
         let mut graph = Digraph::new();
         for i in 0..(matrix.vars_count() + 1) {
@@ -542,8 +542,8 @@ impl From<DBM> for Digraph<usize, Bound<i32>> {
     }
 }
 
-impl From<Digraph<usize, Bound<i32>>> for DBM {
-    fn from(graph: Digraph<usize, Bound<i32>>) -> Self {
+impl From<Digraph<usize, Bound<Real>>> for DBM {
+    fn from(graph: Digraph<usize, Bound<Real>>) -> Self {
         DBM::from(graph.get_matrix())
     }
 }

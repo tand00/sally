@@ -2,17 +2,17 @@ use std::rc::Rc;
 
 use num_traits::Zero;
 
-use crate::{computation::{convex::{ContinuousSet, Delta, ToPositive}, probability::ProbabilisticChoice}, models::{action::Action, run::RunStatus, time::{ClockValue, TimeInterval}, Model, ModelState}, verification::VerificationBound};
+use crate::{computation::{Bound, Interval, convex::{ContinuousSet, Delta, ToPositive}, probability::ProbabilisticChoice}, models::{Model, ModelState, action::Action, run::RunStatus, time::ClockValue}, real::Real, verification::VerificationBound};
 
 use super::{tapn_transition::{FiringMode, TAPNTransition}, TAPNPlaceList, TAPNPlaceListReader, TAPN};
 
-use rand::{rngs::ThreadRng, seq::IndexedRandom};
+use rand::{RngExt, rngs::ThreadRng, seq::IndexedRandom};
 
 pub struct TAPNRunGenerator<'a> {
     pub tapn : &'a TAPN,
     pub initial_state : &'a ModelState,
     pub bound : VerificationBound,
-    pub intervals : Vec<ContinuousSet<ClockValue, TimeInterval>>,
+    pub intervals : Vec<ContinuousSet<Real, Interval<Real>>>,
     pub firing_dates : Vec<ClockValue>,
     pub started : bool,
     pub run_status : RunStatus,
@@ -32,7 +32,7 @@ impl<'a> TAPNRunGenerator<'a> {
             run_status : RunStatus {
                 current_state : Rc::new(initial_state.clone()),
                 steps : 0,
-                time : ClockValue::zero(),
+                time : Real::zero(),
                 maximal : false
             },
             rng : rand::rng()
@@ -45,7 +45,7 @@ impl<'a> TAPNRunGenerator<'a> {
         self.run_status = RunStatus {
             current_state : Rc::new(self.initial_state.clone()),
             steps : 0,
-            time : ClockValue::zero(),
+            time : Real::zero(),
             maximal : false
         };
         self.started = false;
@@ -55,27 +55,27 @@ impl<'a> TAPNRunGenerator<'a> {
     pub fn refresh_intervals(&mut self) {
         let state = &self.run_status.current_state;
         let avail_delay = self.tapn.available_delay(&self.run_status.current_state);
-        let avail_delay : ContinuousSet<ClockValue, TimeInterval> = TimeInterval::invariant(avail_delay).into();
+        let avail_delay : ContinuousSet<Real, Interval<Real>> = Interval::from(avail_delay).into();
         let place_list = TAPNPlaceListReader::from(state.storage(&self.tapn.tokens_storage));
         for transition in self.tapn.transitions.iter() {
             let dates = transition.firing_dates(&place_list).intersection(avail_delay.clone());
-            let enabled = dates.contains(&ClockValue::zero());
+            let enabled = dates.contains(&Real::zero());
             let newly_enabled = enabled && self.firing_dates[transition.index].is_disabled();
-            let reached_upper = enabled && dates.convexs().next().unwrap().1.clock_value().is_zero();
+            let reached_upper = enabled && dates.convexs().next().unwrap().1.is_zero();
             self.intervals[transition.index] = dates;
             if !enabled {
-                self.firing_dates[transition.index] = ClockValue::disabled();
+                self.firing_dates[transition.index].disable();
             } else if newly_enabled {
                 self.firing_dates[transition.index] = transition.sample_date(&mut self.rng);
             }
             if reached_upper && self.firing_dates[transition.index] > ClockValue::zero() {
-                self.firing_dates[transition.index] = ClockValue::disabled();
+                self.firing_dates[transition.index].disable();
             }
         }
     }
 
-    pub fn get_winner_and_delay(&mut self) -> (Option<usize>, ClockValue) {
-        let mut delay = ClockValue::infinity();
+    pub fn get_winner_and_delay(&mut self) -> (Option<usize>, Option<Real>) {
+        let mut delay = None;
         let mut candidates : Vec<(usize, f64)> = Vec::new();
         let mut infinite_weights : Vec<usize> = Vec::new();
         let mut null_weights : Vec<usize> = Vec::new();
@@ -86,27 +86,40 @@ impl<'a> TAPNRunGenerator<'a> {
             if dates.is_empty() {
                 continue;
             }
-            let mut date = ClockValue::infinity();
+            let mut date = None;
             for convex in dates.convexs() {
-                let a = convex.0.clock_value();
-                let b = convex.1.clock_value();
-                if a > ClockValue::zero() {
-                    date = a;
-                    break;
+                match convex.0 {
+                    Bound::Large(d_a) | Bound::Strict(d_a)
+                        if d_a > Real::zero() 
+                    => {
+                        date = Some(d_a);
+                        break;
+                    }
+                    _ => ()
                 }
-                if b > ClockValue::zero() {
-                    date = b;
-                    break;
+                match convex.1 {
+                    Bound::Large(d_b) | Bound::Strict(d_b)
+                        if d_b > Real::zero() 
+                    => {
+                        date = Some(d_b);
+                        break;
+                    }
+                    _ => ()
                 }
             }
-            if firing.is_enabled() && *firing < date {
-                date = *firing;
+            let Some(mut date) = date else {
+                continue;
+            };
+            if let ClockValue::Enabled(f_date) = firing && *f_date < date {
+                date = *f_date;
             }
-            if date < delay {
-                delay = date;
+            if let Some(dt) = &mut delay && date < *dt {
+                *dt = date;
                 candidates.clear();
+            } else if delay.is_none() {
+                delay = Some(date);
             }
-            if *firing == delay {
+            if let (ClockValue::Enabled(f_date), Some(dt)) = (firing, delay) && *f_date == dt {
                 if t.weight.is_infinite() {
                     infinite_weights.push(i);
                 } else if t.weight.is_zero() {
@@ -149,30 +162,30 @@ impl<'a> TAPNRunGenerator<'a> {
 
     pub fn random_token_set(&mut self, transition : &TAPNTransition, place_list : TAPNPlaceListReader) -> TAPNPlaceList {
         let mut token_sets = transition.fireable_tokens(&place_list);
-        let random_index = self.rng.gen_range(0..token_sets.len());
+        let random_index = self.rng.random_range(0..token_sets.len());
         token_sets.swap_remove(random_index)
     }
 
     pub fn disable_transitions(&mut self, places : &TAPNPlaceListReader) {
         for transition in self.tapn.transitions.iter() {
             if !transition.is_fireable(places) {
-                self.firing_dates[transition.index] = ClockValue::disabled();
+                self.firing_dates[transition.index].disable();
             }
         }
     }
 
-    pub fn time_forward(&mut self, delay : ClockValue) {
+    pub fn time_forward(&mut self, delay : Real) {
         for i in 0..self.firing_dates.len() {
             let date = &mut self.firing_dates[i];
-            if date.is_enabled() {
-                *date -= delay;
-                if *date < ClockValue::zero() {
-                    *date = ClockValue::zero();
+            match date {
+                ClockValue::Disabled => (),
+                ClockValue::Enabled(f_date) => {
+                    *f_date = (*f_date - delay).max(Real::zero())
                 }
             }
-            let interval = &mut self.intervals[i];
+            let mut interval = std::mem::take(&mut self.intervals[i]);
             interval.delta(-delay);
-            interval.into_positive();
+            self.intervals[i] = interval.positive();
         }
     }
 
@@ -180,15 +193,18 @@ impl<'a> TAPNRunGenerator<'a> {
 
 impl<'a> Iterator for TAPNRunGenerator<'a> {
 
-    type Item = (Rc<ModelState>, ClockValue, Option<Action>);
+    type Item = (Rc<ModelState>, Real, Option<Action>);
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.started {
             self.started = true;
-            return Some((self.run_status.current_state.clone(), ClockValue::zero(), None))
+            return Some((self.run_status.current_state.clone(), Real::zero(), None))
         }
         let next_state = ModelState::clone(&self.run_status.current_state);
         let (winner, delay) = self.get_winner_and_delay();
+        let Some(delay) = delay else {
+            return None;
+        };
         let Some(next_state) = self.tapn.delay(next_state, delay) else {
             return None;
         };
@@ -200,7 +216,7 @@ impl<'a> Iterator for TAPNRunGenerator<'a> {
             let place_list = TAPNPlaceListReader::from(next_state.storage(&self.tapn.tokens_storage));
             let in_tokens = self.select_token_set(winner, place_list);
             let next_state = self.tapn.fire(next_state, winner, in_tokens);
-            self.firing_dates[winner] = ClockValue::disabled();
+            self.firing_dates[winner].disable();
             // self.disable_transitions(&TAPNPlaceListReader::from(&intermed));
             self.refresh_intervals();
             self.run_status.steps += 1;

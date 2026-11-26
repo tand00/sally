@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use crate::verification::{VerificationBound, Verifiable};
+use crate::{real::Real, verification::{Verifiable, VerificationBound}};
 
-use super::{action::Action, time::ClockValue, ModelState};
+use super::{action::Action, ModelState};
 
 use num_traits::Zero;
 use VerificationBound::*;
@@ -11,7 +11,7 @@ use VerificationBound::*;
 pub struct RunStatus {
     pub current_state : Rc<ModelState>,
     pub steps : usize,
-    pub time : ClockValue,
+    pub time : Real,
     pub maximal : bool
 }
 
@@ -19,7 +19,7 @@ impl RunStatus {
 
     pub fn is_under(&self, bound : &VerificationBound) -> bool {
         match bound {
-            TimeRunBound(t) => self.time < ClockValue::from(*t as f64),
+            TimeRunBound(t) => self.time < *t,
             StepsRunBound(s) => self.steps < *s,
             VarRunBound(v, x) => self.current_state.evaluate_var(v) < *x,
             NoRunBound => true
@@ -31,7 +31,7 @@ impl RunStatus {
 pub enum RunElement {
     State(Rc<ModelState>),
     Step(Action),
-    Delay(ClockValue)
+    Delay(Real)
 }
 
 use RunElement::*;
@@ -39,7 +39,7 @@ use RunElement::*;
 pub struct Run {
     pub elements : Vec<RunElement>,
     pub steps : usize,
-    pub time : ClockValue,
+    pub time : Real,
     pub maximal : bool
 }
 
@@ -49,7 +49,7 @@ impl Run {
         Run {
             elements : Vec::new(),
             steps : 0,
-            time : ClockValue::zero(),
+            time : Real::zero(),
             maximal : false
         }
     }
@@ -70,7 +70,7 @@ impl Run {
     pub fn add(&mut self, elem : RunElement) {
         match &elem {
             Step(_) => self.steps += 1,
-            Delay(d) => self.time += d.clone(),
+            Delay(d) => self.time += *d,
             _ => ()
         }
         self.elements.push(elem);
@@ -123,7 +123,7 @@ impl Run {
 
     pub fn is_under(&self, bound : &VerificationBound) -> bool {
         match bound {
-            TimeRunBound(t) => self.time < ClockValue::from(*t as f64),
+            TimeRunBound(t) => self.time < *t,
             StepsRunBound(s) => self.steps < *s,
             VarRunBound(v, x) => match self.last_state() {
                 Some(s) => s.evaluate_var(v) < *x,

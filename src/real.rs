@@ -1,4 +1,4 @@
-use std::{fmt::Display, iter::Sum, ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Rem, Sub, SubAssign}};
+use std::{fmt::Display, iter::Sum, ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, Sub, SubAssign}};
 
 use fixed::{traits::{FromFixed, ToFixed}, types::I16F48};
 use num_traits::{One, Zero};
@@ -88,6 +88,12 @@ impl Div for Real {
 
     fn div(self, rhs: Self) -> Self::Output {
         Real(self.0 / rhs.0)
+    }
+}
+
+impl DivAssign for Real {
+    fn div_assign(&mut self, rhs: Self) {
+        self.0 /= rhs.0
     }
 }
 

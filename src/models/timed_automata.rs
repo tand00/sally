@@ -83,7 +83,7 @@ impl Model for TimedAutomaton {
     }
 
     fn random_run<'a>(&'a self, initial: &'a ModelState, bound: VerificationBound)
-        -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
+        -> Box<dyn Iterator<Item = (Rc<ModelState>, Real, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }
@@ -145,7 +145,7 @@ impl Model for TimedAutomaton {
         place.remaining_time(state)
     }
 
-    fn delay(&self, mut state: ModelState, dt: ClockValue) -> Option<ModelState> {
+    fn delay(&self, mut state: ModelState, dt: Real) -> Option<ModelState> {
         state.step_clocks(self.clocks.iter(), dt);
         let place = self.get_active_place(&state);
         if place.invariants.is_true(&state) {

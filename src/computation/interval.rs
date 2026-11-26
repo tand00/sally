@@ -1,4 +1,4 @@
-use std::{fmt::{self, Display}, ops::{Add, BitAnd, Mul, Neg, Sub}};
+use std::{fmt::{self, Display}, ops::{Add, AddAssign, BitAnd, Mul, Neg, Sub, SubAssign}};
 use num_traits::{Bounded, Zero};
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,13 @@ use super::Bound::*;
 /// Time interval with bounds either integer of infinite
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct Interval<T>(pub Bound<T>, pub Bound<T>);
+
+fn check_emptiness<T: PartialOrd>(interval: &Interval<T>) -> bool {
+    match (&interval.0, &interval.1) {
+        (Strict(x), Strict(y)) => x >= y,
+        _ => interval.0 > interval.1
+    }
+}
 
 impl<T> Interval<T> {
 
@@ -27,12 +34,6 @@ impl<T> Interval<T> {
 
     pub const fn empty() -> Self {
         Interval(Infinite, MinusInfinite)
-    }
-
-    pub fn invariant(bound : Bound<T>) -> Self
-        where T: Zero + PartialEq
-    {
-        Interval(Bound::zero(), bound)
     }
 
     pub fn lower(&self) -> &Bound<T> {
@@ -54,19 +55,58 @@ impl<T> Interval<T> {
     pub fn is_empty(&self) -> bool 
         where T: PartialOrd
     {
-        todo!()
+        check_emptiness(self)
     }
 
     pub fn cast<U: From<T>>(self) -> Interval<U> {
         Interval(self.0.cast(), self.1.cast())
     }
 
+    pub fn open(self) -> Interval<T> {
+        Interval(self.0.strict(), self.1.strict())
+    }
+
+    pub fn make_open(&mut self) {
+        self.0.make_strict();
+        self.1.make_strict();
+    }
+
+    pub fn closed(self) -> Interval<T> {
+        Interval(self.0.large(), self.1.large())
+    }
+
+    pub fn make_closed(&mut self) {
+        self.0.make_large();
+        self.1.make_large();
+    }
+
 }
 
-impl<T : Add<Output = T>> Add for Interval<T> { // Intersection
+impl<T : Add<Output = T>> Add for Interval<T> { 
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
         Interval(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+impl<T : Add<Output = T>> AddAssign for Interval<T> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
+        self.1 += rhs.1;
+    }
+}
+
+impl<T : Add<Output = T> + Clone> Add<T> for Interval<T> {
+    type Output = Self;
+    fn add(self, rhs: T) -> Self::Output {
+        Interval(self.0 + rhs.clone(), self.1 + rhs)
+    }
+}
+
+impl<T : Add<Output = T> + Clone> AddAssign<T> for Interval<T> { 
+    fn add_assign(&mut self, rhs: T) {
+        self.0 += rhs.clone();
+        self.1 += rhs;
     }
 }
 
@@ -74,6 +114,27 @@ impl<T : Sub<Output = T>> Sub for Interval<T> {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
         Interval(self.0 - rhs.1, self.1 - rhs.0)
+    }
+}
+
+impl<T : Sub<Output = T>> SubAssign for Interval<T> {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 -= rhs.0;
+        self.1 -= rhs.1;
+    }
+}
+
+impl<T : Sub<Output = T> + Clone> Sub<T> for Interval<T> {
+    type Output = Self;
+    fn sub(self, rhs: T) -> Self::Output {
+        Interval(self.0 - rhs.clone(), self.1 - rhs)
+    }
+}
+
+impl<T : Sub<Output = T> + Clone> SubAssign<T> for Interval<T> { // Intersection
+    fn sub_assign(&mut self, rhs: T) {
+        self.0 -= rhs.clone();
+        self.1 -= rhs;
     }
 }
 
@@ -152,10 +213,7 @@ impl<T : Clone + PartialOrd> Convex<T> for Interval<T> {
     }
 
     fn is_empty(&self) -> bool {
-        match (&self.0, &self.1) {
-            (Strict(x), Strict(y)) => x >= y,
-            _ => self.0 > self.1
-        }
+        check_emptiness(self)
     }
 
     fn union(self, other : Self) -> Disjoint<T,Self> {
@@ -269,6 +327,12 @@ impl<T : Clone + PartialOrd> Convex<T> for Interval<T> {
 
 }
 
+impl<T: Zero + PartialEq> From<Bound<T>> for Interval<T> {
+    fn from(bound : Bound<T>) -> Self {
+        Interval(Bound::zero(), bound)
+    }
+}
+
 impl Measurable for Interval<Real> {
     fn len(&self) -> Len {
         match self.1 - self.0 {
@@ -288,9 +352,14 @@ impl Measurable for Interval<i32> {
 }
 
 impl<T : Clone + PartialOrd + Zero> ToPositive for Interval<T> {
-
     fn positive(self) -> Self {
         self.intersection(Interval(Large(T::zero()), Infinite))
     }
+}
 
+impl<T: Add<Output = T> + Clone> Delta<T> for Interval<T> {
+    fn delta(&mut self, dx: T) {
+        self.0 += dx.clone();
+        self.1 += dx;
+    }
 }

@@ -201,7 +201,7 @@ fn parse_query_pairs(pairs: Pairs<Rule>) -> ParsedQuery {
                 Rule::globally => ParsedLogic(StateLogic::Globally, rhs),
                 Rule::timebound => {
                     let value = op.into_inner().as_str().parse::<u32>().unwrap();
-                    ParsedBound(VerificationBound::TimeRunBound(value), rhs)
+                    ParsedBound(VerificationBound::TimeRunBound(value.into()), rhs)
                 },
                 Rule::stepsbound => {
                     let value = op.into_inner().as_str().parse::<usize>().unwrap();

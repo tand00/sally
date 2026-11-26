@@ -272,10 +272,9 @@ impl Model for PetriNet {
         let m = self.transitions.iter()
             .filter_map(|t| {
                 let c = state.get_clock_value(t.get_clock());
-                if c.is_enabled() {
-                    Some(t.interval.1 - c.into())
-                } else {
-                    None
+                match c {
+                    ClockValue::Disabled => None,
+                    ClockValue::Enabled(value) => Some(t.interval.1 - value),
                 }
             })
             .reduce(|a,b| if a < b { a } else { b });
@@ -292,7 +291,7 @@ impl Model for PetriNet {
         state
     }
 
-    fn delay(&self, mut state: ModelState, dt: ClockValue) -> Option<ModelState> {
+    fn delay(&self, mut state: ModelState, dt: Real) -> Option<ModelState> {
         let clocks = self.transitions.iter().map(|t| t.get_clock());
         state.step_clocks(clocks, dt);
         Some(state)
@@ -352,7 +351,7 @@ impl Model for PetriNet {
     }
 
     fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
-        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, Real, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }

@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, marker::PhantomData};
 
-use rand::rngs::ThreadRng;
+use rand::{RngExt, rngs::ThreadRng};
 
 use super::{GraphEdge, GraphNode};
 
@@ -67,7 +67,7 @@ impl<T> SearchStrategy<T> for RandomSearch<T> {
         if self.vec.is_empty() {
             return None;
         }
-        let index = self.rng.gen_range(0..self.vec.len());
+        let index = self.rng.random_range(0..self.vec.len());
         Some(self.vec.remove(index))
     }
 }

@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use Bound::{Strict, Large, Infinite, MinusInfinite};
 
+use crate::computation::convex::Delta;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Deserialize, Serialize, Default)]
 pub enum Bound<T> {
     #[serde(rename="<")]
@@ -85,6 +87,36 @@ impl<T> Bound<T> {
         }
     }
 
+    pub fn strict(self) -> Bound<T> {
+        match self {
+            Large(x) => Strict(x),
+            _ => self
+        }
+    }
+
+    pub fn large(self) -> Bound<T> {
+        match self {
+            Strict(x) => Large(x),
+            _ => self
+        }
+    }
+
+    pub fn make_strict(&mut self) {
+        let temp = std::mem::take(self);
+        *self = temp.strict();
+    }
+
+    pub fn make_large(&mut self) {
+        let temp = std::mem::take(self);
+        *self = temp.large();
+    }
+
+}
+
+impl<T> From<T> for Bound<T> {
+    fn from(value: T) -> Self {
+        Bound::Large(value)
+    }
 }
 
 impl<T : Neg<Output = T>> Neg for Bound<T> {
@@ -103,15 +135,15 @@ impl<T : Add<Output = T>> Add for Bound<T> {
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Infinite, MinusInfinite) |
-                (MinusInfinite, Infinite) => panic!("Indeterminate sum !"),
-            (Infinite, _) |
-                (_, Infinite) => Infinite,
-            (MinusInfinite, _) |
-                (_, MinusInfinite) => MinusInfinite,
-            (Large(x), Strict(y)) |
-                (Strict(x), Large(y)) |
-                (Strict(x), Strict(y)) => Strict(x + y),
+            (Infinite, MinusInfinite) 
+            | (MinusInfinite, Infinite) => panic!("Indeterminate sum !"),
+            (Infinite, _) 
+            | (_, Infinite) => Infinite,
+            (MinusInfinite, _) 
+            | (_, MinusInfinite) => MinusInfinite,
+            (Large(x), Strict(y)) 
+            | (Strict(x), Large(y)) 
+            | (Strict(x), Strict(y)) => Strict(x + y),
             (Large(x), Large(y)) => Large(x + y)
         }
     }
@@ -121,13 +153,13 @@ impl<T : Sub<Output = T>> Sub for Bound<T> {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
-            (Infinite, Infinite) |
-                (MinusInfinite, MinusInfinite) => panic!("Indeterminate sum !"),
+            (Infinite, Infinite) 
+            | (MinusInfinite, MinusInfinite) => panic!("Indeterminate sum !"),
             (MinusInfinite, _) | (_, Infinite) => MinusInfinite,
             (Infinite, _) | (_, MinusInfinite) => Infinite,
-            (Large(x), Strict(y)) |
-                (Strict(x), Large(y)) |
-                (Strict(x), Strict(y)) => Strict(x - y),
+            (Large(x), Strict(y)) 
+            | (Strict(x), Large(y)) 
+            | (Strict(x), Strict(y)) => Strict(x - y),
             (Large(x), Large(y)) => Large(x - y)
         }
     }
@@ -231,15 +263,21 @@ impl<T> Bounded for Bound<T> {
     }
 }
 
+impl<T: Add<Output = T>> Delta<T> for Bound<T> {
+    fn delta(&mut self, dx: T) {
+        *self += dx
+    }
+}
+
 impl<T : PartialOrd> PartialOrd for Bound<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match (self, other) {
-            (Infinite,Infinite) |
-                (MinusInfinite,MinusInfinite) => Some(std::cmp::Ordering::Equal),
-            (Infinite, _) |
-                (_, MinusInfinite) => Some(std::cmp::Ordering::Greater),
-            (_, Infinite) |
-                (MinusInfinite, _) => Some(std::cmp::Ordering::Less),
+            (Infinite,Infinite) 
+            | (MinusInfinite,MinusInfinite) => Some(std::cmp::Ordering::Equal),
+            (Infinite, _) 
+            | (_, MinusInfinite) => Some(std::cmp::Ordering::Greater),
+            (_, Infinite) 
+            | (MinusInfinite, _) => Some(std::cmp::Ordering::Less),
             (Strict(x), Strict(y)) => x.partial_cmp(y),
             (Large(x), Large(y)) => x.partial_cmp(y),
             (Strict(x), Large(y)) =>

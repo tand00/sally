@@ -10,7 +10,7 @@ pub struct ModelNetwork {
     pub id : Option<usize>,
     pub models : Vec<Box<dyn ModelObject>>,
     pub models_map : HashMap<Label, usize>,
-    pub actions_map : HashMap<usize, usize>,
+    pub actions_map : HashMap<u16, usize>,
     pub io_actions : HashSet<Label, (Vec<Label>, Vec<Label>)>,
     pub sync_actions : HashMap<Action, ActionPairs>, // { Input : Output } s.t. (a => b) to fire
 }
@@ -38,10 +38,10 @@ impl Model for ModelNetwork {
     }
 
     fn next(&self, state : ModelState, action : Action) -> Option<ModelState> {
-        if !self.actions_map.contains_key(&action.get_id()) {
+        if !self.actions_map.contains_key(&action.get_symbol()) {
             return None;
         }
-        let model_index = self.actions_map[&action.get_id()];
+        let model_index = self.actions_map[&action.get_symbol()];
         let model = &self.models[model_index];
         let next = model.next(state, action);
         if next.is_none() {
@@ -60,7 +60,7 @@ impl Model for ModelNetwork {
             let enabled = pairs.enabled(&actions);
             actions = enabled.remove_io(actions);
             for (i,o) in enabled.generate_pairs() {
-                synchros.insert(Action::Sync(sync.get_id(), Box::new(i), Box::new(o)));
+                synchros.insert(Action::Sync(sync.get_symbol(), Box::new(i), Box::new(o)));
             }
         }
         actions.extend(synchros);
@@ -110,7 +110,7 @@ impl Model for ModelNetwork {
     }
 
     fn random_run<'a>(&'a self, initial : &'a ModelState, bound : VerificationBound)
-        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, ClockValue, Option<Action>)> + 'a>
+        -> Box<dyn Iterator<Item = (std::rc::Rc<ModelState>, Real, Option<Action>)> + 'a>
     {
         Box::new(RandomRunIterator::generate(self, initial, bound))
     }

@@ -29,7 +29,7 @@ pub use action::*;
 pub use node::Node;
 
 use num_traits::Zero;
-use rand::RngExt;
+use rand::{RngExt, seq::IndexedRandom};
 
 pub mod caching;
 pub mod class_graph;
@@ -46,7 +46,7 @@ pub mod time;
 pub mod timed_automata;
 pub mod beliefs_graph;
 
-use crate::{computation::{Bound, virtual_memory::EvaluationType}, real::Real, verification::VerificationBound};
+use crate::{computation::{Bound, Interval, virtual_memory::EvaluationType}, real::Real, verification::VerificationBound};
 
 use self::time::ClockValue;
 
@@ -85,13 +85,13 @@ pub trait Model: Any {
         Bound::Infinite
     }
 
-    fn delay(&self, state: ModelState, dt: ClockValue) -> Option<ModelState> {
+    fn delay(&self, state: ModelState, dt: Real) -> Option<ModelState> {
         let _ = dt;
         let _ = state;
         Some(state)
     }
 
-    fn delay_next(&self, state: ModelState, dt: ClockValue, action: Action) -> Option<ModelState> {
+    fn delay_next(&self, state: ModelState, dt: Real, action: Action) -> Option<ModelState> {
         self.delay(state, dt)
             .and_then(|state| self.next(state, action))
     }
@@ -112,13 +112,13 @@ pub trait Model: Any {
 
     // Default implementation of random_next sampler for SMC.
     // Should be overrided by stochastic models with a more relevant behaviour !
-    fn random_next(&self, state: ModelState) -> (Option<ModelState>, ClockValue, Option<Action>) {
+    fn random_next(&self, state: ModelState) -> (Option<ModelState>, Real, Option<Action>) {
         let mut rng = rand::rng();
         let max_delay = self.available_delay(&state);
         let mut delayed_state = state;
         let mut delay = Real::zero();
         if !max_delay.is_zero() && self.is_timed() {
-            let delay_range = (InternalF::ZERO)..(max_delay);
+            let delay_range: Interval<Real> = max_delay.into();
             delay = rng.random_range(delay_range).into();
             delayed_state = self.delay(delayed_state, delay).unwrap();
         }
@@ -139,7 +139,7 @@ pub trait Model: Any {
         &'a self,
         initial: &'a ModelState,
         bound: VerificationBound,
-    ) -> Box<dyn Iterator<Item = (Rc<ModelState>, ClockValue, Option<Action>)> + 'a>;
+    ) -> Box<dyn Iterator<Item = (Rc<ModelState>, Real, Option<Action>)> + 'a>;
 
     fn compile(&mut self, context: &mut ModelContext) -> CompilationResult<()>;
 

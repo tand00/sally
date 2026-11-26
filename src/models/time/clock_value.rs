@@ -1,7 +1,5 @@
-use std::{fmt, hash::Hash, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}};
+use std::{fmt, hash::Hash, ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign}};
 use num_traits::{One, Zero};
-use rand::Rng;
-use rand_distr::Distribution;
 use serde::{Deserialize, Serialize};
 use crate::real::Real;
 
@@ -33,6 +31,15 @@ impl ClockValue {
         match self {
             ClockValue::Disabled => ClockValue::Disabled,
             ClockValue::Enabled(x) => ClockValue::Enabled(f(x))
+        }
+    }
+
+    pub fn map_mut<F>(&mut self, f: F)
+        where F: Fn(&mut Real)
+    {
+        match self {
+            ClockValue::Disabled => (),
+            ClockValue::Enabled(x) => f(x)
         }
     }
 
@@ -92,16 +99,63 @@ impl MulAssign for ClockValue {
     }
 }
 
-impl Mul<i64> for ClockValue {
+impl<T: Into<Real>> Add<T> for ClockValue {
     type Output = ClockValue;
-    fn mul(self, rhs: i64) -> Self::Output {
-        self.map(|c| c * rhs.into())
+    fn add(self, rhs: T) -> Self::Output {
+        let value = rhs.into();
+        self.map(|c| c + value)
     }
 }
 
-impl MulAssign<i64> for ClockValue {
-    fn mul_assign(&mut self, rhs: i64) {
-        *self = *self * rhs
+impl<T: Into<Real>> AddAssign<T> for ClockValue {
+    fn add_assign(&mut self, rhs: T) {
+        let value = rhs.into();
+        self.map_mut(|x| *x += value);
+    }
+}
+
+impl<T: Into<Real>> Sub<T> for ClockValue {
+    type Output = ClockValue;
+    fn sub(self, rhs: T) -> Self::Output {
+        let value = rhs.into();
+        self.map(|c| c - value)
+    }
+}
+
+impl<T: Into<Real>> SubAssign<T> for ClockValue {
+    fn sub_assign(&mut self, rhs: T) {
+        let value = rhs.into();
+        self.map_mut(|x| *x -= value);
+    }
+}
+
+impl<T: Into<Real>> Mul<T> for ClockValue {
+    type Output = ClockValue;
+    fn mul(self, rhs: T) -> Self::Output {
+        let value = rhs.into();
+        self.map(|c| c * value)
+    }
+}
+
+impl<T: Into<Real>> MulAssign<T> for ClockValue {
+    fn mul_assign(&mut self, rhs: T) {
+        let value = rhs.into();
+        self.map_mut(|x| *x -= value);
+    }
+}
+
+impl<T: Into<Real>> Div<T> for ClockValue {
+    type Output = ClockValue;
+    fn div(self, rhs: T) -> Self::Output {
+        let value = rhs.into();
+        self.map(|c| c / value)
+    }
+}
+
+impl<T: Into<Real>> DivAssign<T> for ClockValue {
+    fn div_assign(&mut self, rhs: T) {
+        let value = rhs.into();
+        self.map_mut(|x| *x /= value);
     }
 }
 
